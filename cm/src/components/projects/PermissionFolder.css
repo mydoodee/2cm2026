@@ -1,0 +1,27 @@
+.custom-tree {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ant-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.upload-modal .ant-upload-drag {
+  background: #fafafa;
+  border: 1px dashed #d9d9d9;
+}
+
+.upload-modal .ant-upload-drag:hover {
+  border-color: #1890ff;
+}
+
+.upload-dragger .ant-upload {
+  padding: 16px;
+}
+
+.font-kanit {
+  font-family: 'Kanit', sans-serif;
+}

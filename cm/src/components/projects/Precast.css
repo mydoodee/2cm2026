@@ -1,0 +1,251 @@
+/* นำเข้าฟอนต์ Kanit */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+/* ตั้งค่าฟอนต์ Kanit เป็นค่าเริ่มต้นทั่วทั้งหน้า */
+body, .ant-typography, .ant-btn, .ant-table, .ant-select, .ant-input, .ant-modal, .ant-tree, .ant-breadcrumb, .ant-checkbox, .ant-upload {
+  font-family: 'Kanit', sans-serif !important;
+}
+
+/* สีหลักและสีที่เกี่ยวข้อง */
+:root {
+  --primary-color: #6366F1; /* Indigo */
+  --primary-hover: #4F46E5; /* Indigo เข้ม */
+  --light-bg: #F7FAFC; /* Gray-50 */
+  --light-bg-secondary: #EDF2F7; /* Gray-100 */
+  --light-border: #E2E8F0; /* Gray-200 */
+  --light-text: #1A202C; /* Gray-900 */
+  --light-text-secondary: #4A5568; /* Gray-700 */
+  --dark-bg: #1F2A44; /* Gray-900 */
+  --dark-bg-secondary: #2D3748; /* Gray-800 */
+  --dark-border: #4A5568; /* Gray-700 */
+  --dark-border-secondary: #718096; /* Gray-600 */
+  --dark-text: #E6F3FF; /* Bright */
+  --dark-text-secondary: #CBD5E0; /* Gray-300 */
+  --construction-management-color: #fa8c16; /* สีส้มสำหรับ Construction Management */
+}
+
+/* สไตล์ทั่วไป */
+.bg-gray-50 { background-color: var(--light-bg) !important; }
+.bg-gray-100 { background-color: var(--light-bg-secondary) !important; }
+.border-gray-200 { border-color: var(--light-border) !important; }
+.text-gray-600 { color: var(--light-text-secondary) !important; }
+.text-gray-700 { color: var(--light-text) !important; }
+.bg-gray-900 { background-color: var(--dark-bg) !important; }
+.bg-gray-800 { background-color: var(--dark-bg-secondary) !important; }
+.bg-gray-700 { background-color: var(--dark-border) !important; }
+.border-gray-700 { border-color: var(--dark-border) !important; }
+.border-gray-600 { border-color: var(--dark-border-secondary) !important; }
+.text-gray-400 { color: var(--dark-text-secondary) !important; }
+.text-gray-300 { color: var(--dark-text-secondary) !important; }
+.text-white { color: var(--dark-text) !important; }
+
+/* สไตล์สำหรับปุ่ม */
+.ant-btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+.ant-btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+.ant-btn-default {
+  background-color: var(--light-bg-secondary) !important;
+  border-color: var(--light-border) !important;
+  color: var(--light-text) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-default {
+  background-color: var(--dark-bg-secondary) !important;
+  border-color: var(--dark-border-secondary) !important;
+  color: var(--dark-text) !important;
+}
+.ant-btn-default:hover {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  color: #ffffff !important;
+}
+
+/* สไตล์สำหรับ Card */
+.ant-card {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-card {
+  background-color: var(--dark-bg-secondary) !important;
+  border-color: var(--dark-border) !important;
+}
+.ant-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px !important;
+}
+.ant-card-head .ant-btn {
+  margin-left: 8px; /* ระยะห่างสำหรับปุ่มในส่วนหัวของ Card */
+}
+
+/* สไตล์สำหรับ Tree */
+.custom-tree {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.custom-tree .ant-tree-treenode {
+  padding: 4px 0;
+}
+.custom-tree .ant-tree-node-content-wrapper {
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+.custom-tree .ant-tree-node-content-wrapper:hover {
+  background-color: rgba(99, 102, 241, 0.1); /* ใช้สี --primary-color ที่มี opacity */
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .custom-tree .ant-tree-node-content-wrapper:hover {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+}
+.custom-tree .ant-tree-title {
+  color: var(--light-text) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .custom-tree .ant-tree-title {
+  color: var(--dark-text) !important;
+}
+
+/* สไตล์สำหรับ Upload Dragger */
+.upload-dragger .ant-upload {
+  background: transparent !important;
+  border: none !important;
+  padding: 16px !important;
+}
+.upload-dragger .ant-upload-drag {
+  border: 2px dashed var(--light-border) !important;
+  border-radius: 8px !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-drag {
+  border-color: var(--dark-border-secondary) !important;
+}
+.upload-dragger .ant-upload-text, .upload-dragger .ant-upload-hint {
+  color: var(--light-text-secondary) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-text,
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-hint {
+  color: var(--dark-text-secondary) !important;
+}
+.upload-dragger .ant-upload-drag:hover {
+  border-color: var(--primary-color) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-drag:hover {
+  border-color: var(--primary-hover) !important;
+}
+
+/* สไตล์สำหรับ Modal */
+.upload-modal .ant-modal-content {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-modal .ant-modal-content {
+  background-color: var(--dark-bg-secondary) !important;
+}
+.upload-modal .ant-modal-title, .upload-modal .ant-form-item-label > label {
+  color: var(--light-text) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-modal .ant-modal-title,
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-modal .ant-form-item-label > label {
+  color: var(--dark-text) !important;
+}
+
+/* สไตล์สำหรับ Input และ Select */
+.ant-input, .ant-select-selector {
+  background-color: var(--light-bg-secondary) !important;
+  border-color: var(--light-border) !important;
+  color: var(--light-text) !important;
+  border-radius: 6px !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-input,
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-select-selector {
+  background-color: var(--dark-bg-secondary) !important;
+  border-color: var(--dark-border-secondary) !important;
+  color: var(--dark-text) !important;
+}
+.ant-select-item-option-selected {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-select-item-option-selected {
+  background-color: var(--primary-hover) !important;
+}
+
+/* สไตล์สำหรับ Breadcrumb */
+.custom-breadcrumb .ant-breadcrumb a,
+.custom-breadcrumb .ant-breadcrumb span {
+  color: var(--dark-text) !important;
+}
+.custom-breadcrumb .ant-breadcrumb a:hover {
+  color: var(--primary-color) !important;
+}
+
+/* สไตล์สำหรับ Table */
+.ant-table {
+  background-color: var(--light-bg) !important;
+  border-radius: 8px !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-table {
+  background-color: var(--dark-bg-secondary) !important;
+}
+.ant-table-thead > tr > th {
+  background-color: var(--light-bg-secondary) !important;
+  color: var(--light-text) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-table-thead > tr > th {
+  background-color: var(--dark-bg) !important;
+  color: var(--dark-text) !important;
+}
+.ant-table-row:hover > td {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-table-row:hover > td {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+}
+.table-header-icon {
+  font-size: 18px !important;
+  margin: 0 auto !important;
+  display: block !important;
+  color: var(--light-text) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .table-header-icon {
+  color: var(--dark-text) !important;
+}
+
+/* สไตล์สำหรับส่วนหัว */
+.custom-header {
+  position: relative;
+  width: 100%;
+  height: 128px;
+}
+@media (min-width: 768px) {
+  .custom-header {
+    height: 192px;
+  }
+}
+.custom-header .bg-black.bg-opacity-50 {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.text-shadow-lg {
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* สไตล์เฉพาะสำหรับ Construction Management */
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-primary.construction-management-btn {
+  background-color: var(--construction-management-color) !important;
+  border-color: var(--construction-management-color) !important;
+}
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-primary.construction-management-btn:hover {
+  background-color: #d97706 !important; /* สีส้มเข้มเมื่อ hover */
+  border-color: #d97706 !important;
+}

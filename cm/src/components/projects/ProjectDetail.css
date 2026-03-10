@@ -1,0 +1,374 @@
+/* ProjectDetail.css */
+:where(.font-kanit,
+        .ant-card-head-title,
+        .ant-statistic-title,
+        .ant-statistic-content,
+        .ant-progress-text,
+        .ant-typography,
+        .ant-btn,
+        .ant-tag,
+        .ant-picker,
+        .ant-input,
+        .ant-tabs-nav,
+        .ant-tabs-tab,
+        .ant-progress-circle .ant-progress-text,
+        .ant-progress-line) {
+    font-family: 'Kanit', sans-serif !important;
+}
+
+/* Pulse Animation */
+.animate-pulse {
+    animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.85;
+    }
+}
+
+/* Card Hover Effect */
+.card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    transition: all 0.3s ease-in-out;
+}
+
+/* Tabs Styling */
+.custom-tabs .ant-tabs-tab {
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.custom-tabs .ant-tabs-tab-active {
+    background-color: #1890ff;
+    color: white !important;
+}
+
+.custom-tabs .ant-tabs-nav {
+    margin-bottom: 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+/* Image Card Specific Styles */
+.image-card {
+    transition: all 0.3s ease-in-out;
+    width: 100%;
+    height: 100%;
+}
+
+.image-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.image-card .ant-card-body {
+    padding: 0;
+}
+
+/* Image Container */
+.image-container {
+    position: relative;
+    width: 100% !important;
+    height: 16rem !important;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.image-container img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+/* Error Overlay */
+.image-container .error-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(229, 231, 235, 0.9);
+    z-index: 20;
+    border-radius: 8px;
+}
+
+/* Gradient Overlay for Main Project Image */
+.image-card .image-container .gradient-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+    z-index: 10;
+}
+
+/* Project Name and Job Number */
+.image-card .image-container .project-info {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 20;
+}
+
+/* Progress and Tag Styling */
+.image-card .progress-tag-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+}
+
+/* Progress Header for Progress Summary and Payment Cards */
+.progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.progress-header .ant-typography {
+    flex: 1;
+    margin: 0;
+}
+
+.progress-header .ant-select {
+    width: 160px;
+}
+
+.progress-header .ant-progress {
+    flex-shrink: 0;
+}
+
+/* Text Colors */
+.text-gray-600 {
+    color: #6b7280;
+}
+
+.text-gray-800 {
+    color: #1f2937;
+}
+
+.text-blue-200 {
+    color: #bfdbfe;
+}
+
+/* Ant Design Skeleton Custom Styles */
+.ant-skeleton.ant-skeleton-element.hidden.css-dev-only-do-not-override-1odpy8d {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+.css-dev-only-do-not-override-1odpy8d.hidden {
+    display: none !important;
+}
+
+.ant-skeleton.ant-skeleton-element.css-dev-only-do-not-override-1odpy8d {
+    border-radius: 8px;
+}
+
+.ant-skeleton.ant-skeleton-element.css-dev-only-do-not-override-1odpy8d .ant-skeleton-image {
+    width: 100%;
+    height: 16rem;
+}
+
+.ant-skeleton.ant-skeleton-element.css-dev-only-do-not-override-1odpy8d .ant-skeleton-image .ant-skeleton-image-svg {
+    opacity: 0.3;
+}
+
+/* Project Detail Specific Styles */
+.project-detail-container {
+    padding: 24px;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+.project-detail-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.project-main-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.project-sidebar {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.project-status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-planning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-in-progress {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-on-hold {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.project-team-section {
+    margin-top: 24px;
+}
+
+.team-member {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.team-member:hover {
+    background: #f8fafc;
+}
+
+.team-avatar {
+    margin-right: 12px;
+}
+
+.team-info {
+    flex: 1;
+}
+
+.team-name {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 2px;
+}
+
+.team-role {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1200px) {
+    .project-detail-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .project-sidebar {
+        order: -1;
+    }
+
+    .progress-header .ant-select {
+        width: 140px;
+    }
+}
+
+@media (max-width: 768px) {
+    .image-container {
+        height: 12rem !important;
+    }
+    
+    .ant-skeleton.ant-skeleton-element.css-dev-only-do-not-override-1odpy8d .ant-skeleton-image {
+        height: 12rem;
+    }
+    
+    .project-detail-container {
+        padding: 16px;
+    }
+    
+    .project-main-content,
+    .project-sidebar {
+        padding: 16px;
+    }
+    
+    .project-detail-content {
+        gap: 16px;
+    }
+
+    .progress-header {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .progress-header .ant-select {
+        width: 120px;
+    }
+
+    .progress-header .ant-typography {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .image-container {
+        height: 10rem !important;
+    }
+    
+    .ant-skeleton.ant-skeleton-element.css-dev-only-do-not-override-1odpy8d .ant-skeleton-image {
+        height: 10rem;
+    }
+    
+    .project-detail-container {
+        padding: 12px;
+    }
+    
+    .project-main-content,
+    .project-sidebar {
+        padding: 12px;
+    }
+
+    .progress-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .progress-header .ant-select {
+        width: 100%;
+        margin: 8px 0;
+    }
+
+    .progress-header .ant-progress {
+        margin-left: auto;
+    }
+}

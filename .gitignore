@@ -1,0 +1,29 @@
+# Standard ignore
+node_modules/
+dist/
+dist-ssr/
+*.log
+*.local
+
+# CM (Frontend)
+cm/node_modules/
+cm/dist/
+cm/dist-ssr/
+cm/.env
+cm/.env.local
+cm/.env.*.local
+
+# CMAPI (Backend)
+cmapi/node_modules/
+cmapi/.env
+cmapi/uploads/
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

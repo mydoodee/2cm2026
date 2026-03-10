@@ -1,0 +1,20 @@
+/* Profile.css */
+:root {
+  --border-color: #e5e7eb; /* light theme */
+}
+[data-theme='dark'] {
+  --border-color: #4b5563; /* dark theme */
+}
+.ant-descriptions-dark .ant-descriptions-item-label {
+  background: rgba(55, 65, 81, 0.9) !important;
+  color: #e5e7eb !important;
+  border-color: var(--border-color) !important;
+}
+.ant-descriptions-dark .ant-descriptions-item-content {
+  background: rgba(31, 41, 55, 0.9) !important;
+  color: #e5e7eb !important;
+  border-color: var(--border-color) !important;
+}
+.ant-descriptions {
+  border-color: var(--border-color) !important;
+}

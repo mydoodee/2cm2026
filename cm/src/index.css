@@ -1,0 +1,85 @@
+/* ย้ายการ import Ant Design reset.css ไปไว้ที่ต้นไฟล์ */
+@import 'antd/dist/reset.css';
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root, .ant-typography, .ant-btn, .ant-menu, .ant-form-item-label > label, .ant-descriptions-item-label, .ant-descriptions-item-content {
+    font-family: 'Kanit', Arial, sans-serif !important;
+  }
+
+  /* Override Ant Design components */
+  .ant-layout-sider,
+  .ant-menu,
+  .ant-menu-item,
+  .ant-menu-title-content,
+  .ant-btn,
+  .ant-btn > span,
+  .ant-avatar,
+  .ant-dropdown-trigger,
+  .ant-dropdown-menu,
+  .ant-dropdown-menu-item,
+  .ant-dropdown-menu-item > span,
+  .ant-form-item-label > label,
+  .ant-descriptions-item-label,
+  .ant-descriptions-item-content,
+  .ant-table,
+  .ant-table-cell,
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    font-family: 'Kanit', Arial, sans-serif !important;
+  }
+
+  /* Dark theme table styles */
+  .ant-table-dark .ant-table-thead > tr > th,
+  .ant-table-dark .ant-table-tbody > tr > td {
+    font-family: 'Kanit', Arial, sans-serif !important;
+    background: #4b5e6a;
+    color: white;
+  }
+
+  .ant-table-dark .ant-table-tbody > tr:hover > td {
+    background: #5a6e7a;
+  }
+
+  /* Modal styles */
+  .ant-modal {
+    z-index: 10000 !important;
+    position: fixed !important;
+    top: 20% !important;
+    left: 50% !important;
+    transform: translate(-50%, 0) !important;
+    display: block !important;
+  }
+
+  .ant-modal-mask {
+    z-index: 9999 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+  }
+}
+
+/* ใน index.css */
+@layer components {
+  .ant-btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+  }
+  .ant-btn-primary:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+  }
+  /* ปุ่มทั่วไปใน Dark Theme */
+  :where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-default {
+    background-color: var(--dark-bg-secondary) !important;
+    border-color: var(--dark-border-secondary) !important;
+    color: var(--dark-text) !important;
+  }
+  .ant-btn-default:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: #ffffff !important;
+  }
+}

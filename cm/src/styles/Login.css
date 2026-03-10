@@ -1,0 +1,13 @@
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.login-container.dark {
+    background-color: #1f2937;
+}
+.login-container.light {
+    background-color: #f3f4f6;
+}
+/* เพิ่มสไตล์อื่น ๆ */

@@ -1,0 +1,302 @@
+/* Actual.css - สไตล์เรียบง่าย มีพื้นที่มากขึ้น */
+
+/* ===========================
+   Tooltip Styles (เพิ่มใหม่)
+   =========================== */
+.progress-tooltip .ant-tooltip-inner {
+  font-family: 'Kanit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+  font-size: 13px !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  line-height: 1.6 !important;
+}
+
+.progress-tooltip .ant-tooltip-arrow-content {
+  --antd-arrow-background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Global Tooltip Override */
+.ant-tooltip {
+  font-family: 'Kanit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+.ant-tooltip-inner {
+  font-family: 'Kanit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ===========================
+   Tree Styles
+   =========================== */
+.Actual-tree .ant-tree-switcher-noop {
+  display: none;
+}
+
+.Actual-tree .ant-tree-indent {
+  width: 0;
+}
+
+.Actual-tree .ant-tree-treenode {
+  padding: 0 !important;
+  margin: 0;
+  width: 100% !important;
+}
+
+.Actual-tree .ant-tree-node-content-wrapper {
+  padding: 4px 0 !important;
+  flex: 1;
+  width: 100% !important;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  line-height: 1.3;
+}
+
+.Actual-tree .ant-tree-title {
+  width: 100%;
+  padding: 0;
+}
+
+.Actual-tree .ant-tree-list-holder-inner {
+  padding: 0;
+}
+
+/* ไอเท็มหลัก - เรียบง่าย */
+.Actual-tree-item {
+  margin: 0 0 4px 0;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Kanit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: block;
+}
+
+.Actual-tree-item:hover {
+  background: #faf5ff;
+  border-left-color: #a78bfa;
+  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.1);
+}
+
+.Actual-tree-item.selected {
+  background: #faf5ff;
+  border-left-color: #8b5cf6;
+  border-left-width: 4px;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.15);
+}
+
+/* Row 1 */
+.Actual-tree-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.Actual-tree-code-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.Actual-tree-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 9px;
+  background: #8b5cf6;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.Actual-tree-name {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.Actual-tree-status {
+  flex-shrink: 0;
+}
+
+.Actual-tree-status .ant-tag {
+  margin: 0;
+  font-size: 10px;
+  padding: 0 6px;
+  line-height: 18px;
+}
+
+/* Row 2 - แสดงตลอดเวลา แทนที่จะซ่อน */
+.Actual-tree-row2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #e5e7eb;
+  font-size: 10px;
+  color: #6b7280;
+  width: 100%;
+}
+
+.Actual-tree-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.Actual-tree-date {
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.Actual-tree-date .anticon {
+  font-size: 10px;
+}
+
+.Actual-tree-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.Actual-tree-progress-bar {
+  width: 60px;
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.Actual-tree-progress-fill {
+  height: 100%;
+  background: #8b5cf6;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.Actual-tree-progress-text {
+  font-weight: 600;
+  font-size: 10px;
+  color: #8b5cf6;
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ปรับ selected state ของ antd */
+.Actual-tree .ant-tree-node-selected .ant-tree-node-content-wrapper {
+  background-color: transparent !important;
+}
+
+/* Dark mode support */
+.dark .Actual-tree-item {
+  background: #1f2937;
+  border-color: #374151;
+  border-left-color: #4b5563;
+}
+
+.dark .Actual-tree-item:hover {
+  background: #111827;
+  border-left-color: #a78bfa;
+}
+
+.dark .Actual-tree-item.selected {
+  background: #111827;
+  border-left-color: #8b5cf6;
+}
+
+.dark .Actual-tree-name {
+  color: #f9fafb;
+}
+
+.dark .Actual-tree-date {
+  color: #9ca3af;
+}
+
+.dark .Actual-tree-row2 {
+  border-top-color: #374151;
+}
+
+.dark .Actual-tree-progress-bar {
+  background-color: #374151;
+}
+
+/* Dark mode Tooltip */
+.dark .ant-tooltip-inner {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.dark .progress-tooltip .ant-tooltip-arrow-content {
+  --antd-arrow-background-color: #1f2937 !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .Actual-tree-item {
+    padding: 6px;
+    border-radius: 4px;
+  }
+
+  .Actual-tree-code {
+    min-width: 20px;
+    height: 20px;
+    font-size: 8px;
+    border-radius: 3px;
+  }
+
+  .Actual-tree-name {
+    font-size: 11px;
+  }
+
+  .Actual-tree-row2 {
+    margin-top: 4px;
+    padding-top: 4px;
+    font-size: 9px;
+  }
+
+  .Actual-tree-progress-bar {
+    width: 40px;
+    height: 3px;
+  }
+
+  .Actual-tree-progress-text {
+    font-size: 9px;
+  }
+  
+  /* Tooltip responsive */
+  .ant-tooltip-inner {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+/* Smooth transitions */
+.Actual-tree-item * {
+  transition: all 0.15s ease;
+}

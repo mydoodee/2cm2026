@@ -1,0 +1,249 @@
+/* Planning.css - สไตล์เรียบง่าย เหมือน Actual */
+
+/* ===========================
+   Tree Styles
+   =========================== */
+.planning-tree .ant-tree-switcher-noop {
+  display: none;
+}
+
+.planning-tree .ant-tree-indent {
+  width: 0;
+}
+
+.planning-tree .ant-tree-treenode {
+  padding: 0 !important;
+  margin: 0;
+  width: 100% !important;
+}
+
+.planning-tree .ant-tree-node-content-wrapper {
+  padding: 4px 0 !important;
+  flex: 1;
+  width: 100% !important;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  line-height: 1.3;
+}
+
+.planning-tree .ant-tree-title {
+  width: 100%;
+  padding: 0;
+}
+
+.planning-tree .ant-tree-list-holder-inner {
+  padding: 0;
+}
+
+/* ไอเท็มหลัก */
+.planning-tree-item {
+  margin: 0 0 4px 0;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Kanit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: block;
+}
+
+.planning-tree-item:hover {
+  background: #faf5ff;
+  border-left-color: #a78bfa;
+  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.1);
+}
+
+.planning-tree-item.selected {
+  background: #faf5ff;
+  border-left-color: #8b5cf6;
+  border-left-width: 4px;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.15);
+}
+
+/* Header: รหัส + ชื่อ */
+.planning-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.planning-tree-code-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.planning-tree-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 9px;
+  background: #8b5cf6;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.planning-tree-name {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* Summary: แถวเดียวกันหมด */
+.planning-tree-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #6b7280;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.planning-tree-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.planning-tree-summary-left > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.planning-tree-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.planning-tree-progress {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.planning-tree-progress-bar {
+  width: 40px !important;
+  height: 3px;
+  background-color: #e5e7eb;
+  border-radius: 1.5px;
+  overflow: hidden;
+}
+
+.planning-tree-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a78bfa 0%, #8b5cf6 100%);
+  border-radius: 1.5px;
+  transition: width 0.3s ease;
+}
+
+.planning-tree-progress-text {
+  font-weight: 600;
+  font-size: 9px;
+  color: #7c3aed;
+  min-width: 22px;
+  text-align: right;
+}
+
+.planning-tree-status .ant-tag {
+  margin: 0;
+  font-size: 9px;
+  padding: 0 5px;
+  line-height: 16px;
+  height: 18px;
+}
+
+/* ปรับ selected state ของ antd */
+.planning-tree .ant-tree-node-selected .ant-tree-node-content-wrapper {
+  background-color: transparent !important;
+}
+
+/* Dark mode support */
+.dark .planning-tree-item {
+  background: #1f2937;
+  border-color: #374151;
+  border-left-color: #4b5563;
+}
+
+.dark .planning-tree-item:hover {
+  background: #111827;
+  border-left-color: #a78bfa;
+}
+
+.dark .planning-tree-item.selected {
+  background: #111827;
+  border-left-color: #8b5cf6;
+}
+
+.dark .planning-tree-name {
+  color: #f9fafb;
+}
+
+.dark .planning-tree-summary {
+  color: #9ca3af;
+}
+
+.dark .planning-tree-progress-bar {
+  background-color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .planning-tree-item {
+    padding: 6px;
+    border-radius: 4px;
+  }
+
+  .planning-tree-code {
+    min-width: 20px;
+    height: 20px;
+    font-size: 8px;
+    border-radius: 3px;
+  }
+
+  .planning-tree-name {
+    font-size: 11px;
+  }
+
+  .planning-tree-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .planning-tree-summary-right {
+    margin-left: auto;
+  }
+
+  .planning-tree-progress-bar {
+    width: 35px !important;
+  }
+}
+
+/* Smooth transitions */
+.planning-tree-item * {
+  transition: all 0.15s ease;
+}

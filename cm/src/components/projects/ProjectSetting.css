@@ -1,0 +1,110 @@
+/* ProjectSetting.css */
+
+/* ฟอนต์ Kanit */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap');
+
+.font-kanit {
+  font-family: 'Kanit', sans-serif !important;
+}
+
+/* การ์ดหลัก */
+.project-setting-card {
+  transition: all 0.3s ease;
+  padding: 24px;
+  border-radius: 16px !important;
+}
+
+.project-setting-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* การ์ดย่อยในส่วนสถิติตามปี */
+.year-stat-card {
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+  border-radius: 12px !important;
+}
+
+.year-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* สไตล์ตาราง */
+.project-table .ant-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.project-table .ant-table-thead > tr > th {
+  font-family: 'Kanit', sans-serif;
+  font-weight: 500;
+  background: #f8fafc;
+  color: #1f2937;
+}
+
+.project-table.ant-table-dark .ant-table-thead > tr > th {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+/* สไตล์สำหรับโหมด dark */
+.ant-input-dark .ant-input {
+  background: #374151;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+.ant-input-dark .ant-input::placeholder {
+  color: #9ca3af;
+}
+
+.ant-select-dark .ant-select-selector {
+  background: #374151;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+.ant-select-dark .ant-select-arrow {
+  color: #9ca3af;
+}
+
+.ant-modal-dark .ant-modal-content {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+.ant-modal-dark .ant-modal-header {
+  background: #1f2937;
+  color: #e5e7eb;
+  border-bottom: 1px solid #4b5563;
+}
+
+.ant-modal-dark .ant-modal-title {
+  color: #e5e7eb;
+  font-family: 'Kanit', sans-serif;
+}
+
+.ant-modal-dark .ant-modal-footer .ant-btn {
+  font-family: 'Kanit', sans-serif;
+}
+
+.ant-modal-dark .ant-btn-primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.ant-modal-dark .ant-btn-primary:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+/* ปรับปุ่มให้มีมุมโค้ง */
+.ant-btn.rounded-lg {
+  border-radius: 8px !important;
+}
+
+/* ปรับระยะห่างและความสมดุล */
+.project-setting-card .ant-space-item {
+  margin-right: 12px;
+}
