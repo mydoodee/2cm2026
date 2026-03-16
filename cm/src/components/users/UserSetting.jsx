@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Table, Form, Input, Select, Space, Spin, Modal, Row, Col, Typography, Card, Badge, Upload, Empty, List, Avatar } from 'antd';
 import { 
-    LeftOutlined, EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, UserOutlined, UploadOutlined, SettingOutlined
+    LeftOutlined, EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, UserOutlined, UploadOutlined, SettingOutlined, CopyOutlined
 } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
@@ -27,6 +27,9 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     const [searchText, setSearchText] = useState('');
     const [fileList, setFileList] = useState([]);
     const [selectedUserForRoles, setSelectedUserForRoles] = useState(null);
+    const [copyModalVisible, setCopyModalVisible] = useState(false);
+    const [sourceUserId, setSourceUserId] = useState(null);
+    const [isCopying, setIsCopying] = useState(false);
 
     // Refresh access token
   const refreshAccessToken = async () => {
@@ -766,6 +769,88 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         }
     };
 
+    // Handle copy permissions from another user
+    const handleCopyPermissions = async () => {
+        if (!selectedUserForRoles) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ข้อผิดพลาด',
+                text: 'กรุณาเลือกผู้ใช้ปลายทางก่อน',
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'ตกลง',
+            });
+            return;
+        }
+
+        if (!sourceUserId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ข้อผิดพลาด',
+                text: 'กรุณาเลือกผู้ใช้ต้นทาง',
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'ตกลง',
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            icon: 'question',
+            title: 'ยืนยันการคัดลอกสิทธิ์',
+            text: `คุณต้องการคัดลอกสิทธิ์จากผู้ใช้นี้ไปยัง ${selectedUserForRoles.username} ใช่หรือไม่? สิทธิ์เดิมที่ซ้ำกันจะถูกอัปเดต`,
+            showCancelButton: true,
+            confirmButtonColor: '#4f46e5',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'ตกลง',
+            cancelButtonText: 'ยกเลิก',
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            setIsCopying(true);
+            const token = localStorage.getItem('token');
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/users/copy-permissions`,
+                {
+                    sourceUserId: sourceUserId,
+                    targetUserId: selectedUserForRoles.user_id
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: response.data.message,
+                confirmButtonColor: '#4f46e5',
+                confirmButtonText: 'ตกลง',
+            });
+
+            setCopyModalVisible(false);
+            setSourceUserId(null);
+            await fetchUsers(); // โหลดข้อมูลผู้ใช้ใหม่เพื่ออัปเดตรายการสิทธิ์
+            
+            // อัปเดตข้อมูลผู้ใช้ที่เลือกอยู่
+            if (users) {
+                const updatedUser = users.find(u => u.user_id === selectedUserForRoles.user_id);
+                if (updatedUser) {
+                    setSelectedUserForRoles(updatedUser);
+                }
+            }
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'ไม่สามารถคัดลอกสิทธิ์ได้';
+            Swal.fire({
+                icon: 'error',
+                title: 'ข้อผิดพลาด',
+                text: errorMessage,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'ตกลง',
+            });
+        } finally {
+            setIsCopying(false);
+        }
+    };
+
     // Upload properties for profile image
     const uploadProps = {
         onRemove: () => {
@@ -953,10 +1038,23 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                             </Spin>
                         </Col>
                         <Col span={8}>
-                            <Title level={5} className="mb-3">
-                                <SettingOutlined className="mr-2" />
-                                กำหนดสิทธิ์โครงการ
-                            </Title>
+                             <div className="flex items-center justify-between mb-3">
+                                    <Title level={5} className="mb-0">
+                                        <SettingOutlined className="mr-2" />
+                                        กำหนดสิทธิ์โครงการ
+                                    </Title>
+                                    {selectedUserForRoles && (
+                                        <Button 
+                                            type="link" 
+                                            icon={<CopyOutlined />} 
+                                            size="small"
+                                            onClick={() => setCopyModalVisible(true)}
+                                            className="text-indigo-600 p-0 h-auto"
+                                        >
+                                            คัดลอกสิทธิ์
+                                        </Button>
+                                    )}
+                                </div>
                             {selectedUserForRoles ? (
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
@@ -1118,7 +1216,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                             label="รหัสผ่าน"
                             rules={editMode ? [] : [
                                 { required: true, message: 'กรุณากรอกรหัสผ่าน' },
-                                { min: 6, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' },
+                                { min: 4, message: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' },
                             ]}
                         >
                             <Input.Password placeholder="รหัสผ่าน" />
@@ -1187,6 +1285,52 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                         </div>
                     </Form>
                 </Spin>
+            </Modal>
+
+            <Modal
+                title={
+                    <div className="flex items-center space-x-2">
+                        <CopyOutlined />
+                        <span>คัดลอกสิทธิ์จากผู้ใช้อื่น</span>
+                    </div>
+                }
+                open={copyModalVisible}
+                onCancel={() => {
+                    setCopyModalVisible(false);
+                    setSourceUserId(null);
+                }}
+                onOk={handleCopyPermissions}
+                confirmLoading={isCopying}
+                okText="คัดลอกสิทธิ์"
+                cancelText="ยกเลิก"
+                okButtonProps={{ className: 'bg-indigo-500 border-0' }}
+            >
+                <div className="py-4">
+                    <Text className="block mb-4">
+                        เลือกผู้ใช้ต้นทางที่ต้องการคัดลอกสิทธิ์ (โครงการและโฟลเดอร์) มายัง <Text strong>{selectedUserForRoles?.username}</Text>
+                    </Text>
+                    <Select
+                        placeholder="เลือกผู้ใช้ต้นทาง"
+                        style={{ width: '100%' }}
+                        onChange={setSourceUserId}
+                        value={sourceUserId}
+                        showSearch
+                        optionFilterProp="children"
+                    >
+                        {users
+                            .filter(u => u.user_id !== selectedUserForRoles?.user_id)
+                            .map(u => (
+                                <Option key={u.user_id} value={u.user_id}>
+                                    {u.username} ({u.first_name} {u.last_name})
+                                </Option>
+                            ))}
+                    </Select>
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded">
+                        <Text type="secondary" className="text-xs">
+                            * ระบบจะเพิ่มโครงการและสิทธิ์โฟลเดอร์ที่ผู้ใช้ต้นทางมีอยู่ หากผู้ใช้ปลายทางมีโครงการเดียวกันอยู่แล้ว บทบาทจะถูกอัปเดตตามต้นทาง
+                        </Text>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

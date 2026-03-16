@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Space, Card, Typography, Input, Form, Checkbox, App, Empty, Tree, Breadcrumb, Modal, Select, List, Tag, Divider, Tooltip, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, SaveOutlined, FolderAddOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, SaveOutlined, FolderAddOutlined, SearchOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import Navbar from '../Navbar';
 import axios from 'axios';
@@ -48,6 +48,13 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [applyToSubfolders, setApplyToSubfolders] = useState(false);
   const selectedFolderRef = useRef(null);
+
+  // Copy Folder Structure states
+  const [isCopyModalVisible, setIsCopyModalVisible] = useState(false);
+  const [sourceProjectId, setSourceProjectId] = useState(null);
+  const [sourceFolders, setSourceFolders] = useState([]);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isFetchingSourceFolders, setIsFetchingSourceFolders] = useState(false);
 
   const fetchProjects = async () => {
     try {
@@ -438,6 +445,65 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
     }
   };
 
+  // ===== Copy Folder Structure handlers =====
+  const handleOpenCopyModal = () => {
+    setSourceProjectId(null);
+    setSourceFolders([]);
+    setIsCopyModalVisible(true);
+  };
+
+  const fetchSourceFolders = async (projectId) => {
+    if (!projectId) {
+      setSourceFolders([]);
+      return;
+    }
+    setIsFetchingSourceFolders(true);
+    try {
+      const response = await api.get(`/api/folders?project_id=${projectId}`);
+      setSourceFolders(response.data.folders || []);
+    } catch {
+      message.error('ไม่สามารถดึงโฟลเดอร์ต้นทางได้');
+      setSourceFolders([]);
+    } finally {
+      setIsFetchingSourceFolders(false);
+    }
+  };
+
+  const getSourceFolderTreeData = () => {
+    const buildTree = (parentId = null) => {
+      return sourceFolders
+        .filter(f => f.parent_folder_id === parentId)
+        .map(folder => {
+          const children = buildTree(folder.folder_id);
+          return {
+            title: folder.folder_name,
+            key: folder.folder_id.toString(),
+            icon: <FolderOutlined />,
+            children,
+          };
+        });
+    };
+    return buildTree();
+  };
+
+  const handleCopyStructure = async () => {
+    if (!sourceProjectId || !selectedProject) return;
+    setIsCopying(true);
+    try {
+      const response = await api.post('/api/folders/copy-structure', {
+        sourceProjectId,
+        targetProjectId: selectedProject,
+      });
+      message.success(response.data.message || 'คัดลอกโครงสร้างสำเร็จ');
+      setIsCopyModalVisible(false);
+      await fetchFoldersData(selectedProject);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'ไม่สามารถคัดลอกโครงสร้างได้');
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
   }, []);
@@ -527,15 +593,25 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                     allowClear
                     size="large"
                   />
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => showFolderModal()}
-                    size="large"
-                    style={{ borderRadius: '8px' }}
-                  >
-                    เพิ่มโฟลเดอร์หลัก
-                  </Button>
+                  <Space>
+                    <Button
+                      icon={<CopyOutlined />}
+                      onClick={handleOpenCopyModal}
+                      size="large"
+                      style={{ borderRadius: '8px' }}
+                    >
+                      คัดลอกโครงสร้าง
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => showFolderModal()}
+                      size="large"
+                      style={{ borderRadius: '8px' }}
+                    >
+                      เพิ่มโฟลเดอร์หลัก
+                    </Button>
+                  </Space>
                 </div>
 
                 <Divider style={{ margin: '16px 0' }} />
@@ -868,6 +944,116 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
           background: transparent !important;
         }
       `}</style>
+
+      {/* Copy Folder Structure Modal */}
+      <Modal
+        title={
+          <span>
+            <CopyOutlined className="mr-2" />
+            คัดลอกโครงสร้างโฟลเดอร์
+          </span>
+        }
+        open={isCopyModalVisible}
+        onCancel={() => setIsCopyModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsCopyModalVisible(false)}>
+            ยกเลิก
+          </Button>,
+          <Button
+            key="copy"
+            type="primary"
+            icon={<CopyOutlined />}
+            onClick={handleCopyStructure}
+            loading={isCopying}
+            disabled={!sourceProjectId || sourceFolders.length === 0}
+          >
+            คัดลอกโครงสร้าง
+          </Button>,
+        ]}
+        width={600}
+        className={theme === 'dark' ? 'dark-modal' : ''}
+      >
+        <div style={{ marginTop: 16 }}>
+          <Text style={{ color: theme === 'dark' ? '#d1d5db' : undefined }}>
+            เลือกโครงการต้นทางที่ต้องการคัดลอกโครงสร้างโฟลเดอร์มา
+          </Text>
+
+          <Select
+            placeholder="เลือกโครงการต้นทาง"
+            style={{ width: '100%', marginTop: 12 }}
+            size="large"
+            value={sourceProjectId}
+            onChange={(value) => {
+              setSourceProjectId(value);
+              fetchSourceFolders(value);
+            }}
+            className={theme === 'dark' ? 'dark-select' : ''}
+            showSearch
+            optionFilterProp="children"
+          >
+            {projects
+              .filter(p => p.project_id !== selectedProject)
+              .map(p => (
+                <Option key={p.project_id} value={p.project_id}>
+                  {p.project_name}
+                </Option>
+              ))}
+          </Select>
+
+          {sourceProjectId && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 12,
+                border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
+                backgroundColor: theme === 'dark' ? '#111827' : '#fafafa',
+                maxHeight: 350,
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text strong style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>
+                  📂 โครงสร้างโฟลเดอร์ ({sourceFolders.length} โฟลเดอร์)
+                </Text>
+              </div>
+
+              {isFetchingSourceFolders ? (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <Text style={{ color: theme === 'dark' ? '#9ca3af' : undefined }}>กำลังโหลด...</Text>
+                </div>
+              ) : sourceFolders.length === 0 ? (
+                <Empty description="โครงการนี้ไม่มีโฟลเดอร์" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              ) : (
+                <Tree
+                  showLine
+                  showIcon
+                  defaultExpandAll
+                  treeData={getSourceFolderTreeData()}
+                  selectable={false}
+                  className={theme === 'dark' ? 'dark-tree' : ''}
+                />
+              )}
+            </div>
+          )}
+
+          {sourceProjectId && sourceFolders.length > 0 && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: '8px 12px',
+                borderRadius: 8,
+                backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : '#eff6ff',
+                border: `1px solid ${theme === 'dark' ? '#4f46e5' : '#bfdbfe'}`,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme === 'dark' ? '#818cf8' : '#3b82f6' }}>
+                ℹ️ จะคัดลอกเฉพาะโครงสร้างโฟลเดอร์เท่านั้น (ไม่รวมไฟล์และสิทธิ์)
+              </Text>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

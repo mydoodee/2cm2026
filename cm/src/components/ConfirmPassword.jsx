@@ -29,8 +29,8 @@ const ConfirmPassword = ({ theme, setTheme }) => {
             setError('รหัสผ่านไม่ตรงกัน');
             return;
         }
-        if (password.length < 8) {
-            setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+        if (password.length < 4) {
+            setError('รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร');
             return;
         }
 

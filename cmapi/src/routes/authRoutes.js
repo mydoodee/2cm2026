@@ -13,6 +13,7 @@ const {
   deleteProjectUserRole,
   resetPassword,
   confirmPassword,
+  copyUserPermissions,
 } = require('../controllers/authController');
 const authenticateToken = require('../middleware/authenticateToken');
 const multer = require('multer');
@@ -105,6 +106,9 @@ router.post('/user', authenticateToken, upload.single('profile_image'), multerEr
 
 // Route: ลบผู้ใช้
 router.delete('/user/:id', authenticateToken, deleteUser);
+
+// Route: คัดลอกสิทธิ์ผู้ใช้
+router.post('/users/copy-permissions', authenticateToken, copyUserPermissions);
 
 // Route: รีเฟรช token
 router.post('/refresh-token', refreshToken);

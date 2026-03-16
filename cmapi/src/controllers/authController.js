@@ -412,10 +412,9 @@ const createUser = async (req, res) => {
             });
         }
 
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-        if (!passwordRegex.test(password)) {
+        if (password.length < 4) {
             return res.status(400).json({
-                message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวอักษรและตัวเลข'
+                message: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร'
             });
         }
 
@@ -948,6 +947,102 @@ const confirmPassword = async (req, res) => {
     }
 };
 
+const copyUserPermissions = async (req, res) => {
+    const { sourceUserId, targetUserId } = req.body;
+
+    if (!sourceUserId || !targetUserId) {
+        return res.status(400).json({ message: 'กรุณาระบุ sourceUserId และ targetUserId' });
+    }
+
+    if (sourceUserId === targetUserId) {
+        return res.status(400).json({ message: 'ผู้ใช้ต้นทางและปลายทางต้องไม่ใช่คนเดียวกัน' });
+    }
+
+    let connection;
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+        }
+
+        connection = await getConnection();
+        
+        // ตรวจสอบสิทธิ์ Admin
+        const [adminRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
+            [req.user.user_id]
+        );
+        const isAdmin = adminRoles.length > 0 || req.user.username === 'admin' || req.user.username === 'adminspk';
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถคัดลอกสิทธิ์ได้' });
+        }
+
+        // ตรวจสอบว่าผู้ใช้ทั้งสองคนมีอยู่จริง
+        const [users] = await connection.execute(
+            'SELECT user_id, username FROM users WHERE user_id IN (?, ?) AND active = 1',
+            [sourceUserId, targetUserId]
+        );
+        if (users.length < 2) {
+            return res.status(404).json({ message: 'ไม่พบข้อมูลผู้ใช้ต้นทางหรือปลายทาง' });
+        }
+
+        await connection.beginTransaction();
+
+        // 1. คัดลอก Project Roles (project_user_roles)
+        const [sourceProjectRoles] = await connection.execute(
+            'SELECT project_id, role_id FROM project_user_roles WHERE user_id = ?',
+            [sourceUserId]
+        );
+
+        for (const role of sourceProjectRoles) {
+            await connection.execute(
+                `INSERT INTO project_user_roles (project_id, user_id, role_id, created_at) 
+                 VALUES (?, ?, ?, NOW()) 
+                 ON DUPLICATE KEY UPDATE role_id = ?, updated_at = NOW()`,
+                [role.project_id, targetUserId, role.role_id, role.role_id]
+            );
+        }
+
+        // 2. คัดลอก Folder Permissions (folder_permissions)
+        const [sourceFolderPerms] = await connection.execute(
+            'SELECT folder_id, permission_type FROM folder_permissions WHERE user_id = ?',
+            [sourceUserId]
+        );
+
+        for (const perm of sourceFolderPerms) {
+            await connection.execute(
+                `INSERT INTO folder_permissions (folder_id, user_id, permission_type, created_at) 
+                 VALUES (?, ?, ?, NOW()) 
+                 ON DUPLICATE KEY UPDATE permission_type = ?, updated_at = NOW()`,
+                [perm.folder_id, targetUserId, perm.permission_type, perm.permission_type]
+            );
+        }
+
+        await connection.execute(
+            'INSERT INTO logs (message) VALUES (?)',
+            [`Permissions copied from user_id: ${sourceUserId} to user_id: ${targetUserId} by admin_id: ${req.user.user_id}`]
+        );
+
+        await connection.commit();
+
+        res.json({
+            message: 'คัดลอกสิทธิ์สำเร็จ',
+            details: {
+                projectRolesCount: sourceProjectRoles.length,
+                folderPermissionsCount: sourceFolderPerms.length
+            }
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        res.status(500).json({
+            message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        if (connection) await connection.release();
+    }
+};
+
 module.exports = {
     login,
     getUser,
@@ -959,5 +1054,6 @@ module.exports = {
     assignProjectRole,
     deleteProjectUserRole,
     resetPassword,
-    confirmPassword
+    confirmPassword,
+    copyUserPermissions
 };

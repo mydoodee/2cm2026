@@ -14,6 +14,7 @@ router.post('/folder', authenticateToken, folderController.createFolder);
 router.put('/folder/:id', authenticateToken, folderController.updateFolder);
 router.delete('/folder/:id', authenticateToken, folderController.deleteFolder);
 router.put('/folder/:id/permissions', authenticateToken, folderController.updateFolderPermissions);
+router.post('/folders/copy-structure', authenticateToken, folderController.copyFolderStructure);
 
 // File Management Routes
 router.get('/folder/:folderId/files', authenticateToken, folderController.getFiles);

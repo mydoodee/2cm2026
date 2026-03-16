@@ -1934,80 +1934,94 @@ return (
         width={700}
         className="font-kanit"
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Upload.Dragger
-            multiple
-            fileList={folderToUpload}
-            showUploadList={false}
-            beforeUpload={(file) => {
-              if (file.size === 0) {
-                message.error(`ไฟล์ "${file.name}" ไม่มีข้อมูล`);
-                return Upload.LIST_IGNORE;
-              }
-              setFolderToUpload(prev => [...prev, file]);
-              return false;
-            }}
-            onRemove={(file) => {
-              setFolderToUpload(prev => prev.filter(f => f.uid !== file.uid));
-            }}
-            className="upload-dragger"
-            openFileDialogOnClick={true}
-            accept="*"
-          >
-            <p className="ant-upload-drag-icon">
-              <CloudUploadOutlined />
+        <Upload.Dragger
+          multiple
+          directory={true}
+          fileList={folderToUpload}
+          showUploadList={false}
+          beforeUpload={(file) => {
+            if (file.size === 0) {
+              message.error(`ไฟล์ "${file.name}" ไม่มีข้อมูล`);
+              return Upload.LIST_IGNORE;
+            }
+            setFolderToUpload(prev => [...prev, file]);
+            return false;
+          }}
+          onRemove={(file) => {
+            setFolderToUpload(prev => prev.filter(f => f.uid !== file.uid));
+          }}
+          openFileDialogOnClick={false}
+          className="!rounded-xl !border-2"
+          style={{ 
+            background: theme === 'dark' ? 'rgba(30,41,59,0.5)' : 'rgba(248,250,252,0.8)',
+            borderColor: theme === 'dark' ? '#374151' : '#e2e8f0',
+          }}
+        >
+          <div className="py-6 px-4">
+            <CloudUploadOutlined style={{ fontSize: '36px', color: '#3b82f6', marginBottom: '8px' }} />
+            <p className={`text-base font-medium mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`}>
+              ลากไฟล์หรือโฟลเดอร์มาวางที่นี่
             </p>
-            <p className="ant-upload-text">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
-            <p className="ant-upload-hint">
-              รองรับการอัพโหลดหลายไฟล์พร้อมกัน
+            <p className={`text-xs mb-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              หรือเลือกจากปุ่มด้านล่าง
             </p>
-          </Upload.Dragger>
-
-          <Upload
-            multiple
-            directory
-            showUploadList={false}
-            beforeUpload={(file) => {
-              if (file.size === 0) {
-                return Upload.LIST_IGNORE;
-              }
-              setFolderToUpload(prev => [...prev, file]);
-              return false;
-            }}
-          >
-            <Button 
-              icon={<FolderOpenOutlined />} 
-              block
-              type="dashed"
-            >
-              หรือเลือกโฟลเดอร์ทั้งโฟลเดอร์
-            </Button>
-          </Upload>
-        </Space>
+            <div className="flex justify-center gap-3" onClick={(e) => e.stopPropagation()}>
+              <Upload
+                multiple
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  if (file.size > 0) setFolderToUpload(prev => [...prev, file]);
+                  return false;
+                }}
+              >
+                <Button icon={<FileOutlined />} className="!rounded-full !px-5 !h-9 !text-sm">
+                  ไฟล์
+                </Button>
+              </Upload>
+              <Upload
+                multiple
+                directory
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  if (file.size > 0) setFolderToUpload(prev => [...prev, file]);
+                  return false;
+                }}
+              >
+                <Button icon={<FolderOpenOutlined />} className="!rounded-full !px-5 !h-9 !text-sm">
+                  โฟลเดอร์
+                </Button>
+              </Upload>
+            </div>
+          </div>
+        </Upload.Dragger>
 
         {folderToUpload.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <Text strong>ไฟล์ที่เลือก: {folderToUpload.length} ไฟล์</Text>
-            <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8 }}>
+          <div className={`mt-3 rounded-lg border overflow-hidden ${theme === 'dark' ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-white'}`}>
+            <div className={`flex items-center justify-between px-3 py-2 ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+              <Text className="text-xs font-medium">
+                📎 {folderToUpload.length} ไฟล์พร้อมอัพโหลด
+              </Text>
+              <Button type="link" size="small" danger className="!text-xs !p-0 !h-auto"
+                onClick={() => setFolderToUpload([])}
+              >
+                ล้างทั้งหมด
+              </Button>
+            </div>
+            <div style={{ maxHeight: 160, overflow: 'auto' }}>
               {folderToUpload.map((file, index) => (
-                <div key={index} className="flex items-center justify-between py-1 hover:bg-gray-50 px-2 rounded">
-                  <Text className="text-sm truncate" style={{ maxWidth: '60%' }}>
-                    {file.webkitRelativePath || file.name}
-                  </Text>
-                  <div className="flex items-center gap-2">
-                    <Text className="text-xs text-gray-500">{formatFileSize(file.size)}</Text>
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => {
-                        setFolderToUpload(prev => prev.filter(f => f.uid !== file.uid));
-                      }}
-                      style={{ 
-                        padding: '2px 8px',
-                        color: '#ff4d4f'
-                      }}
+                <div key={index} className={`flex items-center justify-between px-3 py-1.5 text-xs ${theme === 'dark' ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50'} transition-colors`}>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileOutlined className={`flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-500'}`} />
+                    <span className={`truncate ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {file.webkitRelativePath || file.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{formatFileSize(file.size)}</span>
+                    <CloseOutlined 
+                      className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors"
+                      style={{ fontSize: '10px' }}
+                      onClick={() => setFolderToUpload(prev => prev.filter(f => f.uid !== file.uid))}
                     />
                   </div>
                 </div>
