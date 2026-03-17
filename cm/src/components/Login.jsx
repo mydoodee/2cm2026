@@ -5,6 +5,7 @@ import { Form, Input, Button, Alert, Typography } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone, LoginOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import logoSpk from '../assets/logospk.png';
 
 const { Title, Text } = Typography;
 
@@ -95,17 +96,17 @@ function Login({ setUser, theme }) {
         <div className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 text-center">
           {/* Logo */}
           <div className="flex justify-center mb-4 sm:mb-6">
-            <div className={clsx(
-              'relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center',
-              'shadow-lg transition-transform active:scale-95 sm:hover:scale-105',
-              theme === 'dark'
-                ? 'bg-gradient-to-br from-red-600 to-red-700'
-                : 'bg-gradient-to-br from-red-500 to-red-600'
-            )}>
-              <span className="text-white font-black text-xl sm:text-2xl tracking-tight">
-                SPK
-              </span>
-            </div>
+            <img 
+              src={logoSpk} 
+              alt="SPK Logo" 
+              className={clsx(
+                'w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl object-contain p-2',
+                'transition-transform active:scale-95 sm:hover:scale-105',
+                theme === 'dark'
+                  ? 'bg-red-950/30 border border-red-900/50 shadow-[0_0_30px_rgba(220,38,38,0.2)]'
+                  : 'bg-red-50 border border-red-100 shadow-[0_10px_25px_rgba(220,38,38,0.15)]'
+              )}
+            />
           </div>
 
           <Title level={2} className={clsx(

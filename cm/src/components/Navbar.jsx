@@ -14,6 +14,7 @@ import {
   DownOutlined,
   SafetyOutlined,
 } from '@ant-design/icons';
+import logoSpk from '../assets/logospk.png';
 import { Badge, Avatar } from 'antd';
 import clsx from 'clsx';
 
@@ -71,33 +72,14 @@ function Navbar({ user, setUser, theme, setTheme }) {
   {/* SPK Logo - ขนาดเล็กลง */}
   <div
     className={clsx(
-      'relative p-1.5 rounded-lg shadow-lg transition-all duration-300 group-hover:scale-110',
+      'relative p-1.5 rounded-lg transition-all duration-300 group-hover:scale-110',
       theme === 'dark'
-        ? 'bg-gradient-to-br from-red-700 to-red-900 border border-red-500/30 shadow-red-900/50'
-        : 'bg-gradient-to-br from-red-600 to-red-700 border border-red-400/40 shadow-red-600/40'
+        ? 'bg-red-950/30 border border-red-900/50 shadow-[0_0_20px_rgba(220,38,38,0.15)]'
+        : 'bg-red-50 border border-red-100 shadow-[0_4px_12px_rgba(220,38,38,0.1)]'
     )}
   >
     <div className="relative w-9 h-9 flex items-center justify-center">
-      {/* Background Structure Lines */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <svg className="w-7 h-7 text-white/20" viewBox="0 0 28 28" fill="none">
-          <path d="M6 6 H22 M6 14 H22 M6 22 H22 M14 6 V22" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
-      </div>
-
-      {/* SPK Text - เล็กลงแต่ยังชัด */}
-      <span
-        className="relative text-white font-black text-xs tracking-tighter"
-        style={{
-          fontFamily: '"Montserrat", "Prompt", sans-serif',
-          letterSpacing: '-0.5px',
-        }}
-      >
-        SPK
-      </span>
-
-      {/* Small Diamond Accent - เล็กลง */}
-      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-yellow-500 rounded-sm rotate-45 shadow-sm"></div>
+      <img src={logoSpk} alt="SPK Logo" className="w-full h-full object-contain" />
     </div>
 
     {/* Pulse on Hover */}
