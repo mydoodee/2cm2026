@@ -364,7 +364,7 @@ const getAllUsers = async (req, res) => {
                     ? user.project_roles.split(',').map(pr => {
                           const [project_id, job_number, role_id, role_name] = pr.split(':');
                           return {
-                              project_id: project_id ? Number(project_id) : null,
+                              project_id: project_id || null,
                               job_number: job_number || 'ไม่ระบุหมายเลขงาน',
                               role_id: Number(role_id),
                               role_name
@@ -908,7 +908,7 @@ const deleteProjectUserRole = async (req, res) => {
 
         const [projectRows] = await connection.execute(
             'SELECT project_id, project_name, job_number FROM projects WHERE project_id = ? AND active = 1',
-            [projectIdNum]
+            [projectIdStr]
         );
 
         if (projectRows.length === 0) {
@@ -932,7 +932,7 @@ const deleteProjectUserRole = async (req, res) => {
 
         const [existingRoles] = await connection.execute(
             'SELECT * FROM project_user_roles WHERE project_id = ? AND user_id = ?',
-            [projectIdNum, userIdNum]
+            [projectIdStr, userIdNum]
         );
 
         if (existingRoles.length === 0) {
@@ -944,14 +944,14 @@ const deleteProjectUserRole = async (req, res) => {
 
         const [deleteResult] = await connection.execute(
             'DELETE FROM project_user_roles WHERE project_id = ? AND user_id = ?',
-            [projectIdNum, userIdNum]
+            [projectIdStr, userIdNum]
         );
 
         res.json({
             success: true,
             message: 'ลบสิทธิ์การเข้าใช้งานสำเร็จ',
             data: {
-                project_id: projectIdNum,
+                project_id: projectIdStr,
                 project_name: projectRows[0].project_name,
                 job_number: projectRows[0].job_number,
                 user_id: userIdNum,

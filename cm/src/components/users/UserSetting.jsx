@@ -249,6 +249,16 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         setFilteredUsers(filtered);
     }, [users, searchText]);
 
+    // Keep selectedUserForRoles synced with users array updates (like after copy permissions)
+    useEffect(() => {
+        if (selectedUserForRoles && users.length > 0) {
+            const updated = users.find(u => u.user_id === selectedUserForRoles.user_id);
+            if (updated && JSON.stringify(updated.project_roles) !== JSON.stringify(selectedUserForRoles.project_roles)) {
+                setSelectedUserForRoles(updated);
+            }
+        }
+    }, [users, selectedUserForRoles?.user_id, selectedUserForRoles?.project_roles]);
+
     // Handle Role Management
     const handleSaveRole = async (values) => {
         setRoleLoading(true);
@@ -1003,13 +1013,6 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             setSourceUserId(null);
             await fetchUsers(); // โหลดข้อมูลผู้ใช้ใหม่เพื่ออัปเดตรายการสิทธิ์
             
-            // อัปเดตข้อมูลผู้ใช้ที่เลือกอยู่
-            if (users) {
-                const updatedUser = users.find(u => u.user_id === selectedUserForRoles.user_id);
-                if (updatedUser) {
-                    setSelectedUserForRoles(updatedUser);
-                }
-            }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'ไม่สามารถคัดลอกสิทธิ์ได้';
             Swal.fire({
