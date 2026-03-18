@@ -143,8 +143,8 @@ const ProgressSummaryCard = ({
               <div className="flex justify-between items-center">
                 <Text className="text-gray-600 font-kanit text-xs">ผลงานทำได้จริง</Text>
                 <div className="flex items-center">
-                  <Progress percent={Number(actualProgressValue)} strokeColor="#52c41a" size="small" showInfo={false} className="w-16 mr-1" />
-                  <Text className="text-gray-800 font-kanit text-xs">{actualProgressValue.toFixed(2)}%</Text>
+                  <Progress percent={Number(actualProgress)} strokeColor="#52c41a" size="small" showInfo={false} className="w-16 mr-1" />
+                  <Text className="text-gray-800 font-kanit text-xs">{Number(actualProgress).toFixed(2)}%</Text>
                 </div>
               </div>
               <div className="flex justify-between">

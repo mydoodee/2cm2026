@@ -1,4 +1,4 @@
-//src/componentes/projects/Design.jsx
+//src/componentes/projects/Bidding.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -13,7 +13,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import Navbar from '../Navbar';
-import './Design.css';
+import './Bidding.css';
 import moment from 'moment';
 
 moment.locale('th');
@@ -36,7 +36,7 @@ const fuzzySearch = (searchTerm, text) => {
   return searchIndex === search.length;
 };
 
-const Design = ({ user, setUser, theme, setTheme }) => {
+const Bidding = ({ user, setUser, theme, setTheme }) => {
   const navigate = useNavigate();
   const { id } = useParams();
   
@@ -157,10 +157,10 @@ const Design = ({ user, setUser, theme, setTheme }) => {
       
       setFolders(foldersWithPermission);
       
-      const designFolder = foldersWithPermission.find(f => f.folder_name === 'Design' && !f.parent_folder_id);
-      if (designFolder) {
-        setSelectedFolderId(designFolder.folder_id);
-        setSelectedFolderName(designFolder.folder_name);
+      const biddingFolder = foldersWithPermission.find(f => f.folder_name === 'Bidding' && !f.parent_folder_id);
+      if (biddingFolder) {
+        setSelectedFolderId(biddingFolder.folder_id);
+        setSelectedFolderName(biddingFolder.folder_name);
       }
     } catch (error) {
       if (axios.isCancel(error)) return;
@@ -514,10 +514,10 @@ const handleNavigateImage = async (direction) => {
     return;
   }
   
-  const isRootDesignFolder = !folder.parent_folder_id && folder.folder_name === 'Design';
+  const isRootDesignFolder = !folder.parent_folder_id && folder.folder_name === 'Bidding';
   
   if (isRootDesignFolder) {
-    message.warning('ไม่สามารถสร้างโฟลเดอร์ในโฟลเดอร์หลัก Design ได้โดยตรง กรุณาสร้างใน subfolder');
+    message.warning('ไม่สามารถสร้างโฟลเดอร์ในโฟลเดอร์หลัก Bidding ได้โดยตรง กรุณาสร้างใน subfolder');
     return;
   }
   
@@ -582,21 +582,21 @@ const handleOpenRenameFolderModal = (folderId, folderName) => {
     return;
   }
   
-  // ✅ ตรวจสอบว่าเป็น root Design หรือไม่
-  const isRootDesignFolder = !folder.parent_folder_id && folder.folder_name === 'Design';
+  // ✅ ตรวจสอบว่าเป็น root Bidding หรือไม่
+  const isRootDesignFolder = !folder.parent_folder_id && folder.folder_name === 'Bidding';
   
   if (isRootDesignFolder) {
-    message.warning('ไม่สามารถเปลี่ยนชื่อโฟลเดอร์หลัก Design ได้');
+    message.warning('ไม่สามารถเปลี่ยนชื่อโฟลเดอร์หลัก Bidding ได้');
     return;
   }
   
-  // ✅ ตรวจสอบว่าเป็นโฟลเดอร์ลูกโดยตรงของ Design หรือไม่ (เช่น Drawings, Documents)
+  // ✅ ตรวจสอบว่าเป็นโฟลเดอร์ลูกโดยตรงของ Bidding หรือไม่ (เช่น Drawings, Documents)
   if (folder.parent_folder_id) {
     const parentFolder = folders.find(f => String(f.folder_id) === String(folder.parent_folder_id));
-    const isDirectChildOfRoot = parentFolder && !parentFolder.parent_folder_id && parentFolder.folder_name === 'Design';
+    const isDirectChildOfRoot = parentFolder && !parentFolder.parent_folder_id && parentFolder.folder_name === 'Bidding';
     
     if (isDirectChildOfRoot) {
-      message.warning('ไม่สามารถเปลี่ยนชื่อโฟลเดอร์หลักย่อยของ Design ได้ (เช่น Drawings, Documents)');
+      message.warning('ไม่สามารถเปลี่ยนชื่อโฟลเดอร์หลักย่อยของ Bidding ได้ (เช่น Drawings, Documents)');
       return;
     }
   }
@@ -950,7 +950,7 @@ const folderStructure = {
         const totalItems = fileCount + subfolderCount;
 
         const isRootFolder = !folders.find(f => String(f.folder_id) === String(data.folder_id))?.parent_folder_id && 
-                             folderName === 'Design';
+                             folderName === 'Bidding';
 
         const hasSubfolders = subfolderCount > 0;
         
@@ -1117,7 +1117,7 @@ const canDelete = !isRootFolder && !hasSubfolders && ['write', 'admin'].includes
       return;
     }
     
-    const isRootFolder = !folder.parent_folder_id && folder.folder_name === 'Design';
+    const isRootFolder = !folder.parent_folder_id && folder.folder_name === 'Bidding';
     
     if (isRootFolder) {
       message.warning('ไม่สามารถอัพโหลดไฟล์ในโฟลเดอร์หลักได้ กรุณาเลือก subfolder');
@@ -1273,7 +1273,7 @@ const canDelete = !isRootFolder && !hasSubfolders && ['write', 'admin'].includes
             formData,
             {
               headers: {
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${token}`
               },
               onUploadProgress: (progressEvent) => {
                 const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -1605,11 +1605,11 @@ const buildTree = (allFolders, parentId) => {
       const fileCount = files.filter(f => String(f.folder_id) === String(folder.folder_id)).length;
       
       // ✅ ตรวจสอบว่าเป็น root folder หรือไม่
-      const isRootFolder = !folder.parent_folder_id && folder.folder_name === 'Design';
+      const isRootFolder = !folder.parent_folder_id && folder.folder_name === 'Bidding';
       
-      // ✅ ตรวจสอบว่าเป็นลูกโดยตรงของ root Design หรือไม่
+      // ✅ ตรวจสอบว่าเป็นลูกโดยตรงของ root Bidding หรือไม่
       const parentFolder = allFolders.find(f => String(f.folder_id) === String(folder.parent_folder_id));
-      const isDirectChildOfRoot = parentFolder && !parentFolder.parent_folder_id && parentFolder.folder_name === 'Design';
+      const isDirectChildOfRoot = parentFolder && !parentFolder.parent_folder_id && parentFolder.folder_name === 'Bidding';
       
       // ✅ ตรวจสอบว่ามี subfolder หรือไม่
       const hasSubfolders = allFolders.some(f => String(f.parent_folder_id) === String(folder.folder_id));
@@ -1708,9 +1708,9 @@ const buildTree = (allFolders, parentId) => {
     });
 };
 
-const designRoots = uniqueFolders.filter(f => f.folder_name === 'Design' && !f.parent_folder_id && f.permission_type && ['read', 'write', 'admin'].includes(f.permission_type));
+const biddingRoots = uniqueFolders.filter(f => f.folder_name === 'Bidding' && !f.parent_folder_id && f.permission_type && ['read', 'write', 'admin'].includes(f.permission_type));
 
-const treeData = designRoots.map(root => {
+const treeData = biddingRoots.map(root => {
   const rootFileCount = files.filter(f => String(f.folder_id) === String(root.folder_id)).length;
   
   return {
@@ -1753,11 +1753,11 @@ return (
                 <Breadcrumb
                   items={[
                     { title: 'Folder' },
-                    { title: 'Design' },
+                    { title: 'Bidding' },
                   ]}
                 />
                 <Title level={2} className="text-white text-shadow-lg">
-                  Phase: Design
+                  Phase: Bidding
                 </Title>
                 <Text className="text-gray-200">
                   จัดการไฟล์ออกแบบและเอกสารโครงการ
@@ -2377,7 +2377,7 @@ return (
       />
     </Form.Item>
     {/* <Text className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-xs`}>
-      💡 ไม่สามารถเปลี่ยนชื่อโฟลเดอร์หลัก Design และโฟลเดอร์ย่อยระดับแรก (เช่น Drawings, Documents) ได้
+      💡 ไม่สามารถเปลี่ยนชื่อโฟลเดอร์หลัก Bidding และโฟลเดอร์ย่อยระดับแรก (เช่น Drawings, Documents) ได้
     </Text> */}
   </Form>
 </Modal>
@@ -2385,4 +2385,4 @@ return (
   );
 };
 
-export default Design;
+export default Bidding;

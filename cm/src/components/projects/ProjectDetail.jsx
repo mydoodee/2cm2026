@@ -33,6 +33,7 @@ const ProjectDetail = ({ user, setUser }) => {
     construction: false,
     cm: false,
     precast: false,
+    bidding: false,
   });
   const [imageLoading, setImageLoading] = useState({
     general: true,
@@ -43,6 +44,7 @@ const ProjectDetail = ({ user, setUser }) => {
     construction: true,
     cm: true,
     precast: true,
+    bidding: true,
   });
   const [progressHistory, setProgressHistory] = useState([]);
   const [selectedProgressInstallment, setSelectedProgressInstallment] = useState(null);
@@ -50,6 +52,7 @@ const ProjectDetail = ({ user, setUser }) => {
   const [selectedPaymentInstallment, setSelectedPaymentInstallment] = useState(null);
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [scurveActual, setScurveActual] = useState(null);
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -166,6 +169,7 @@ const ProjectDetail = ({ user, setUser }) => {
           construction: true,
           cm: true,
           precast: true,
+          bidding: true,
         });
 
         const token = localStorage.getItem('token');
@@ -392,12 +396,22 @@ const ProjectDetail = ({ user, setUser }) => {
           construction_image: getImageUrl(projectResponse.data.project.construction_image),
           cm_image: getImageUrl(projectResponse.data.project.cm_image),
           precast_image: getImageUrl(projectResponse.data.project.precast_image),
+          bidding_image: getImageUrl(projectResponse.data.project.bidding_image),
 
           phases: [
             {
+              name: "Bidding",
+              displayName: "ประมูล",
+              progress: projectResponse.data.project.bidding_progress || 0,
+              color: "#eb2f96",
+              path: `/project/${id}/bidding`,
+              image_field: "bidding_image",
+              visible: !!projectResponse.data.project.show_bidding
+            },
+            {
               name: "Design",
               displayName: "ออกแบบ",
-              progress: 45,
+              progress: projectResponse.data.project.design_progress || 0,
               color: "#52c41a",
               path: `/project/${id}/design`,
               image_field: "design_image",
@@ -406,7 +420,7 @@ const ProjectDetail = ({ user, setUser }) => {
             {
               name: "PreConstruction",
               displayName: "เตรียมงาน",
-              progress: 5,
+              progress: projectResponse.data.project.pre_construction_progress || 0,
               color: "#1890ff",
               path: `/project/${id}/pre-construction`,
               image_field: "pre_construction_image",
@@ -415,7 +429,7 @@ const ProjectDetail = ({ user, setUser }) => {
             {
               name: "Construction",
               displayName: "ก่อสร้าง",
-              progress: 5,
+              progress: projectResponse.data.project.construction_progress || 0,
               color: "#faad14",
               path: `/project/${id}/construction`,
               image_field: "construction_image",
@@ -424,7 +438,7 @@ const ProjectDetail = ({ user, setUser }) => {
             {
               name: "Precast",
               displayName: "พรีคาสท์",
-              progress: 0,
+              progress: projectResponse.data.project.precast_progress || 0,
               color: "#722ed1",
               path: `/project/${id}/precast`,
               image_field: "precast_image",
@@ -433,7 +447,7 @@ const ProjectDetail = ({ user, setUser }) => {
             {
               name: "Construction Management",
               displayName: "บริหารก่อสร้าง",
-              progress: 0,
+              progress: projectResponse.data.project.cm_progress || 0,
               color: "#f5222d",
               path: `/project/${id}/construction-management`,
               image_field: "cm_image",
@@ -500,7 +514,8 @@ const ProjectDetail = ({ user, setUser }) => {
           pre_construction: false,
           construction: false,
           cm: false,
-          precast: false
+          precast: false,
+          bidding: false
         }));
 
         if (error.code === 'ERR_NETWORK') {
@@ -576,7 +591,10 @@ const ProjectDetail = ({ user, setUser }) => {
 
   if (!project) return null;
 
-  const actualProgress = selectedProgress ? Number(selectedProgress.actual_progress) || 0 : 0;
+  // ✅ Prioritize S-Curve Actual progress for the dashboard circles
+  const actualProgress = scurveActual !== null 
+    ? scurveActual 
+    : (selectedProgress ? Number(selectedProgress.actual_progress) || 0 : 0);
 
   return (
     <div className={`h-screen w-full ${theme === 'dark' ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} transition-all duration-300 font-kanit overflow-auto`}>
@@ -656,13 +674,16 @@ const ProjectDetail = ({ user, setUser }) => {
 
         {/* S-Curve Chart */}
         <div className="mb-6">
-          <SCurveChart projectId={id} />
+          <SCurveChart 
+            projectId={id} 
+            onActualProgressChange={(val) => setScurveActual(val)} 
+          />
         </div>
 
         {/* Daily Stats and Weather */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <StatsCards dailyStats={project.dailyStats} />
           <WeatherCard weather={weather} weatherLoading={weatherLoading} address={project.address} />
+          <StatsCards dailyStats={project.dailyStats} />
         </div>
 
         {/* Team Members */}

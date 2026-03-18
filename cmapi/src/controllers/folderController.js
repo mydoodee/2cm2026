@@ -26,7 +26,7 @@ async function getFolders(req, res) {
              COALESCE(
                JSON_ARRAYAGG(
                  JSON_OBJECT(
-                   'permission_id', fp.id,
+                  'permission_id', fp.permission_id,
                    'user_id', fp.user_id,
                    'permission_type', fp.permission_type
                  )
@@ -78,7 +78,7 @@ async function getFolders(req, res) {
       }
       return {
         ...folder,
-        permissions: Array.isArray(permissions) ? permissions : []
+        permissions: Array.isArray(permissions) ? permissions.filter(p => p && p.user_id) : []
       };
     });
 

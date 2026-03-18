@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 dayjs.locale('th');
 
-const SCurveChart = ({ projectId }) => {
+const SCurveChart = ({ projectId, onActualProgressChange }) => {
   const [loading, setLoading] = useState(true);
   const [rootCategories, setRootCategories] = useState([]);
   const [chartData, setChartData] = useState(null);
@@ -186,6 +186,18 @@ const SCurveChart = ({ projectId }) => {
 
     fetchAllChartData();
   }, [projectId]);
+
+  // ✅ New effect to report overall actual progress back to parent
+  useEffect(() => {
+    if (onActualProgressChange && chartData && chartData.datasets?.[1]?.data) {
+      const actualData = chartData.datasets[1].data;
+      // Get the last non-null value
+      const latestActual = [...actualData].reverse().find(v => v !== null && v !== undefined);
+      if (latestActual !== undefined) {
+        onActualProgressChange(latestActual.toFixed(2));
+      }
+    }
+  }, [chartData, onActualProgressChange]);
 
 
 

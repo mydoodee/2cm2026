@@ -10,6 +10,9 @@ const {
   deleteProject,
   getAllRoles,
   getProjectUsers,
+  createRole,
+  updateRole,
+  deleteRole,
 } = require('../controllers/projectController');
 const {
   getFolders,
@@ -71,6 +74,7 @@ router.post(
     { name: 'construction_image', maxCount: 1 },
     { name: 'cm_image', maxCount: 1 },
     { name: 'precast_image', maxCount: 1 },
+    { name: 'bidding_image', maxCount: 1 },
   ]),
   multerErrorHandler,
   createProject
@@ -87,11 +91,17 @@ router.put(
     { name: 'construction_image', maxCount: 1 },
     { name: 'cm_image', maxCount: 1 },
     { name: 'precast_image', maxCount: 1 },
+    { name: 'bidding_image', maxCount: 1 },
   ]),
   multerErrorHandler,
   updateProject
 );
 router.delete('/project/:id', authenticateToken, deleteProject);
+
+// Role Management Routes
+router.post('/role', authenticateToken, createRole);
+router.put('/role/:id', authenticateToken, updateRole);
+router.delete('/role/:id', authenticateToken, deleteRole);
 
 // PUBLIC SHARE ROUTES
 router.post('/project/:projectId/enable-public', authenticateToken, async (req, res) => {

@@ -33,6 +33,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
     cm: [],
     general: [], // รักษาฟิลด์รูปภาพทั่วไปเดิม
     precast: [], // เพิ่ม precast
+    bidding: [], // เพิ่ม bidding
   });
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -208,6 +209,13 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
         show_construction: project.show_construction !== undefined ? project.show_construction : true,
         show_precast: project.show_precast !== undefined ? project.show_precast : true,
         show_cm: project.show_cm !== undefined ? project.show_cm : true,
+        show_bidding: project.show_bidding !== undefined ? project.show_bidding : true,
+        bidding_progress: project.bidding_progress || 0,
+        design_progress: project.design_progress || 0,
+        pre_construction_progress: project.pre_construction_progress || 0,
+        construction_progress: project.construction_progress || 0,
+        precast_progress: project.precast_progress || 0,
+        cm_progress: project.cm_progress || 0,
       });
       setFileLists({
         progress_summary: project.progress_summary_image ? [{ uid: '-1', name: 'progress_summary.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${project.progress_summary_image}` }] : [],
@@ -218,6 +226,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
         cm: project.cm_image ? [{ uid: '-6', name: 'cm.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${project.cm_image}` }] : [],
         general: project.image ? [{ uid: '-7', name: 'image.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${project.image}` }] : [],
         precast: project.precast_image ? [{ uid: '-8', name: 'precast.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${project.precast_image}` }] : [], // เพิ่ม precast
+        bidding: project.bidding_image ? [{ uid: '-9', name: 'bidding.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${project.bidding_image}` }] : [], // เพิ่ม bidding
       });
     } else {
       form.resetFields();
@@ -229,7 +238,8 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
         construction: [],
         cm: [],
         general: [],
-        precast: [], // เพิ่ม precast
+        precast: [],
+        bidding: [],
       });
       form.setFieldsValue({
         show_design: true,
@@ -237,6 +247,13 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
         show_construction: true,
         show_precast: true,
         show_cm: true,
+        show_bidding: true,
+        bidding_progress: 0,
+        design_progress: 0,
+        pre_construction_progress: 0,
+        construction_progress: 0,
+        precast_progress: 0,
+        cm_progress: 0,
       });
     }
     setIsModalVisible(true);
@@ -247,9 +264,9 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       const values = await form.validateFields();
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      formData.append('project_name', values.project_name || '');
+      if (values.project_name) formData.append('project_name', values.project_name);
       if (values.job_number) formData.append('job_number', values.job_number);
-      if (values.description) formData.append('description', values.description);
+      if (values.description !== undefined) formData.append('description', values.description || '');
       if (values.start_date) formData.append('start_date', values.start_date.format('YYYY-MM-DD'));
       if (values.end_date) formData.append('end_date', values.end_date.format('YYYY-MM-DD'));
       if (values.status) formData.append('status', values.status);
@@ -265,6 +282,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       formData.append('show_construction', values.show_construction ? 1 : 0);
       formData.append('show_precast', values.show_precast ? 1 : 0);
       formData.append('show_cm', values.show_cm ? 1 : 0);
+      formData.append('show_bidding', values.show_bidding ? 1 : 0);
       if (fileLists.general[0]?.originFileObj) {
         formData.append('image', fileLists.general[0].originFileObj);
       }
@@ -289,6 +307,17 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       if (fileLists.precast[0]?.originFileObj) { // เพิ่ม precast
         formData.append('precast_image', fileLists.precast[0].originFileObj);
       }
+      if (fileLists.bidding[0]?.originFileObj) {
+        formData.append('bidding_image', fileLists.bidding[0].originFileObj);
+      }
+
+      // Phase Progress
+      formData.append('bidding_progress', values.bidding_progress || 0);
+      formData.append('design_progress', values.design_progress || 0);
+      formData.append('pre_construction_progress', values.pre_construction_progress || 0);
+      formData.append('construction_progress', values.construction_progress || 0);
+      formData.append('precast_progress', values.precast_progress || 0);
+      formData.append('cm_progress', values.cm_progress || 0);
 
       let response;
       if (editingProject) {
@@ -306,7 +335,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
         });
       } else {
         response = await axios.post(`${import.meta.env.VITE_API_URL}/api/project`, formData, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+          headers: { Authorization: `Bearer ${token}` },
         });
         Swal.fire({
           icon: 'success',
@@ -326,7 +355,8 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
         construction: [],
         cm: [],
         general: [],
-        precast: [], // เพิ่ม precast
+        precast: [],
+        bidding: [],
       });
       await fetchProjects();
     } catch (error) {
@@ -364,6 +394,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       cm: [],
       general: [],
       precast: [], // เพิ่ม precast
+      bidding: [], // เพิ่ม bidding
     });
   };
 
@@ -881,11 +912,36 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 <Form.Item name="show_cm" valuePropName="checked" noStyle>
                   <Checkbox className="font-kanit">CM</Checkbox>
                 </Form.Item>
+                <Form.Item name="show_bidding" valuePropName="checked" noStyle>
+                  <Checkbox className="font-kanit">Bidding</Checkbox>
+                </Form.Item>
+              </div>
+
+              <Divider orientation="left">ความคืบหน้าของแต่ละเฟส (%)</Divider>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg mb-6">
+                <Form.Item name="bidding_progress" label="Bidding">
+                  <InputNumber min={0} max={100} className="w-full" />
+                </Form.Item>
+                <Form.Item name="design_progress" label="Design">
+                  <InputNumber min={0} max={100} className="w-full" />
+                </Form.Item>
+                <Form.Item name="pre_construction_progress" label="Pre-Construction">
+                  <InputNumber min={0} max={100} className="w-full" />
+                </Form.Item>
+                <Form.Item name="construction_progress" label="Construction">
+                  <InputNumber min={0} max={100} className="w-full" />
+                </Form.Item>
+                <Form.Item name="precast_progress" label="Precast">
+                  <InputNumber min={0} max={100} className="w-full" />
+                </Form.Item>
+                <Form.Item name="cm_progress" label="CM">
+                  <InputNumber min={0} max={100} className="w-full" />
+                </Form.Item>
               </div>
 
               <Divider orientation="left">รูปภาพโครงการ</Divider>
               <Form.Item name="image" label="รูปภาพโครงการ (ทั่วไป)">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.general}
                     onChange={handleFileChange('general')}
@@ -900,7 +956,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </div>
               </Form.Item>
               <Form.Item name="progress_summary_image" label="รูปภาพสรุปความคืบหน้า">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.progress_summary}
                     onChange={handleFileChange('progress_summary')}
@@ -915,7 +971,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </div>
               </Form.Item>
               <Form.Item name="payment_image" label="รูปภาพการชำระเงิน">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.payment}
                     onChange={handleFileChange('payment')}
@@ -930,7 +986,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </div>
               </Form.Item>
               <Form.Item name="design_image" label="รูปภาพการออกแบบ">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.design}
                     onChange={handleFileChange('design')}
@@ -945,7 +1001,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </div>
               </Form.Item>
               <Form.Item name="pre_construction_image" label="รูปภาพก่อนการก่อสร้าง">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.pre_construction}
                     onChange={handleFileChange('pre_construction')}
@@ -960,7 +1016,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </div>
               </Form.Item>
               <Form.Item name="construction_image" label="รูปภาพการก่อสร้าง">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.construction}
                     onChange={handleFileChange('construction')}
@@ -975,7 +1031,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </div>
               </Form.Item>
               <Form.Item name="cm_image" label="รูปภาพการบริหารงานก่อสร้าง (CM)">
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+                <div>
                   <Upload
                     fileList={fileLists.cm}
                     onChange={handleFileChange('cm')}
@@ -989,11 +1045,26 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                   </Upload>
                 </div>
               </Form.Item>
-              <Form.Item name="precast_image" label="รูปภาพ Precast"> {/* เพิ่ม precast */}
-                <div> {/* ห่อด้วย div เพื่อ single child */}
+              <Form.Item name="precast_image" label="รูปภาพ Precast">
+                <div>
                   <Upload
                     fileList={fileLists.precast}
                     onChange={handleFileChange('precast')}
+                    beforeUpload={() => false}
+                    accept="image/*"
+                    listType="picture"
+                  >
+                    <Button icon={<UploadOutlined />} className="font-kanit">
+                      เลือกไฟล์
+                    </Button>
+                  </Upload>
+                </div>
+              </Form.Item>
+              <Form.Item name="bidding_image" label="รูปภาพ Bidding">
+                <div>
+                  <Upload
+                    fileList={fileLists.bidding}
+                    onChange={handleFileChange('bidding')}
                     beforeUpload={() => false}
                     accept="image/*"
                     listType="picture"

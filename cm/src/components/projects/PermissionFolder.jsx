@@ -116,7 +116,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
           const newPendingPermissions = {};
           projectUsers.forEach(user => {
             const userPermissions = updatedFolder.permissions
-              ?.filter(p => p.user_id === user.user_id)
+              ?.filter(p => p && p.user_id === user.user_id)
               ?.map(p => `${user.user_id}-${p.permission_type}`) || [];
             newPendingPermissions[user.user_id] = userPermissions;
           });
@@ -520,7 +520,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
       const initialPermissions = {};
       projectUsers.forEach(user => {
         const userPermissions = selectedFolder.permissions
-          ?.filter(p => p.user_id === user.user_id)
+          ?.filter(p => p && p.user_id === user.user_id)
           ?.map(p => `${user.user_id}-${p.permission_type}`) || [];
         initialPermissions[user.user_id] = userPermissions;
       });
@@ -717,52 +717,64 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                   }}
                 >
                   <div className="flex justify-between items-center mb-3">
-                    <Text strong style={{ fontSize: '14px', color: theme === 'dark' ? '#818cf8' : '#096dd9' }}>
+                    <Text strong style={{ fontSize: '13px', color: theme === 'dark' ? '#818cf8' : '#096dd9' }}>
                       <TeamOutlined className="mr-2" />
-                      จัดการสิทธิ์แบบกลุ่ม (ทุกคนในโครงการ)
+                      ตั้งค่าสิทธิ์กลุ่ม
                     </Text>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('read')}
-                      className="text-[12px] h-9"
-                    >
-                      ให้สิทธิ์ "อ่าน" ทั้งหมด
-                    </Button>
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('write')}
-                      className="text-[12px] h-9"
-                    >
-                      ให้สิทธิ์ "เขียน" ทั้งหมด
-                    </Button>
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('admin')}
-                      className="text-[12px] h-9"
-                    >
-                      ให้สิทธิ์ "ผู้ดูแล" ทั้งหมด
-                    </Button>
-                    <Button
-                      danger
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('none')}
-                      className="text-[12px] h-9"
-                    >
-                      ล้างสิทธิ์ทั้งหมด
-                    </Button>
+                  <div className="grid grid-cols-4 gap-2">
+                    <Tooltip title="ให้สิทธิ์ 'อ่าน' ทุกคน">
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('read')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        อ่าน
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="ให้สิทธิ์ 'เขียน' ทุกคน">
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('write')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        เขียน
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="ให้สิทธิ์ 'ผู้ดูแล' ทุกคน">
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('admin')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        ผู้ดูแล
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="ล้างสิทธิ์ทุกคน">
+                      <Button
+                        danger
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('none')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        ล้าง
+                      </Button>
+                    </Tooltip>
                   </div>
                   <div className="mt-3 text-center">
-                    <Text italic style={{ fontSize: '11px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>
-                      * คลิกปุ่มด้านบนเพื่อกำหนดสิทธิ์เริ่มต้นให้ทุกคนพร้อมกัน
+                    <Text italic style={{ fontSize: '12px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>
+                      * คลิกเพื่อกำหนดสิทธิ์เริ่มต้นให้ทุกคนพร้อมกัน
                     </Text>
                   </div>
                 </div>
@@ -785,7 +797,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                           </div>
                           <div className="flex flex-wrap justify-end gap-1">
                             {selectedFolder.permissions
-                              ?.filter(p => p.user_id === user.user_id)
+                              ?.filter(p => p && p.user_id === user.user_id)
                               ?.map(permission => (
                                 <Tag
                                   key={permission.permission_type}
@@ -801,7 +813,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
 
                         <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                           <div className="flex justify-between items-center mb-2">
-                            <Text size="small" type="secondary" className="text-[11px] uppercase tracking-wider">กำหนดสิทธิ์ใหม่</Text>
+                            <Text size="small" type="secondary" className="text-[11px] uppercase tracking-wider">กำหนดสิทธิ์</Text>
                             <Space size={4}>
                               <Button size="small" type="link" className="text-[11px] p-0" onClick={() => handleSelectAllPermissions(user.user_id, 'all')}>เลือกทั้งหมด</Button>
                               <Divider type="vertical" />

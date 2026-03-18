@@ -2,7 +2,7 @@ import { Card, Progress, Typography, Skeleton } from 'antd';
 import { Link } from 'react-router-dom';
 import {
   ExperimentOutlined, SettingOutlined, BuildOutlined,
-  TeamOutlined, ToolOutlined
+  TeamOutlined, ToolOutlined, FileTextOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -22,6 +22,7 @@ const PhaseCard = ({
   const getPhaseDisplayName = (phaseName) => {
     const map = {
       'Design': 'Design',
+      'Bidding': 'Bidding',
       'PreConstruction': 'PreConstruction',
       'Construction': 'Construction',
       'Precast': 'Precast',
@@ -36,6 +37,12 @@ const PhaseCard = ({
         <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-blue-50">
           <ExperimentOutlined className="text-2xl text-blue-600" />
           <div className="absolute inset-0 border-2 border-blue-200 rounded-full opacity-50" />
+        </div>
+      ),
+      'Bidding': (
+        <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-pink-50">
+          <FileTextOutlined className="text-2xl text-pink-600" />
+          <div className="absolute inset-0 border-2 border-pink-200 rounded-full opacity-50" />
         </div>
       ),
       'PreConstruction': (

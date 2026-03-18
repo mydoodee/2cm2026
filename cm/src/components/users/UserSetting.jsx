@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Table, Form, Input, Select, Space, Spin, Modal, Row, Col, Typography, Card, Badge, Upload, Empty, List, Avatar } from 'antd';
+import { Button, Table, Form, Input, Select, Space, Spin, Modal, Row, Col, Typography, Card, Badge, Upload, Empty, List, Avatar, Tabs } from 'antd';
 import { 
-    LeftOutlined, EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, UserOutlined, UploadOutlined, SettingOutlined, CopyOutlined
+    LeftOutlined, EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, UserOutlined, UploadOutlined, SettingOutlined, CopyOutlined, UndoOutlined
 } from '@ant-design/icons';
+import { Switch } from 'antd';
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -27,9 +28,16 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     const [searchText, setSearchText] = useState('');
     const [fileList, setFileList] = useState([]);
     const [selectedUserForRoles, setSelectedUserForRoles] = useState(null);
+    const [isCopying, setIsCopying] = useState(false);
+    const [activeTab, setActiveTab] = useState('1');
     const [copyModalVisible, setCopyModalVisible] = useState(false);
     const [sourceUserId, setSourceUserId] = useState(null);
-    const [isCopying, setIsCopying] = useState(false);
+    
+    // Role Management States
+    const [roleModalVisible, setRoleModalVisible] = useState(false);
+    const [roleForm] = Form.useForm();
+    const [roleLoading, setRoleLoading] = useState(false);
+    const [editingRole, setEditingRole] = useState(null);
 
     // Refresh access token
   const refreshAccessToken = async () => {
@@ -81,6 +89,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             }
             const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/users`, {
                 headers: { Authorization: `Bearer ${token}` },
+                params: { includeInactive: true } // ดึงมาทั้งคู่เลยเพื่อแยก Tab
             });
             const userData = response.data.users.map(user => ({
                 ...user,
@@ -110,6 +119,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                     const newToken = await refreshAccessToken();
                     const retryResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/users`, {
                         headers: { Authorization: `Bearer ${newToken}` },
+                        params: { includeInactive: true }
                     });
                     const userData = retryResponse.data.users.map(user => ({
                         ...user,
@@ -239,6 +249,58 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         setFilteredUsers(filtered);
     }, [users, searchText]);
 
+    // Handle Role Management
+    const handleSaveRole = async (values) => {
+        setRoleLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            if (editingRole) {
+                await axios.put(`${import.meta.env.VITE_API_URL}/api/role/${editingRole.role_id}`, values, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'อัปเดตบทบาทเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+            } else {
+                await axios.post(`${import.meta.env.VITE_API_URL}/api/role`, values, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'สร้างบทบาทใหม่เรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+            }
+            roleForm.resetFields();
+            setEditingRole(null);
+            fetchRolesAndProjects();
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: error.response?.data?.message || 'ไม่สามารถดำเนินการได้' });
+        } finally {
+            setRoleLoading(false);
+        }
+    };
+
+    const handleDeleteRole = async (roleId) => {
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: "คุณต้องการลบบทบาทนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'ลบ',
+            cancelText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const token = localStorage.getItem('token');
+                await axios.delete(`${import.meta.env.VITE_API_URL}/api/role/${roleId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'ลบบทบาทเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+                fetchRolesAndProjects();
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: error.response?.data?.message || 'ไม่สามารถลบบทบาทได้' });
+            }
+        }
+    };
+
     // Reset form when modal is opened
     useEffect(() => {
         if (modalVisible && !editMode) {
@@ -347,8 +409,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             }
             const config = {
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
+                    Authorization: `Bearer ${token}`
                 }
             };
 
@@ -415,7 +476,6 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         }
     };
 
-    // Handle user deletion
     const handleDelete = async (userId) => {
         const result = await Swal.fire({
             icon: 'warning',
@@ -454,6 +514,119 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                 await fetchUsers();
             } catch (error) {
                 const errorMessage = error.response?.data?.message || 'ไม่สามารถลบผู้ใช้ได้';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อผิดพลาด',
+                    text: errorMessage,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'ตกลง',
+                    customClass: {
+                        popup: theme === 'dark' ? 'swal2-dark' : '',
+                    },
+                    timer: 3000,
+                    timerProgressBar: true,
+                });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    // Handle user restoration
+    const handleRestore = async (userId) => {
+        const result = await Swal.fire({
+            icon: 'question',
+            title: 'ยืนยันการกู้คืน',
+            text: 'คุณต้องการกู้คืนผู้ใช้นี้กลับมาใช้งานหรือไม่?',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'กู้คืน',
+            cancelButtonText: 'ยกเลิก',
+            customClass: {
+                popup: theme === 'dark' ? 'swal2-dark' : '',
+            },
+        });
+
+        if (result.isConfirmed) {
+            try {
+                setLoading(true);
+                const token = localStorage.getItem('token');
+                await axios.put(`${import.meta.env.VITE_API_URL}/api/user/restore/${userId}`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'สำเร็จ',
+                    text: 'กู้คืนผู้ใช้สำเร็จ',
+                    confirmButtonColor: '#4f46e5',
+                    confirmButtonText: 'ตกลง',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: theme === 'dark' ? 'swal2-dark' : '',
+                    },
+                });
+                await fetchUsers();
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || 'ไม่สามารถกู้คืนผู้ใช้ได้';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อผิดพลาด',
+                    text: errorMessage,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'ตกลง',
+                    customClass: {
+                        popup: theme === 'dark' ? 'swal2-dark' : '',
+                    },
+                    timer: 3000,
+                    timerProgressBar: true,
+                });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    // Handle permanent deletion
+    const handlePermanentDelete = async (userId) => {
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: 'ยืนยันการลบถาวร',
+            text: 'ข้อมูลผู้ใช้นี้จะถูกลบออกจากระบบอย่างถาวรและไม่สามารถกู้คืนได้อีก คุณแน่ใจหรือไม่?',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'ลบทิ้งถาวร',
+            cancelButtonText: 'ยกเลิก',
+            customClass: {
+                popup: theme === 'dark' ? 'swal2-dark' : '',
+            },
+        });
+
+        if (result.isConfirmed) {
+            try {
+                setLoading(true);
+                const token = localStorage.getItem('token');
+                await axios.delete(`${import.meta.env.VITE_API_URL}/api/user/permanent/${userId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'สำเร็จ',
+                    text: 'ลบผู้ใช้ถาวรสำเร็จแล้ว',
+                    confirmButtonColor: '#4f46e5',
+                    confirmButtonText: 'ตกลง',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: theme === 'dark' ? 'swal2-dark' : '',
+                    },
+                });
+                setSelectedUserForRoles(null);
+                await fetchUsers();
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || 'ไม่สามารถลบผู้ใช้ถาวรได้';
                 Swal.fire({
                     icon: 'error',
                     title: 'ข้อผิดพลาด',
@@ -905,10 +1078,11 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             dataIndex: 'username',
             key: 'username',
             width: '25%',
-            render: (text) => (
+            render: (text, record) => (
                 <div className="flex items-center space-x-2">
-                    <UserOutlined className="text-blue-500 text-xs" />
-                    <Text className="text-sm">{text || 'ไม่ระบุ'}</Text>
+                    <UserOutlined className={record.active === 0 ? "text-gray-400" : "text-blue-500"} />
+                    <Text className={`text-sm ${record.active === 0 ? "text-gray-400 line-through" : ""}`}>{text || 'ไม่ระบุ'}</Text>
+                    {record.active === 0 && <Badge status="default" text={<Text type="secondary" style={{ fontSize: '10px' }}>ลบแล้ว</Text>} />}
                 </div>
             ),
         },
@@ -933,24 +1107,49 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             width: '25%',
             render: (_, record) => (
                 <Space size="small">
-                    <Button
-                        type="primary"
-                        className="bg-indigo-500 hover:bg-indigo-600 border-0 text-xs"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => handleEdit(record)}
-                    >
-                        แก้ไข
-                    </Button>
-                    <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        className="text-xs"
-                        onClick={() => handleDelete(record.user_id)}
-                    >
-                        ลบ
-                    </Button>
+                    {record.active !== 0 ? (
+                        <>
+                            <Button
+                                type="primary"
+                                className="bg-indigo-500 hover:bg-indigo-600 border-0 text-xs"
+                                icon={<EditOutlined />}
+                                size="small"
+                                onClick={() => handleEdit(record)}
+                            >
+                                แก้ไข
+                            </Button>
+                            <Button
+                                danger
+                                icon={<DeleteOutlined />}
+                                size="small"
+                                className="text-xs"
+                                onClick={() => handleDelete(record.user_id)}
+                            >
+                                ลบ
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button
+                                type="primary"
+                                className="bg-emerald-500 hover:bg-emerald-600 border-0 text-xs"
+                                icon={<UndoOutlined />}
+                                size="small"
+                                onClick={() => handleRestore(record.user_id)}
+                            >
+                                กู้คืน
+                            </Button>
+                            <Button
+                                danger
+                                icon={<DeleteOutlined />}
+                                size="small"
+                                className="text-xs"
+                                onClick={() => handlePermanentDelete(record.user_id)}
+                            >
+                                ลบถาวร
+                            </Button>
+                        </>
+                    )}
                 </Space>
             ),
         },
@@ -966,6 +1165,99 @@ function UserSetting({ user, setUser, theme, setTheme }) {
 
     return (
         <div className={`min-h-screen font-kanit ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
+            <Modal
+                title={
+                    <div className="flex items-center space-x-2">
+                        <SettingOutlined />
+                        <span>จัดการบทบาทผู้ใช้งาน</span>
+                    </div>
+                }
+                open={roleModalVisible}
+                onCancel={() => {
+                    setRoleModalVisible(false);
+                    setEditingRole(null);
+                    roleForm.resetFields();
+                }}
+                footer={null}
+                width={600}
+            >
+                <div className="space-y-6">
+                    <Card size="small" title={editingRole ? "แก้ไขบทบาท" : "เพิ่มบทบาทใหม่"} className="bg-gray-50 border-gray-200">
+                        <Form
+                            form={roleForm}
+                            layout="vertical"
+                            onFinish={handleSaveRole}
+                            initialValues={{ role_name: '', description: '' }}
+                        >
+                            <Row gutter={16}>
+                                <Col span={24}>
+                                    <Form.Item
+                                        name="role_name"
+                                        label="ชื่อบทบาท"
+                                        rules={[{ required: true, message: 'กรุณากรอกชื่อบทบาท' }]}
+                                    >
+                                        <Input placeholder="เช่น Purchasing, Support" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                    <Form.Item
+                                        name="description"
+                                        label="คำอธิบาย"
+                                    >
+                                        <Input.TextArea rows={2} placeholder="รายละเอียดหน้าที่ของบทบาทนี้" />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                            <div className="flex justify-end space-x-2">
+                                {editingRole && (
+                                    <Button onClick={() => { setEditingRole(null); roleForm.resetFields(); }}>
+                                        ยกเลิกการแก้ไข
+                                    </Button>
+                                )}
+                                <Button type="primary" htmlType="submit" loading={roleLoading} className="bg-indigo-500 border-0">
+                                    {editingRole ? 'บันทึกการแก้ไข' : 'เพิ่มบทบาท'}
+                                </Button>
+                            </div>
+                        </Form>
+                    </Card>
+
+                    <div className="max-h-[400px] overflow-y-auto">
+                        <List
+                            itemLayout="horizontal"
+                            dataSource={roles}
+                            renderItem={(item) => (
+                                <List.Item
+                                    actions={[
+                                        <Button 
+                                            key="edit" 
+                                            type="text" 
+                                            icon={<EditOutlined className="text-blue-500" />} 
+                                            onClick={() => {
+                                                setEditingRole(item);
+                                                roleForm.setFieldsValue(item);
+                                            }}
+                                        />,
+                                        <Button 
+                                            key="delete" 
+                                            type="text" 
+                                            icon={<DeleteOutlined className="text-red-500" />} 
+                                            onClick={() => handleDeleteRole(item.role_id)}
+                                            disabled={item.role_id <= 4} // ป้องการการลบบทบาทหลัก (Admin, PM, etc.)
+                                        />
+                                    ]}
+                                >
+                                    <List.Item.Meta
+                                        avatar={<Avatar icon={<UserOutlined />} className="bg-indigo-100 text-indigo-500" />}
+                                        title={<Text strong>{item.role_name} {item.role_id <= 4 && <Badge status="default" text="System" />}</Text>}
+                                        description={item.description || 'ไม่มีคำอธิบาย'}
+                                    />
+                                </List.Item>
+                            )}
+                        />
+                    </div>
+                </div>
+            </Modal>
+
             <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
             <div className="p-4">
                 <Card
@@ -975,15 +1267,29 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                                 <UserOutlined className="text-indigo-500" />
                                 <Title level={4} className="m-0">จัดการผู้ใช้</Title>
                             </div>
-                            <Button
-                                type="primary"
-                                className="bg-indigo-500 hover:bg-indigo-600 border-0 mr-2"
-                                icon={<PlusOutlined />}
-                                onClick={handleAdd}
-                                size="middle"
-                            >
-                                เพิ่มผู้ใช้
-                            </Button>
+                            <Space>
+                                <Button
+                                    type="default"
+                                    icon={<SettingOutlined />}
+                                    onClick={() => setRoleModalVisible(true)}
+                                    className="bg-white hover:bg-gray-50 border-gray-300 text-gray-700"
+                                >
+                                    จัดการบทบาท
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    className="bg-indigo-500 hover:bg-indigo-600 border-0"
+                                    icon={<PlusOutlined />}
+                                    onClick={() => {
+                                        setEditMode(false);
+                                        setSelectedUser(null);
+                                        setModalVisible(true);
+                                    }}
+                                    size="middle"
+                                >
+                                    เพิ่มผู้ใช้
+                                </Button>
+                            </Space>
                         </div>
                     }
                     extra={
@@ -1000,26 +1306,54 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                 >
                     <Row gutter={16}>
                         <Col span={16}>
-                            <Search
-                                placeholder="ค้นหาผู้ใช้..."
-                                allowClear
-                                enterButton={<Button className="bg-indigo-500 hover:bg-indigo-600 border-0 text-white" icon={<SearchOutlined />}>ค้นหา</Button>}
-                                size="middle"
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
-                                onSearch={setSearchText}
-                                className="mb-4"
+                            <div className="flex items-center justify-between mb-4">
+                                <Search
+                                    placeholder="ค้นหาผู้ใช้..."
+                                    allowClear
+                                    enterButton={<Button className="bg-indigo-500 hover:bg-indigo-600 border-0 text-white" icon={<SearchOutlined />}>ค้นหา</Button>}
+                                    size="middle"
+                                    value={searchText}
+                                    onChange={(e) => setSearchText(e.target.value)}
+                                    onSearch={setSearchText}
+                                    style={{ width: '100%', marginBottom: 0 }}
+                                />
+                            </div>
+
+                            <Tabs 
+                                defaultActiveKey="1" 
+                                onChange={setActiveTab}
+                                items={[
+                                    {
+                                        key: '1',
+                                        label: (
+                                            <span className="flex items-center">
+                                                <UserOutlined className="mr-2" />
+                                                ผู้ใช้งานปกติ
+                                            </span>
+                                        ),
+                                    },
+                                    {
+                                        key: '2',
+                                        label: (
+                                            <span className="flex items-center">
+                                                <DeleteOutlined className="mr-2" />
+                                                ถังขยะ
+                                            </span>
+                                        ),
+                                    },
+                                ]}
                             />
+
                             <Spin spinning={loading}>
-                                {filteredUsers.length === 0 && !loading ? (
+                                {filteredUsers.filter(u => activeTab === '1' ? u.active !== 0 : u.active === 0).length === 0 && !loading ? (
                                     <Empty
                                         image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                        description="ไม่พบผู้ใช้"
+                                        description={activeTab === '1' ? "ไม่พบผู้ใช้ที่ใช้งานอยู่" : "ไม่มีผู้ใช้ในถังขยะ"}
                                     />
                                 ) : (
                                     <Table
                                         columns={userColumns}
-                                        dataSource={filteredUsers}
+                                        dataSource={filteredUsers.filter(u => activeTab === '1' ? u.active !== 0 : u.active === 0)}
                                         rowKey="user_id"
                                         rowClassName={(record) => (record.user_id === selectedUserForRoles?.user_id ? 'bg-blue-50' : '')}
                                         onRow={(record) => ({
@@ -1032,7 +1366,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                                             showTotal: (total, range) => `${range[0]}-${range[1]} จาก ${total} ผู้ใช้`,
                                         }}
                                         className={theme === 'dark' ? 'ant-table-dark' : ''}
-                                        scroll={{ y: 'calc(100vh - 400px)' }}
+                                        scroll={{ y: 'calc(100vh - 450px)' }}
                                     />
                                 )}
                             </Spin>

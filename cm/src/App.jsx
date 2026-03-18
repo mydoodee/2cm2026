@@ -12,6 +12,7 @@ import ProjectDetail from './components/projects/ProjectDetail';
 import Planning from './components/projects/Planning'; // เพิ่มบรรทัดนี้
 import Actual from './components/projects/Actual'; // เพิ่มบรรทัดนี้
 import Design from './components/projects/Design';
+import Bidding from './components/projects/Bidding';
 import ViewerIFC from './components/projects/ViewerIFC';
 import Preconstruction from './components/projects/Preconstruction';
 import Construction from './components/projects/Construction';
@@ -198,6 +199,7 @@ function App() {
             <Route path="/project/:id" element={<ProjectDetail user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
 
             {/* === PHASE ROUTES === */}
+            <Route path="/project/:id/bidding" element={<Bidding user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/project/:id/design" element={<Design user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/project/:id/pre-construction" element={<Preconstruction user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/project/:id/construction" element={<Construction user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />

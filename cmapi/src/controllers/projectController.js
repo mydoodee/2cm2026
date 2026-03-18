@@ -23,11 +23,12 @@ const getProjects = async (req, res) => {
         SELECT project_id, job_number, project_name, description, 
                DATE_FORMAT(start_date, '%Y-%m-%d') as start_date, 
                DATE_FORMAT(end_date, '%Y-%m-%d') as end_date, 
-               image, progress_summary_image, payment_image, design_image, 
-               pre_construction_image, construction_image, cm_image, precast_image, 
-               progress, status, owner, consusltant, contractor, address,
-               show_design, show_pre_construction, show_construction, show_precast, show_cm
-        FROM projects
+               p.image, p.progress_summary_image, p.payment_image, p.design_image, 
+               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, 
+               p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
+               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
+        FROM projects p
         WHERE active = 1
       `);
     } else {
@@ -36,9 +37,10 @@ const getProjects = async (req, res) => {
                DATE_FORMAT(p.start_date, '%Y-%m-%d') as start_date, 
                DATE_FORMAT(p.end_date, '%Y-%m-%d') as end_date, 
                p.image, p.progress_summary_image, p.payment_image, p.design_image, 
-               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, 
+               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
-               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm
+               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
         FROM projects p
         JOIN project_user_roles pur ON p.project_id = pur.project_id
         WHERE pur.user_id = ? AND p.active = 1
@@ -61,7 +63,8 @@ const getProjects = async (req, res) => {
         show_pre_construction: !!project.show_pre_construction,
         show_construction: !!project.show_construction,
         show_precast: !!project.show_precast,
-        show_cm: !!project.show_cm
+        show_cm: !!project.show_cm,
+        show_bidding: !!project.show_bidding
       };
     }));
 
@@ -70,7 +73,7 @@ const getProjects = async (req, res) => {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
@@ -95,11 +98,12 @@ const getProjectById = async (req, res) => {
         `SELECT project_id, job_number, project_name, description, 
                 DATE_FORMAT(start_date, '%Y-%m-%d') as start_date, 
                 DATE_FORMAT(end_date, '%Y-%m-%d') as end_date, 
-                image, progress_summary_image, payment_image, design_image, 
-                pre_construction_image, construction_image, cm_image, precast_image, 
-                progress, status, owner, consusltant, contractor, address,
-                show_design, show_pre_construction, show_construction, show_precast, show_cm
-         FROM projects 
+                p.image, p.progress_summary_image, p.payment_image, p.design_image, 
+                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
+                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
+                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
+         FROM projects p
          WHERE project_id = ? AND active = 1`,
         [req.params.id]
       );
@@ -109,9 +113,10 @@ const getProjectById = async (req, res) => {
                 DATE_FORMAT(p.start_date, '%Y-%m-%d') as start_date, 
                 DATE_FORMAT(p.end_date, '%Y-%m-%d') as end_date, 
                 p.image, p.progress_summary_image, p.payment_image, p.design_image, 
-                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, 
+                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
-                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm
+                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
          FROM projects p
          WHERE p.project_id = ? AND active = 1 AND EXISTS (
              SELECT 1 FROM project_user_roles pur 
@@ -127,7 +132,7 @@ const getProjectById = async (req, res) => {
 
     const project = projectRows[0];
 
-    // แก้ตรงนี้: ดึงข้อมูลสมาชิกครบทุกอย่าง
+    // ดึงข้อมูลสมาชิกครบทุกอย่าง พร้อม role_name
     const [members] = await connection.execute(
       `SELECT 
          u.user_id,
@@ -146,14 +151,15 @@ const getProjectById = async (req, res) => {
 
     const projectWithMembers = {
       ...project,
-      team_members: members,  // ส่งข้อมูลครบ!
+      team_members: members,
       progress: Number(project.progress) || 0,
       status: project.status || 'Unknown',
       show_design: !!project.show_design,
       show_pre_construction: !!project.show_pre_construction,
       show_construction: !!project.show_construction,
       show_precast: !!project.show_precast,
-      show_cm: !!project.show_cm
+      show_cm: !!project.show_cm,
+      show_bidding: !!project.show_bidding
     };
 
     res.json({ project: projectWithMembers });
@@ -161,10 +167,11 @@ const getProjectById = async (req, res) => {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
+
 const getProjectUsers = async (req, res) => {
   let connection;
   try {
@@ -191,23 +198,6 @@ const getProjectUsers = async (req, res) => {
 
     let users;
     if (isAdmin) {
-      // ✅ แก้ไข: เพิ่ม u.profile_image, pu.role
-      [users] = await connection.execute(
-        `SELECT 
-           u.user_id, 
-           u.username, 
-           u.first_name, 
-           u.last_name,
-           u.email,  -- เพิ่ม email
-           u.profile_image,  -- ✅ ต้องมีบรรทัดนี้!
-           pu.role  -- เพิ่ม role จาก project_user_roles
-         FROM users u
-         JOIN project_user_roles pur ON u.user_id = pur.user_id
-         WHERE pur.project_id = ?`,
-        [projectId]
-      );
-    } else {
-      // ✅ แก้ไข: เพิ่ม u.profile_image, pu.role
       [users] = await connection.execute(
         `SELECT 
            u.user_id, 
@@ -215,10 +205,27 @@ const getProjectUsers = async (req, res) => {
            u.first_name, 
            u.last_name,
            u.email,
-           u.profile_image,  -- ✅ ต้องมี!
-           pu.role
+           u.profile_image,
+           COALESCE(r.role_name, 'member') as role
          FROM users u
          JOIN project_user_roles pur ON u.user_id = pur.user_id
+         LEFT JOIN roles r ON pur.role_id = r.role_id
+         WHERE pur.project_id = ?`,
+        [projectId]
+      );
+    } else {
+      [users] = await connection.execute(
+        `SELECT 
+           u.user_id, 
+           u.username, 
+           u.first_name, 
+           u.last_name,
+           u.email,
+           u.profile_image,
+           COALESCE(r.role_name, 'member') as role
+         FROM users u
+         JOIN project_user_roles pur ON u.user_id = pur.user_id
+         LEFT JOIN roles r ON pur.role_id = r.role_id
          WHERE pur.project_id = ? AND EXISTS (
            SELECT 1 FROM project_user_roles pur2 
            WHERE pur2.project_id = ? AND pur2.user_id = ?
@@ -231,18 +238,12 @@ const getProjectUsers = async (req, res) => {
       return res.status(403).json({ message: 'คุณไม่มีสิทธิ์ดูรายชื่อผู้ใช้ในโครงการนี้' });
     }
 
-    // ✅ เพิ่ม role ถ้าไม่มี
-    const usersWithRole = users.map(user => ({
-      ...user,
-      role: user.role || 'member'  // default role
-    }));
-
-    res.json({ users: usersWithRole });  // ✅ ส่ง users ที่มี profile_image
+    res.json({ users });
   } catch (error) {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
@@ -256,7 +257,8 @@ const createProject = async (req, res) => {
 
     const {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
-      show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1
+      show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1, show_bidding = 1,
+      bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0
     } = req.body;
     const files = req.files || {};
 
@@ -288,8 +290,13 @@ const createProject = async (req, res) => {
 
     connection = await getConnection();
     const [result] = await connection.execute(
-      `INSERT INTO projects (job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, pre_construction_image, construction_image, cm_image, precast_image, show_design, show_pre_construction, show_construction, show_precast, show_cm)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO projects (
+        job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
+        owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, 
+        pre_construction_image, construction_image, cm_image, precast_image, bidding_image, 
+        show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding,
+        bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         job_number,
         project_name,
@@ -311,11 +318,19 @@ const createProject = async (req, res) => {
         null, // construction_image
         null, // cm_image
         null,  // precast_image
+        null,  // bidding_image
         show_design,
         show_pre_construction,
         show_construction,
         show_precast,
-        show_cm
+        show_cm,
+        show_bidding,
+        Number(bidding_progress) || 0,
+        Number(design_progress) || 0,
+        Number(pre_construction_progress) || 0,
+        Number(construction_progress) || 0,
+        Number(precast_progress) || 0,
+        Number(cm_progress) || 0
       ]
     );
     const projectId = result.insertId;
@@ -346,7 +361,8 @@ const createProject = async (req, res) => {
       { key: 'pre_construction_image', file: files.pre_construction_image },
       { key: 'construction_image', file: files.construction_image },
       { key: 'cm_image', file: files.cm_image },
-      { key: 'precast_image', file: files.precast_image }, // เพิ่ม precast_image
+      { key: 'precast_image', file: files.precast_image },
+      { key: 'bidding_image', file: files.bidding_image },
     ];
 
     const imagePaths = {};
@@ -378,7 +394,7 @@ const createProject = async (req, res) => {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
@@ -393,7 +409,8 @@ const updateProject = async (req, res) => {
     const project_id = req.params.id || req.body.project_id;
     const {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
-      show_design, show_pre_construction, show_construction, show_precast, show_cm
+      show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding,
+      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress
     } = req.body;
     const files = req.files || {};
 
@@ -401,18 +418,25 @@ const updateProject = async (req, res) => {
       return res.status(400).json({ message: 'กรุณาระบุ project_id' });
     }
 
-    if (!project_name || !job_number || !owner || !consusltant || !contractor || !address) {
-      return res.status(400).json({
-        message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด',
-        missingFields: {
-          project_name: !!project_name,
-          job_number: !!job_number,
-          owner: !!owner,
-          consusltant: !!consusltant,
-          contractor: !!contractor,
-          address: !!address
-        },
-      });
+    connection = await getConnection();
+
+    const [projectRows] = await connection.execute(
+      `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
+      [project_id]
+    );
+    if (projectRows.length === 0) {
+      return res.status(404).json({ message: 'ไม่พบโครงการหรือถูกลบแล้ว' });
+    }
+
+    const final_project_name = project_name !== undefined ? project_name : projectRows[0].project_name;
+    const final_job_number = job_number !== undefined ? job_number : projectRows[0].job_number;
+    const final_owner = owner !== undefined ? owner : projectRows[0].owner;
+    const final_consusltant = consusltant !== undefined ? consusltant : projectRows[0].consusltant;
+    const final_contractor = contractor !== undefined ? contractor : projectRows[0].contractor;
+    const final_address = address !== undefined ? address : projectRows[0].address;
+
+    if (!final_project_name || !final_job_number || !final_owner || !final_consusltant || !final_contractor || !final_address) {
+      return res.status(400).json({ message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด' });
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -425,22 +449,7 @@ const updateProject = async (req, res) => {
 
     const progressValue = progress !== undefined && progress !== '' ? Number(progress) : null;
     if (progressValue !== null && (isNaN(progressValue) || progressValue < 0 || progressValue > 100)) {
-      return res.status(400).json({ message: 'ความคืบหน้าต้องเป็นตัวเลขระหว่าง 0-100' });
-    }
-
-    connection = await getConnection();
-
-    const [projectRows] = await connection.execute(
-      `SELECT project_id, job_number, project_name, description, start_date, end_date, 
-              progress, status, owner, consusltant, contractor, address,
-              image, progress_summary_image, payment_image, design_image, 
-              pre_construction_image, construction_image, cm_image, precast_image,
-              show_design, show_pre_construction, show_construction, show_precast, show_cm
-       FROM projects WHERE project_id = ? AND active = 1`,
-      [project_id]
-    );
-    if (projectRows.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบโครงการหรือถูกลบแล้ว' });
+       return res.status(400).json({ message: 'ความคืบหน้าต้องเป็นตัวเลขระหว่าง 0-100' });
     }
 
     const [userRoles] = await connection.execute(
@@ -468,7 +477,8 @@ const updateProject = async (req, res) => {
       { key: 'pre_construction_image', file: files.pre_construction_image },
       { key: 'construction_image', file: files.construction_image },
       { key: 'cm_image', file: files.cm_image },
-      { key: 'precast_image', file: files.precast_image }, // เพิ่ม precast_image
+      { key: 'precast_image', file: files.precast_image },
+      { key: 'bidding_image', file: files.bidding_image },
     ];
 
     const imagePaths = {};
@@ -476,9 +486,7 @@ const updateProject = async (req, res) => {
       if (file && file[0]) {
         if (projectRows[0][key]) {
           const oldImagePath = path.join(__dirname, '../Uploads', path.basename(projectRows[0][key]));
-          if (await fs.access(oldImagePath).then(() => true).catch(() => false)) {
-            await fs.unlink(oldImagePath);
-          }
+          try { await fs.unlink(oldImagePath); } catch (e) {}
         }
         const fileName = `${key}-${project_id}-${Date.now()}${path.extname(file[0].originalname)}`;
         const uploadPath = path.join(uploadDir, fileName);
@@ -490,83 +498,42 @@ const updateProject = async (req, res) => {
     const fields = [];
     const values = [];
 
-    const compareField = (newValue, oldValue) => {
-      if (newValue === undefined) return false;
-      if (newValue === null && oldValue === null) return false;
-      if (newValue === oldValue) return false;
-      return true;
+    const addField = (fieldName, newValue) => {
+        if (newValue !== undefined) {
+            fields.push(`${fieldName} = ?`);
+            values.push(newValue);
+        }
     };
 
-    if (compareField(project_name, projectRows[0].project_name)) {
-      fields.push('project_name = ?');
-      values.push(project_name);
-    }
-    if (compareField(job_number, projectRows[0].job_number)) {
-      fields.push('job_number = ?');
-      values.push(job_number);
-    }
-    if (compareField(description, projectRows[0].description)) {
-      fields.push('description = ?');
-      values.push(description || null);
-    }
-    if (compareField(start_date, projectRows[0].start_date)) {
-      fields.push('start_date = ?');
-      values.push(start_date);
-    }
-    if (end_date && compareField(end_date, projectRows[0].end_date)) {
-      fields.push('end_date = ?');
-      values.push(end_date);
-    }
-    if (progressValue !== null && compareField(progressValue, projectRows[0].progress)) {
-      fields.push('progress = ?');
-      values.push(progressValue);
-    }
-    if (compareField(status, projectRows[0].status)) {
-      fields.push('status = ?');
-      values.push(status);
-    }
-    if (compareField(owner, projectRows[0].owner)) {
-      fields.push('owner = ?');
-      values.push(owner);
-    }
-    if (compareField(consusltant, projectRows[0].consusltant)) {
-      fields.push('consusltant = ?');
-      values.push(consusltant);
-    }
-    if (compareField(contractor, projectRows[0].contractor)) {
-      fields.push('contractor = ?');
-      values.push(contractor);
-    }
-    if (compareField(address, projectRows[0].address)) {
-      fields.push('address = ?');
-      values.push(address);
-    }
+    addField('project_name', project_name);
+    addField('job_number', job_number);
+    addField('description', description === undefined ? undefined : (description || null));
+    addField('start_date', start_date);
+    addField('end_date', end_date);
+    addField('progress', progressValue);
+    addField('status', status);
+    addField('owner', owner);
+    addField('consusltant', consusltant);
+    addField('contractor', contractor);
+    addField('address', address);
 
     const parseBool = (val) => (val === true || val === "true" || val === 1 || val === "1") ? 1 : 0;
-    if (show_design !== undefined) {
-      fields.push('show_design = ?');
-      values.push(parseBool(show_design));
-    }
-    if (show_pre_construction !== undefined) {
-      fields.push('show_pre_construction = ?');
-      values.push(parseBool(show_pre_construction));
-    }
-    if (show_construction !== undefined) {
-      fields.push('show_construction = ?');
-      values.push(parseBool(show_construction));
-    }
-    if (show_precast !== undefined) {
-      fields.push('show_precast = ?');
-      values.push(parseBool(show_precast));
-    }
-    if (show_cm !== undefined) {
-      fields.push('show_cm = ?');
-      values.push(parseBool(show_cm));
-    }
+    if (show_design !== undefined) addField('show_design', parseBool(show_design));
+    if (show_pre_construction !== undefined) addField('show_pre_construction', parseBool(show_pre_construction));
+    if (show_construction !== undefined) addField('show_construction', parseBool(show_construction));
+    if (show_precast !== undefined) addField('show_precast', parseBool(show_precast));
+    if (show_cm !== undefined) addField('show_cm', parseBool(show_cm));
+    if (show_bidding !== undefined) addField('show_bidding', parseBool(show_bidding));
+
+    if (bidding_progress !== undefined) addField('bidding_progress', Number(bidding_progress) || 0);
+    if (design_progress !== undefined) addField('design_progress', Number(design_progress) || 0);
+    if (pre_construction_progress !== undefined) addField('pre_construction_progress', Number(pre_construction_progress) || 0);
+    if (construction_progress !== undefined) addField('construction_progress', Number(construction_progress) || 0);
+    if (precast_progress !== undefined) addField('precast_progress', Number(precast_progress) || 0);
+    if (cm_progress !== undefined) addField('cm_progress', Number(cm_progress) || 0);
 
     for (const key of Object.keys(imagePaths)) {
-      fields.push(`${key} = ?`);
-      values.push(imagePaths[key]);
+      addField(key, imagePaths[key]);
     }
 
     if (fields.length > 0) {
@@ -576,17 +543,12 @@ const updateProject = async (req, res) => {
       await connection.execute(query, values);
     }
 
-    res.json({
-      message: 'แก้ไขโครงการสำเร็จ',
-      project_id,
-      job_number: job_number || projectRows[0].job_number,
-      ...imagePaths
-    });
+    res.json({ message: 'แก้ไขโครงการสำเร็จ', project_id, ...imagePaths });
   } catch (error) {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
@@ -607,7 +569,7 @@ const uploadProjectImage = async (req, res) => {
 
     const validImageTypes = [
       'image', 'progress_summary_image', 'payment_image', 'design_image',
-      'pre_construction_image', 'construction_image', 'cm_image', 'precast_image'
+      'pre_construction_image', 'construction_image', 'cm_image', 'precast_image', 'bidding_image'
     ];
     if (!validImageTypes.includes(image_type)) {
       return res.status(400).json({ message: 'ประเภทรูปภาพไม่ถูกต้อง' });
@@ -615,8 +577,7 @@ const uploadProjectImage = async (req, res) => {
 
     connection = await getConnection();
     const [projectRows] = await connection.execute(
-      `SELECT project_id, job_number, ${validImageTypes.join(', ')} 
-       FROM projects WHERE project_id = ? AND active = 1`,
+      `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
       [project_id]
     );
     if (projectRows.length === 0) {
@@ -642,9 +603,7 @@ const uploadProjectImage = async (req, res) => {
 
     if (projectRows[0][image_type]) {
       const oldImagePath = path.join(__dirname, '../Uploads', path.basename(projectRows[0][image_type]));
-      if (await fs.access(oldImagePath).then(() => true).catch(() => false)) {
-        await fs.unlink(oldImagePath);
-      }
+      try { await fs.unlink(oldImagePath); } catch (e) {}
     }
 
     const fileName = `${image_type}-${project_id}-${Date.now()}${path.extname(projectImage.originalname)}`;
@@ -657,20 +616,12 @@ const uploadProjectImage = async (req, res) => {
       [imagePath, project_id]
     );
 
-    res.json({
-      message: 'อัปโหลดรูปภาพสำเร็จ',
-      project_id,
-      job_number: projectRows[0].job_number,
-      [image_type]: imagePath
-    });
+    res.json({ message: 'อัปโหลดรูปภาพสำเร็จ', project_id, [image_type]: imagePath });
   } catch (error) {
-    if (error.message === 'กรุณาอัปโหลดไฟล์รูปภาพ') {
-      return res.status(400).json({ message: error.message });
-    }
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
@@ -683,7 +634,6 @@ const deleteProject = async (req, res) => {
     if (!req.user || !req.user.user_id) {
       return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
     }
-
     if (!id) {
       return res.status(400).json({ message: 'กรุณาระบุ project_id' });
     }
@@ -696,9 +646,7 @@ const deleteProject = async (req, res) => {
     const isAdmin = userRoles.length > 0;
 
     const [projectRows] = await connection.execute(
-      `SELECT project_id, job_number, image, progress_summary_image, payment_image, 
-              design_image, pre_construction_image, construction_image, cm_image, precast_image 
-       FROM projects WHERE project_id = ? AND active = 1`,
+      `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
       [id]
     );
     if (projectRows.length === 0) {
@@ -713,16 +661,12 @@ const deleteProject = async (req, res) => {
       return res.status(403).json({ message: 'คุณไม่มีสิทธิ์ลบโครงการนี้' });
     }
 
-    const imageFields = [
-      'image', 'progress_summary_image', 'payment_image', 'design_image',
-      'pre_construction_image', 'construction_image', 'cm_image', 'precast_image'
-    ];
+    // ลบรูปภาพที่เกี่ยวข้อง
+    const imageFields = ['image', 'progress_summary_image', 'payment_image', 'design_image', 'pre_construction_image', 'construction_image', 'cm_image', 'precast_image', 'bidding_image'];
     for (const key of imageFields) {
       if (projectRows[0][key]) {
         const imagePath = path.join(__dirname, '../Uploads', path.basename(projectRows[0][key]));
-        if (await fs.access(imagePath).then(() => true).catch(() => false)) {
-          await fs.unlink(imagePath);
-        }
+        try { await fs.unlink(imagePath); } catch (e) {}
       }
     }
 
@@ -731,12 +675,12 @@ const deleteProject = async (req, res) => {
       [id]
     );
 
-    res.json({ message: 'ลบโครงการสำเร็จ', project_id: id, job_number: projectRows[0].job_number });
+    res.json({ message: 'ลบโครงการสำเร็จ', project_id: id });
   } catch (error) {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
     }
   }
 };
@@ -746,14 +690,93 @@ const getAllRoles = async (req, res) => {
   try {
     connection = await getConnection();
     const [roles] = await connection.execute(
-      'SELECT role_id, role_name FROM roles'
+      'SELECT role_id, role_name, description FROM roles ORDER BY role_id ASC'
     );
     res.json({ roles });
   } catch (error) {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
     if (connection) {
-      await connection.end();
+      await connection.release();
+    }
+  }
+};
+
+const createRole = async (req, res) => {
+  const { role_name, description } = req.body;
+  let connection;
+  try {
+    if (!role_name) {
+      return res.status(400).json({ message: 'กรุณาระบุชื่อบทบาท' });
+    }
+
+    connection = await getConnection();
+    const [result] = await connection.execute(
+      'INSERT INTO roles (role_name, description, created_at, updated_at) VALUES (?, ?, NOW(), NOW())',
+      [role_name, description || null]
+    );
+
+    res.json({ message: 'สร้างบทบาทสำเร็จ', role_id: result.insertId, role_name });
+  } catch (error) {
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสร้างบทบาท', error: error.message });
+  } finally {
+    if (connection) {
+      await connection.release();
+    }
+  }
+};
+
+const updateRole = async (req, res) => {
+  const { id } = req.params;
+  const { role_name, description } = req.body;
+  let connection;
+  try {
+    if (!role_name) {
+      return res.status(400).json({ message: 'กรุณาระบุชื่อบทบาท' });
+    }
+
+    connection = await getConnection();
+    await connection.execute(
+      'UPDATE roles SET role_name = ?, description = ?, updated_at = NOW() WHERE role_id = ?',
+      [role_name, description || null, id]
+    );
+
+    res.json({ message: 'อัปเดตบทบาทสำเร็จ', role_id: id });
+  } catch (error) {
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการอัปเดตบทบาท', error: error.message });
+  } finally {
+    if (connection) {
+      await connection.release();
+    }
+  }
+};
+
+const deleteRole = async (req, res) => {
+  const { id } = req.params;
+  let connection;
+  try {
+    connection = await getConnection();
+    
+    // ตรวจสอบว่ามีผู้ใช้ใช้งานบทบาทนี้อยู่หรือไม่
+    const [userCount] = await connection.execute(
+      'SELECT COUNT(*) as count FROM project_user_roles WHERE role_id = ?',
+      [id]
+    );
+
+    if (userCount[0].count > 0) {
+      return res.status(400).json({ message: 'ไม่สามารถลบบทบาทนี้ได้ เนื่องจากมีผู้ใช้งานอยู่ในโครงการ' });
+    }
+
+    await connection.execute('DELETE FROM roles WHERE role_id = ?', [id]);
+    res.json({ message: 'ลบบทบาทสำเร็จ' });
+  } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).json({ message: 'ไม่สามารถลบบทบาทนี้ได้ เนื่องจากมีการอ้างอิงข้อมูลในส่วนอื่น' });
+    }
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบบทบาท', error: error.message });
+  } finally {
+    if (connection) {
+      await connection.release();
     }
   }
 };
@@ -767,4 +790,7 @@ module.exports = {
   deleteProject,
   getAllRoles,
   getProjectUsers,
+  createRole,
+  updateRole,
+  deleteRole,
 };
