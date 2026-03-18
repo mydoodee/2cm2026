@@ -872,13 +872,13 @@ const deleteProjectUserRole = async (req, res) => {
             });
         }
 
-        const projectIdNum = parseInt(project_id, 10);
+        const projectIdStr = project_id;
         const userIdNum = parseInt(user_id, 10);
 
-        if (isNaN(projectIdNum) || isNaN(userIdNum)) {
+        if (!projectIdStr || isNaN(userIdNum)) {
             return res.status(400).json({ 
                 success: false,
-                message: 'project_id และ user_id ต้องเป็นตัวเลข' 
+                message: 'project_id ต้องระบุ และ user_id ต้องเป็นตัวเลข' 
             });
         }
 

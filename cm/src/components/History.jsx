@@ -249,7 +249,7 @@ function History({ user, setUser, theme, setTheme }) {
   }, [selectedProject, API_URL, refreshAccessToken, generateChartData]);
 
   const addActivityIfValid = useCallback((activity) => {
-    if (selectedProject !== 'all' && activity.project_id !== parseInt(selectedProject)) {
+    if (selectedProject !== 'all' && activity.project_id !== selectedProject) {
       return;
     }
 

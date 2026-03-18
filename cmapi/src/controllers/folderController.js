@@ -12,11 +12,11 @@ async function getFolders(req, res) {
   let connection;
   try {
     connection = await getConnection();
-    const projectId = parseInt(req.query.project_id);
+    const projectId = req.query.project_id;
 
-    if (!projectId || isNaN(projectId)) {
+    if (!projectId) {
       return res.status(400).json({
-        message: 'Project ID is required and must be a valid number'
+        message: 'Project ID is required'
       });
     }
 
@@ -102,11 +102,11 @@ async function getFoldersWithSubfolders(req, res) {
   let connection;
   try {
     connection = await getConnection();
-    const projectId = parseInt(req.query.project_id);
+    const projectId = req.query.project_id;
 
-    if (!projectId || isNaN(projectId)) {
+    if (!projectId) {
       return res.status(400).json({
-        message: 'Project ID is required and must be a valid number'
+        message: 'Project ID is required'
       });
     }
 

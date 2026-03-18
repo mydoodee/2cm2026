@@ -2,6 +2,7 @@
 const { getConnection } = require('../config/db');
 const path = require('path');
 const fs = require('fs').promises;
+const { v4: uuidv4 } = require('uuid');
 
 const getProjects = async (req, res) => {
   let connection;
@@ -289,15 +290,17 @@ const createProject = async (req, res) => {
     }
 
     connection = await getConnection();
-    const [result] = await connection.execute(
+    const projectId = uuidv4();
+    await connection.execute(
       `INSERT INTO projects (
-        job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
+        project_id, job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
         owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, 
         pre_construction_image, construction_image, cm_image, precast_image, bidding_image, 
         show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding,
         bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        projectId,
         job_number,
         project_name,
         description || null,
@@ -333,7 +336,6 @@ const createProject = async (req, res) => {
         Number(cm_progress) || 0
       ]
     );
-    const projectId = result.insertId;
 
     // Insert default payment record into payments table
     await connection.execute(

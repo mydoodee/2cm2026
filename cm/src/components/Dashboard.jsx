@@ -325,7 +325,7 @@ const Dashboard = ({ user, setUser, theme, setTheme }) => {
 
   const filteredProjects = selectedProject === 'all' 
     ? projects 
-    : projects.filter(p => p.project_id === parseInt(selectedProject));
+    : projects.filter(p => p.project_id === selectedProject);
 
   const projectYears = [...new Set(projects.map(p => {
     if (!p.start_date) return null;
