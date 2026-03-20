@@ -37,6 +37,7 @@ async function getFolders(req, res) {
       LEFT JOIN folder_permissions fp ON f.folder_id = fp.folder_id
       WHERE f.project_id = ? AND f.active = 1
       GROUP BY f.folder_id
+      ORDER BY f.folder_name ASC
     `;
 
     let folders;
@@ -48,6 +49,7 @@ async function getFolders(req, res) {
         SELECT f.folder_id, f.folder_name, f.parent_folder_id, f.project_id, f.active
         FROM folders f
         WHERE f.project_id = ? AND f.active = 1
+        ORDER BY f.folder_name ASC
       `;
       [folders] = await connection.query(query, [projectId]);
 
@@ -127,6 +129,7 @@ async function getFoldersWithSubfolders(req, res) {
       LEFT JOIN folder_permissions fp ON f.folder_id = fp.folder_id
       WHERE f.project_id = ? AND f.active = 1
       GROUP BY f.folder_id
+      ORDER BY f.folder_name ASC
     `;
 
     let folders;
@@ -137,6 +140,7 @@ async function getFoldersWithSubfolders(req, res) {
         SELECT f.folder_id, f.folder_name, f.parent_folder_id, f.project_id, f.active
         FROM folders f
         WHERE f.project_id = ? AND f.active = 1
+        ORDER BY f.folder_name ASC
       `;
       [folders] = await connection.query(query, [projectId]);
 

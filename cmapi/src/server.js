@@ -32,11 +32,18 @@ const httpServer = createServer(app); // ⭐ เปลี่ยนจาก app.
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      'https://app.spkconstruction.co.th',
-      'http://localhost:5173',
-      'http://localhost:3000',
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'https://app.spkconstruction.co.th',
+        'http://localhost:5173',
+        'http://localhost:3000',
+      ];
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://192.168.') || origin.startsWith('http://10.')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -155,7 +162,7 @@ app.use(cors({
       'http://localhost:3000',
     ];
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://192.168.') || origin.startsWith('http://10.')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

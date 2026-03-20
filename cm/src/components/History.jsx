@@ -398,11 +398,6 @@ function History({ user, setUser, theme, setTheme }) {
       addActivityIfValid(activity);
     });
 
-    socketInstance.on('file-activity-global', (activity) => {
-      console.log('🌍 Received global activity:', activity);
-      addActivityIfValid(activity);
-    });
-
     return () => {
       console.log('🧹 Cleaning up WebSocket connection');
       socketInstance.offAny();

@@ -335,9 +335,11 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
         key: `year-${year}`,
         selectable: false,
         children: yearMap[year].map(project => {
+          const isSelected = selectedProject === project.project_id;
           const folderCount = folders.filter(f => f.project_id === project.project_id).length;
+          const titleSuffix = isSelected ? ` (${folderCount} โฟลเดอร์)` : '';
           return {
-            title: `${project.project_name} (${folderCount} โฟลเดอร์)`,
+            title: `${project.project_name}${titleSuffix}`,
             key: project.project_id.toString(),
             icon: <FolderOutlined />,
           };
@@ -549,7 +551,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                 className={theme === 'dark' ? 'dark-tree' : ''}
                 onSelect={(keys) => {
                   if (keys.length && !keys[0].startsWith('year-')) {
-                    setSelectedProject(parseInt(keys[0]));
+                    setSelectedProject(keys[0]);
                     setSelectedFolder(null);
                     selectedFolderRef.current = null;
                     setPendingPermissions({});

@@ -785,7 +785,7 @@ const buildFolderHierarchy = (parentId, inheritedPermission = null) => {
   return structure;
 };
 
-const rootStructure = buildFolderHierarchy(selectedFolderId);
+const rootStructure = selectedFolderId ? buildFolderHierarchy(selectedFolderId) : {};
 
 // หาสิทธิ์ของ root folder เพื่อส่งต่อไปยัง subfolder
 const rootFolder = folders.find(f => String(f.folder_id) === String(selectedFolderId));
@@ -1043,7 +1043,7 @@ const canDelete = !isRootFolder && !hasSubfolders && ['write', 'admin'].includes
       const createTreeNodes = (structure, parentKey = '') => {
         const nodes = [];
         
-        Object.entries(structure).forEach(([folderName, data]) => {
+        Object.entries(structure).sort(([a], [b]) => a.localeCompare(b)).forEach(([folderName, data]) => {
           if (folderName === '_root') return;
           
           const folderKey = parentKey ? `${parentKey}-${folderName}` : folderName;
