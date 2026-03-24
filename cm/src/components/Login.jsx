@@ -181,20 +181,19 @@ function Login({ setUser, theme }) {
 
             <Form.Item className="mb-4">
               <Button
-                type="primary"
                 htmlType="submit"
                 loading={isLoading}
                 icon={!isLoading && <LoginOutlined />}
                 size="large"
                 className={clsx(
-                  'w-full h-12 rounded-xl font-semibold',
-                  'shadow-lg hover:shadow-xl',
-                  'transition-all duration-200',
-                  theme === 'dark'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-red-500 hover:bg-red-600'
+                  'w-full h-12 rounded-xl font-semibold text-white',
+                  'shadow-lg hover:shadow-xl active:scale-[0.98]',
+                  'transition-all duration-200 border-none'
                 )}
-                style={{ border: 'none' }}
+                style={{ 
+                  backgroundColor: isLoading ? (theme === 'dark' ? '#991b1b' : '#f87171') : (theme === 'dark' ? '#dc2626' : '#ef4444'),
+                  color: 'white'
+                }}
               >
                 {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
               </Button>

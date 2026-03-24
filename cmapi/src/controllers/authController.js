@@ -24,7 +24,7 @@ const login = async (req, res) => {
     try {
         connection = await getConnection();
         const [rows] = await connection.execute(
-            'SELECT user_id, username, password_hash, first_name, last_name, email, profile_image FROM users WHERE username = ? AND active = 1',
+            'SELECT user_id, username, password_hash, first_name, last_name, email, profile_image, is_pm FROM users WHERE username = ? AND active = 1',
             [username]
         );
 
@@ -69,14 +69,14 @@ const login = async (req, res) => {
 
         // ✅ สร้าง token อายุ 8 ชั่วโมง
         const token = jwt.sign(
-            { user_id: user.user_id, username: user.username, roles: userRoles },
+            { user_id: user.user_id, username: user.username, roles: userRoles, is_pm: !!user.is_pm },
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );
 
         // ✅ สร้าง refresh token อายุ 7 วัน
         const refreshToken = jwt.sign(
-            { user_id: user.user_id, username: user.username, roles: userRoles },
+            { user_id: user.user_id, username: user.username, roles: userRoles, is_pm: !!user.is_pm },
             process.env.JWT_REFRESH_SECRET,
             { expiresIn: '7d' }
         );
@@ -97,7 +97,8 @@ const login = async (req, res) => {
                 email: user.email,
                 profile_image: user.profile_image,
                 roles: userRoles,
-                isAdmin: userRoles.includes(1)
+                isAdmin: userRoles.includes(1),
+                is_pm: !!user.is_pm
             }
         });
     } catch (error) {
@@ -122,10 +123,16 @@ const getUser = async (req, res) => {
 
         connection = await getConnection();
         const [rows] = await connection.execute(
-            'SELECT user_id, username, first_name, last_name, email, profile_image FROM users WHERE user_id = ? AND active = 1',
+            'SELECT user_id, username, first_name, last_name, email, profile_image, is_pm FROM users WHERE user_id = ? AND active = 1',
             [req.user.user_id]
         );
-        const [roles] = await connection.execute(
+        
+        // ดึงทั้ง global roles และ project roles
+        const [globalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ?',
+            [req.user.user_id]
+        );
+        const [projectRoles] = await connection.execute(
             'SELECT role_id FROM project_user_roles WHERE user_id = ?',
             [req.user.user_id]
         );
@@ -134,8 +141,12 @@ const getUser = async (req, res) => {
             return res.status(404).json({ message: 'ไม่พบผู้ใช้' });
         }
 
-        let userRoles = roles.map(r => r.role_id);
-        if (rows[0].username === 'adminspk' && !userRoles.includes(1)) {
+        let userRoles = [...new Set([
+            ...globalRoles.map(r => r.role_id),
+            ...projectRoles.map(r => r.role_id)
+        ])];
+
+        if ((rows[0].username === 'adminspk' || rows[0].username === 'admin') && !userRoles.includes(1)) {
             userRoles.push(1);
         }
 
@@ -148,7 +159,8 @@ const getUser = async (req, res) => {
                 email: rows[0].email,
                 profile_image: rows[0].profile_image,
                 roles: userRoles,
-                isAdmin: userRoles.includes(1)
+                isAdmin: userRoles.includes(1),
+                is_pm: !!rows[0].is_pm
             }
         });
     } catch (error) {
@@ -164,9 +176,12 @@ const getUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-    const { username, email, first_name, last_name, password, role_id, project_id } = req.body;
+    const { username, email, first_name, last_name, password, role_id, project_id, is_pm } = req.body;
     const profileImage = req.file;
     const { id } = req.params;
+
+    console.log(`DEBUG: updateUser called for ID: ${id}`);
+    console.log(`DEBUG: req.body:`, JSON.stringify(req.body, null, 2));
 
     let connection = null;
     try {
@@ -176,23 +191,42 @@ const updateUser = async (req, res) => {
 
         connection = await getConnection();
 
-        const isSelfUpdate = req.user.user_id === parseInt(id);
-        const [adminRoles] = await connection.execute(
-            'SELECT role_id FROM project_user_roles WHERE user_id = ?',
-            [req.user.user_id]
+        const targetId = parseInt(id);
+        const currentUserId = parseInt(req.user.user_id);
+        const isSelfUpdate = currentUserId === targetId;
+
+        console.log(`DEBUG: targetId=${targetId}, currentUserId=${currentUserId}, isSelfUpdate=${isSelfUpdate}`);
+
+        // ดึงสิทธิ์ทั้งหมดของผู้ที่กำลังแก้ไข (Admin Check)
+        const [userGlobalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ?',
+            [currentUserId]
         );
-        const isAdmin = adminRoles.some(r => r.role_id === 1) || req.user.username === 'adminspk';
+        const [userProjectRoles] = await connection.execute(
+            'SELECT role_id FROM project_user_roles WHERE user_id = ?',
+            [currentUserId]
+        );
+        
+        const allUserRoles = [...new Set([
+            ...userGlobalRoles.map(r => r.role_id),
+            ...userProjectRoles.map(r => r.role_id)
+        ])];
+
+        const isAdmin = allUserRoles.includes(1) || req.user.username === 'adminspk' || req.user.username === 'admin';
+        
+        console.log(`DEBUG: isAdmin=${isAdmin}, roles:`, allUserRoles);
+
         if (!isAdmin && !isSelfUpdate) {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์แก้ไขผู้ใช้นี้' });
         }
 
         if (!username || !email || !first_name || !last_name) {
-            return res.status(400).json({ message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด' });
+            return res.status(400).json({ message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด (username, email, firstName, lastName)' });
         }
 
         const [userRows] = await connection.execute(
             'SELECT user_id, username, profile_image FROM users WHERE user_id = ? AND active = 1',
-            [id]
+            [targetId]
         );
         if (userRows.length === 0) {
             return res.status(404).json({ message: 'ไม่พบผู้ใช้' });
@@ -200,7 +234,7 @@ const updateUser = async (req, res) => {
 
         const [usernameRows] = await connection.execute(
             'SELECT user_id FROM users WHERE username = ? AND user_id != ?',
-            [username, id]
+            [username, targetId]
         );
         if (usernameRows.length > 0) {
             return res.status(400).json({ message: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
@@ -208,7 +242,7 @@ const updateUser = async (req, res) => {
 
         const [emailRows] = await connection.execute(
             'SELECT user_id FROM users WHERE email = ? AND user_id != ?',
-            [email, id]
+            [email, targetId]
         );
         if (emailRows.length > 0) {
             return res.status(400).json({ message: 'อีเมลนี้ถูกใช้แล้ว' });
@@ -229,20 +263,28 @@ const updateUser = async (req, res) => {
         let updateQuery = 'UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?';
         let queryParams = [username, email, first_name, last_name];
 
+        if (isAdmin && is_pm !== undefined) {
+            updateQuery += ', is_pm = ?';
+            queryParams.push(is_pm ? 1 : 0);
+        }
+
         if (profileImagePath && profileImagePath !== userRows[0].profile_image) {
             updateQuery += ', profile_image = ?';
             queryParams.push(profileImagePath);
         }
 
         if (password) {
+            console.log('DEBUG: Updating password...');
             updateQuery += ', password_hash = ?';
             queryParams.push(await bcrypt.hash(password, 10));
         }
 
         updateQuery += ' WHERE user_id = ?';
-        queryParams.push(id);
+        queryParams.push(targetId);
 
+        console.log('DEBUG: Executing update query:', updateQuery);
         await connection.execute(updateQuery, queryParams);
+        console.log('DEBUG: Update successful');
 
         if (role_id && isAdmin) {
             await connection.execute(
@@ -324,42 +366,49 @@ const getAllUsers = async (req, res) => {
         }
 
         connection = await getConnection();
-        const [roles] = await connection.execute(
+        // เช็คสิทธิ์ Admin (ทั้ง global และ project)
+        const [userGlobalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ?',
+            [req.user.user_id]
+        );
+        const [userProjectRoles] = await connection.execute(
             'SELECT role_id FROM project_user_roles WHERE user_id = ?',
             [req.user.user_id]
         );
-        if (!roles.some(r => r.role_id === 1) && req.user.username !== 'adminspk') {
+        const allRoles = [...new Set([
+            ...userGlobalRoles.map(r => r.role_id),
+            ...userProjectRoles.map(r => r.role_id)
+        ])];
+
+        if (!allRoles.includes(1) && req.user.username !== 'adminspk' && req.user.username !== 'admin') {
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถดูรายการผู้ใช้ได้' });
         }
 
-            const includeInactive = req.query.includeInactive === 'true';
-            const [users] = await connection.execute(`
-                SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active,
-                       GROUP_CONCAT(DISTINCT pur.role_id) as role_ids,
-                       GROUP_CONCAT(pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name) as project_roles
-                FROM users u
-                LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
-                LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1
-                LEFT JOIN roles r ON pur.role_id = r.role_id
-                WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
-                GROUP BY u.user_id
-            `);
+        const includeInactive = req.query.includeInactive === 'true';
+        const [users] = await connection.execute(`
+            SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
+                   GROUP_CONCAT(DISTINCT pur.role_id) as role_ids,
+                   GROUP_CONCAT(pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name) as project_roles
+            FROM users u
+            LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
+            LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1
+            LEFT JOIN roles r ON pur.role_id = r.role_id
+            WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
+            GROUP BY u.user_id
+        `);
 
         const formattedUsers = users.map(user => {
             let userRoles = user.role_ids ? user.role_ids.split(',').map(Number) : [];
-            if (user.username === 'adminspk' && !userRoles.includes(1)) {
+            if ((user.username === 'adminspk' || user.username === 'admin') && !userRoles.includes(1)) {
                 userRoles.push(1);
             }
+
             return {
-                user_id: user.user_id,
-                username: user.username,
-                email: user.email,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                profile_image: user.profile_image,
-                active: user.active,
+                ...user,
+                user_id: Number(user.user_id),
                 roles: userRoles,
                 isAdmin: userRoles.includes(1),
+                is_pm: !!user.is_pm,
                 project_roles: user.project_roles
                     ? user.project_roles.split(',').map(pr => {
                           const [project_id, job_number, role_id, role_name] = pr.split(':');
@@ -388,7 +437,7 @@ const getAllUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-    const { username, email, first_name, last_name, password, role_id, project_id } = req.body;
+    const { username, email, first_name, last_name, password, role_id, project_id, is_pm } = req.body;
     const profileImage = req.file;
 
     let connection;
@@ -477,8 +526,8 @@ const createUser = async (req, res) => {
         console.error('DEBUG: Password hashed');
 
         const [result] = await connection.execute(
-            'INSERT INTO users (username, password_hash, email, first_name, last_name, profile_image, created_by, active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
-            [username, passwordHash, email, first_name, last_name, profileImagePath, req.user.user_id]
+            'INSERT INTO users (username, password_hash, email, first_name, last_name, profile_image, is_pm, created_by, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+            [username, passwordHash, email, first_name, last_name, profileImagePath, is_pm ? 1 : 0, req.user.user_id]
         );
         console.error('DEBUG: User inserted', { insertId: result.insertId });
 

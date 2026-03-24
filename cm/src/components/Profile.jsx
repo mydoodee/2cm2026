@@ -247,8 +247,8 @@ function Profile({ user, setUser, theme, setTheme }) {
             <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
                 <Card
                     className={clsx(
-                        theme === 'dark' ? 'bg-gray-800/70 border-gray-700/50' : 'bg-white/80 border-gray-200',
-                        'shadow-2xl rounded-3xl backdrop-blur-xl border overflow-hidden'
+                        theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]',
+                        'rounded-[2.5rem] backdrop-blur-3xl overflow-hidden'
                     )}
                     styles={{ body: { padding: 0 } }}
                 >
@@ -262,7 +262,7 @@ function Profile({ user, setUser, theme, setTheme }) {
                             <Button
                                 type="text"
                                 icon={<EditOutlined />}
-                                className="absolute top-4 right-4 text-white hover:bg-white/20 border-white/30 border"
+                                className="absolute top-6 right-6 text-white bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border-0 font-bold px-6 h-10 transition-all hover:scale-105"
                                 onClick={() => {
                                     setEditMode(true);
                                     form.setFieldsValue({
@@ -294,7 +294,9 @@ function Profile({ user, setUser, theme, setTheme }) {
                                         <img
                                             src={imagePreview || `${import.meta.env.VITE_API_URL}/${user.profile_image}`}
                                             alt="Profile"
-                                            className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-xl ring-4 ring-indigo-500/50"
+                                            className={clsx(
+                                                'w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover shadow-[0_10px_30px_rgba(0,0,0,0.2)]'
+                                            )}
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
                                                 e.target.nextSibling.style.display = 'flex';
@@ -304,7 +306,7 @@ function Profile({ user, setUser, theme, setTheme }) {
                                     <div
                                         className={clsx(
                                             theme === 'dark' ? 'bg-gradient-to-br from-indigo-600 to-purple-600' : 'bg-gradient-to-br from-indigo-500 to-purple-500',
-                                            'w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white font-bold text-3xl sm:text-4xl border-4 border-white shadow-xl ring-4 ring-indigo-500/50',
+                                            'w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white font-black text-3xl sm:text-4xl shadow-[0_10px_30px_rgba(0,0,0,0.2)]',
                                             (imagePreview || user?.profile_image) ? 'hidden' : ''
                                         )}
                                     >
@@ -335,8 +337,8 @@ function Profile({ user, setUser, theme, setTheme }) {
                                 {/* User Info */}
                                 {!editMode && (
                                     <div className={clsx(
-                                        'flex-1 sm:mb-2 p-4 rounded-xl',
-                                        theme === 'dark' ? 'bg-gray-700/50' : 'bg-white shadow-md'
+                                        'flex-1 sm:mb-2 p-6 rounded-[2rem] transition-all duration-300',
+                                        theme === 'dark' ? 'bg-slate-700/30' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
                                     )}>
                                         <h2 className={clsx(
                                             'text-2xl sm:text-3xl font-bold mb-1',
@@ -371,18 +373,18 @@ function Profile({ user, setUser, theme, setTheme }) {
                         {!editMode ? (
                             <>
 
-                                <Divider className={theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} />
+                                <div className="h-4" />
 
                                 {/* Info Cards */}
                                 <div className="space-y-4">
                                     <div className={clsx(
-                                        'p-4 rounded-xl transition-all hover:shadow-md',
-                                        theme === 'dark' ? 'bg-gray-700/50 hover:bg-gray-700/70' : 'bg-gray-50 hover:bg-gray-100'
+                                        'p-6 rounded-2xl transition-all duration-300',
+                                        theme === 'dark' ? 'bg-slate-700/20 hover:bg-slate-700/40' : 'bg-slate-50 hover:bg-white hover:shadow-[0_10px_30px_rgba(0,0,0,0.04)]'
                                     )}>
                                         <div className="flex items-center">
                                             <MailOutlined className={clsx(
-                                                'text-2xl mr-3',
-                                                theme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'
+                                                'text-2xl mr-4',
+                                                theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                                             )} />
                                             <div>
                                                 <p className={clsx(
@@ -402,13 +404,13 @@ function Profile({ user, setUser, theme, setTheme }) {
                                     </div>
 
                                     <div className={clsx(
-                                        'p-4 rounded-xl transition-all hover:shadow-md',
-                                        theme === 'dark' ? 'bg-gray-700/50 hover:bg-gray-700/70' : 'bg-gray-50 hover:bg-gray-100'
+                                        'p-6 rounded-2xl transition-all duration-300',
+                                        theme === 'dark' ? 'bg-slate-700/20 hover:bg-slate-700/40' : 'bg-slate-50 hover:bg-white hover:shadow-[0_10px_30px_rgba(0,0,0,0.04)]'
                                     )}>
                                         <div className="flex items-center">
                                             <UserOutlined className={clsx(
-                                                'text-2xl mr-3',
-                                                theme === 'dark' ? 'text-purple-400' : 'text-purple-500'
+                                                'text-2xl mr-4',
+                                                theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
                                             )} />
                                             <div>
                                                 <p className={clsx(

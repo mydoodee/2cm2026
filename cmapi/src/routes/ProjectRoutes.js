@@ -15,6 +15,10 @@ const {
   deleteRole,
 } = require('../controllers/projectController');
 const {
+  getJobStatusDetails,
+  updateJobStatusDetails,
+} = require('../controllers/jobStatusController');
+const {
   getFolders,
   createFolder,
   updateFolder,
@@ -75,6 +79,7 @@ router.post(
     { name: 'cm_image', maxCount: 1 },
     { name: 'precast_image', maxCount: 1 },
     { name: 'bidding_image', maxCount: 1 },
+    { name: 'job_status_image', maxCount: 1 },
   ]),
   multerErrorHandler,
   createProject
@@ -92,11 +97,16 @@ router.put(
     { name: 'cm_image', maxCount: 1 },
     { name: 'precast_image', maxCount: 1 },
     { name: 'bidding_image', maxCount: 1 },
+    { name: 'job_status_image', maxCount: 1 },
   ]),
   multerErrorHandler,
   updateProject
 );
 router.delete('/project/:id', authenticateToken, deleteProject);
+
+// Job Status Details Routes
+router.get('/project/:id/job-status-details', authenticateToken, getJobStatusDetails);
+router.post('/project/:id/job-status-details', authenticateToken, updateJobStatusDetails);
 
 // Role Management Routes
 router.post('/role', authenticateToken, createRole);

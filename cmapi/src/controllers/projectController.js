@@ -13,11 +13,15 @@ const getProjects = async (req, res) => {
 
     connection = await getConnection();
     let projects;
-    const [userRoles] = await connection.execute(
+    const [globalRoles] = await connection.execute(
+      'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
+      [req.user.user_id]
+    );
+    const [projectRoles] = await connection.execute(
       'SELECT role_id FROM project_user_roles WHERE user_id = ? AND role_id = 1',
       [req.user.user_id]
     );
-    const isAdmin = userRoles.length > 0;
+    const isAdmin = globalRoles.length > 0 || projectRoles.length > 0 || req.user.username === 'adminspk' || req.user.username === 'admin';
 
     if (isAdmin) {
       [projects] = await connection.execute(`
@@ -27,10 +31,11 @@ const getProjects = async (req, res) => {
                p.image, p.progress_summary_image, p.payment_image, p.design_image, 
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, 
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
-               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
+               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
         FROM projects p
         WHERE active = 1
+        ORDER BY p.job_number DESC
       `);
     } else {
       [projects] = await connection.execute(`
@@ -40,11 +45,12 @@ const getProjects = async (req, res) => {
                p.image, p.progress_summary_image, p.payment_image, p.design_image, 
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
-               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
+               p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
         FROM projects p
         JOIN project_user_roles pur ON p.project_id = pur.project_id
         WHERE pur.user_id = ? AND p.active = 1
+        ORDER BY p.job_number DESC
       `, [req.user.user_id]);
     }
 
@@ -65,7 +71,10 @@ const getProjects = async (req, res) => {
         show_construction: !!project.show_construction,
         show_precast: !!project.show_precast,
         show_cm: !!project.show_cm,
-        show_bidding: !!project.show_bidding
+        show_bidding: !!project.show_bidding,
+        show_progress_summary: project.show_progress_summary !== undefined ? !!project.show_progress_summary : true,
+        show_payment: project.show_payment !== undefined ? !!project.show_payment : true,
+        show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
       };
     }));
 
@@ -102,8 +111,8 @@ const getProjectById = async (req, res) => {
                 p.image, p.progress_summary_image, p.payment_image, p.design_image, 
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
-                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
+                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
          FROM projects p
          WHERE project_id = ? AND active = 1`,
         [req.params.id]
@@ -116,8 +125,8 @@ const getProjectById = async (req, res) => {
                 p.image, p.progress_summary_image, p.payment_image, p.design_image, 
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
-                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress
+                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
          FROM projects p
          WHERE p.project_id = ? AND active = 1 AND EXISTS (
              SELECT 1 FROM project_user_roles pur 
@@ -160,7 +169,10 @@ const getProjectById = async (req, res) => {
       show_construction: !!project.show_construction,
       show_precast: !!project.show_precast,
       show_cm: !!project.show_cm,
-      show_bidding: !!project.show_bidding
+      show_bidding: !!project.show_bidding,
+      show_progress_summary: project.show_progress_summary !== undefined ? !!project.show_progress_summary : true,
+      show_payment: project.show_payment !== undefined ? !!project.show_payment : true,
+      show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
     };
 
     res.json({ project: projectWithMembers });
@@ -258,8 +270,8 @@ const createProject = async (req, res) => {
 
     const {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
-      show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1, show_bidding = 1,
-      bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0
+      show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1, show_bidding = 1, show_progress_summary = 1, show_payment = 1, show_job_status = 1,
+      bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0, job_status_progress = 0
     } = req.body;
     const files = req.files || {};
 
@@ -296,9 +308,9 @@ const createProject = async (req, res) => {
         project_id, job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
         owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, 
         pre_construction_image, construction_image, cm_image, precast_image, bidding_image, 
-        show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding,
-        bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
+        bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         projectId,
         job_number,
@@ -322,18 +334,23 @@ const createProject = async (req, res) => {
         null, // cm_image
         null,  // precast_image
         null,  // bidding_image
+        null,  // job_status_image
         show_design,
         show_pre_construction,
         show_construction,
         show_precast,
         show_cm,
         show_bidding,
+        show_progress_summary,
+        show_payment,
+        show_job_status,
         Number(bidding_progress) || 0,
         Number(design_progress) || 0,
         Number(pre_construction_progress) || 0,
         Number(construction_progress) || 0,
         Number(precast_progress) || 0,
-        Number(cm_progress) || 0
+        Number(cm_progress) || 0,
+        Number(job_status_progress) || 0
       ]
     );
 
@@ -365,6 +382,7 @@ const createProject = async (req, res) => {
       { key: 'cm_image', file: files.cm_image },
       { key: 'precast_image', file: files.precast_image },
       { key: 'bidding_image', file: files.bidding_image },
+      { key: 'job_status_image', file: files.job_status_image },
     ];
 
     const imagePaths = {};
@@ -411,8 +429,8 @@ const updateProject = async (req, res) => {
     const project_id = req.params.id || req.body.project_id;
     const {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
-      show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding,
-      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress
+      show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
+      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress
     } = req.body;
     const files = req.files || {};
 
@@ -481,6 +499,7 @@ const updateProject = async (req, res) => {
       { key: 'cm_image', file: files.cm_image },
       { key: 'precast_image', file: files.precast_image },
       { key: 'bidding_image', file: files.bidding_image },
+      { key: 'job_status_image', file: files.job_status_image },
     ];
 
     const imagePaths = {};
@@ -526,6 +545,9 @@ const updateProject = async (req, res) => {
     if (show_precast !== undefined) addField('show_precast', parseBool(show_precast));
     if (show_cm !== undefined) addField('show_cm', parseBool(show_cm));
     if (show_bidding !== undefined) addField('show_bidding', parseBool(show_bidding));
+    if (show_progress_summary !== undefined) addField('show_progress_summary', parseBool(show_progress_summary));
+    if (show_payment !== undefined) addField('show_payment', parseBool(show_payment));
+    if (show_job_status !== undefined) addField('show_job_status', parseBool(show_job_status));
 
     if (bidding_progress !== undefined) addField('bidding_progress', Number(bidding_progress) || 0);
     if (design_progress !== undefined) addField('design_progress', Number(design_progress) || 0);
@@ -533,6 +555,7 @@ const updateProject = async (req, res) => {
     if (construction_progress !== undefined) addField('construction_progress', Number(construction_progress) || 0);
     if (precast_progress !== undefined) addField('precast_progress', Number(precast_progress) || 0);
     if (cm_progress !== undefined) addField('cm_progress', Number(cm_progress) || 0);
+    if (job_status_progress !== undefined) addField('job_status_progress', Number(job_status_progress) || 0);
 
     for (const key of Object.keys(imagePaths)) {
       addField(key, imagePaths[key]);
@@ -571,7 +594,7 @@ const uploadProjectImage = async (req, res) => {
 
     const validImageTypes = [
       'image', 'progress_summary_image', 'payment_image', 'design_image',
-      'pre_construction_image', 'construction_image', 'cm_image', 'precast_image', 'bidding_image'
+      'pre_construction_image', 'construction_image', 'cm_image', 'precast_image', 'bidding_image', 'job_status_image'
     ];
     if (!validImageTypes.includes(image_type)) {
       return res.status(400).json({ message: 'ประเภทรูปภาพไม่ถูกต้อง' });

@@ -10,6 +10,7 @@ import Navbar from '../Navbar';
 import ProjectInfoCard from './cards/ProjectInfoCard';
 import ProgressSummaryCard from './cards/ProgressSummaryCard';
 import PaymentCard from './cards/PaymentCard';
+import JobStatusCard from './cards/JobStatusCard';
 import PhaseCard from './cards/PhaseCard';
 import StatsCards from './cards/StatsCards';
 import WeatherCard from './cards/WeatherCard';
@@ -397,6 +398,7 @@ const ProjectDetail = ({ user, setUser }) => {
           cm_image: getImageUrl(projectResponse.data.project.cm_image),
           precast_image: getImageUrl(projectResponse.data.project.precast_image),
           bidding_image: getImageUrl(projectResponse.data.project.bidding_image),
+          job_status_image: getImageUrl(projectResponse.data.project.job_status_image),
 
           phases: [
             {
@@ -600,8 +602,22 @@ const ProjectDetail = ({ user, setUser }) => {
     <div className={`h-screen w-full ${theme === 'dark' ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} transition-all duration-300 font-kanit overflow-auto`}>
       <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
       <div className="w-full px-4 py-6">
-        {/* Top 3 Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Top Cards Grid - Dynamic Layout */}
+        <div className={`grid grid-cols-1 gap-6 mb-6 ${
+          (() => {
+            const activeCards = [
+              true, // ProjectInfoCard
+              project.show_progress_summary !== false,
+              project.show_payment !== false,
+              project.show_job_status !== false
+            ].filter(Boolean).length;
+            
+            if (activeCards >= 4) return 'lg:grid-cols-4';
+            if (activeCards === 3) return 'lg:grid-cols-3';
+            if (activeCards === 2) return 'lg:grid-cols-2';
+            return 'lg:grid-cols-1';
+          })()
+        }`}>
           <ProjectInfoCard
             project={project}
             actualProgress={actualProgress}
@@ -612,36 +628,51 @@ const ProjectDetail = ({ user, setUser }) => {
             handleRetry={handleRetry}
             getStatusColor={getStatusColor}
             canViewProgress={canViewProgress}
-          />
-
-          <ProgressSummaryCard
-            project={project}
-            progressSummary={selectedProgress}
-            progressHistory={progressHistory}
-            selectedProgressInstallment={selectedProgressInstallment}
-            setSelectedProgressInstallment={setSelectedProgressInstallment}
-            actualProgress={actualProgress}
-            imageLoading={imageLoading}
-            imageErrors={imageErrors}
-            setImageLoading={setImageLoading}
-            setImageErrors={setImageErrors}
             user={user}
-            projectId={id}
           />
 
-          <PaymentCard
-            project={project}
-            selectedPayment={selectedPayment}
-            paymentHistory={paymentHistory}
-            selectedPaymentInstallment={selectedPaymentInstallment}
-            setSelectedPaymentInstallment={setSelectedPaymentInstallment}
-            imageLoading={imageLoading}
-            imageErrors={imageErrors}
-            setImageLoading={setImageLoading}
-            setImageErrors={setImageErrors}
-            paymentData={project.payment}
-            actualProgress={actualProgress}
-          />
+          {project.show_progress_summary !== false && (
+            <ProgressSummaryCard
+              project={project}
+              progressSummary={selectedProgress}
+              progressHistory={progressHistory}
+              selectedProgressInstallment={selectedProgressInstallment}
+              setSelectedProgressInstallment={setSelectedProgressInstallment}
+              actualProgress={actualProgress}
+              imageLoading={imageLoading}
+              imageErrors={imageErrors}
+              setImageLoading={setImageLoading}
+              setImageErrors={setImageErrors}
+              user={user}
+              projectId={id}
+            />
+          )}
+
+          {project.show_payment !== false && (
+            <PaymentCard
+              project={project}
+              selectedPayment={selectedPayment}
+              paymentHistory={paymentHistory}
+              selectedPaymentInstallment={selectedPaymentInstallment}
+              setSelectedPaymentInstallment={setSelectedPaymentInstallment}
+              imageLoading={imageLoading}
+              imageErrors={imageErrors}
+              setImageLoading={setImageLoading}
+              setImageErrors={setImageErrors}
+              paymentData={project.payment}
+              actualProgress={actualProgress}
+            />
+          )}
+
+          {project.show_job_status !== false && (
+            <JobStatusCard
+              project={project}
+              imageLoading={imageLoading}
+              imageErrors={imageErrors}
+              setImageLoading={setImageLoading}
+              setImageErrors={setImageErrors}
+            />
+          )}
         </div>
 
         {/* Phase Cards Header */}

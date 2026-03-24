@@ -22,10 +22,11 @@ import Profile from './components/Profile';
 import Settings from './components/Settings';
 import ProjectSetting from './components/projects/ProjectSetting';
 import PermissionFolder from './components/projects/PermissionFolder';
-import UserSetting from './components/users/usersetting';
+import UserSetting from './components/users/UserSetting';
 import Progress from './components/Progress';
 import SCurve from './components/projects/SCurve';
 import Precast from './components/projects/Precast';
+import JobStatusDetail from './components/projects/JobStatusDetail';
 import Unauthorized from './components/Unauthorized';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -211,6 +212,7 @@ function App() {
             <Route path="/project/:id/scurve" element={<SCurve user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/project/:id/planning" element={<Planning user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/project/:id/actual" element={<Actual user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+            <Route path="/project/:id/job-status" element={<JobStatusDetail user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
 
             {/* === USER PAGES === */}
             <Route path="/progress" element={<Progress user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />

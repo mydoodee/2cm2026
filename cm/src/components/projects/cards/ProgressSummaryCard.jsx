@@ -46,7 +46,7 @@ const ProgressSummaryCard = ({
 
   return (
     <Card 
-      className="bg-white shadow-md card-hover rounded-lg relative overflow-hidden h-[420px]"
+      className="bg-white shadow-md card-hover rounded-lg relative overflow-hidden h-[360px]"
       style={{ 
         borderRadius: '12px',
         backgroundImage: project.progress_summary_image && !imageErrors.progress_summary 
