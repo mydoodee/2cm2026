@@ -10,7 +10,7 @@ import {
   CheckCircleOutlined, ClockCircleOutlined, UnorderedListOutlined,
   FolderOutlined, AppstoreOutlined, FileTextOutlined, WarningOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../../axiosConfig';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -39,11 +39,7 @@ const Schedule = ({ user, projectId, onClose }) => {
 
   const fetchProject = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/project/${projectId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/project/${projectId}`);
       setProject(response.data.project);
       setLoading(false);
     } catch (error) {
@@ -55,11 +51,7 @@ const Schedule = ({ user, projectId, onClose }) => {
 
   const fetchTasks = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/schedule/tasks/${projectId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/schedule/tasks/${projectId}`);
       
       const formatted = formatTreeData(response.data.data);
       setTreeData(formatted);
@@ -179,11 +171,7 @@ const Schedule = ({ user, projectId, onClose }) => {
 
   const generateAutoTaskNumber = async (parentId = null) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/schedule/tasks/${projectId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/schedule/tasks/${projectId}`);
       
       const tasks = response.data.data;
       
@@ -289,18 +277,10 @@ const Schedule = ({ user, projectId, onClose }) => {
       delete data.duration;
 
       if (modalMode === 'create') {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/schedule/tasks`,
-          data,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.post('/api/schedule/tasks', data);
         message.success('เพิ่มงานสำเร็จ');
       } else {
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/schedule/tasks/${selectedTask.task_id}`,
-          data,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.put(`/api/schedule/tasks/${selectedTask.task_id}`, data);
         message.success('แก้ไขงานสำเร็จ');
       }
       
@@ -314,11 +294,7 @@ const Schedule = ({ user, projectId, onClose }) => {
 
   const handleDelete = async (taskId) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/schedule/tasks/${taskId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.delete(`/api/schedule/tasks/${taskId}`);
       message.success('ลบงานสำเร็จ');
       fetchTasks();
     } catch (error) {

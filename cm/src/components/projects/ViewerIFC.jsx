@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button, message, Spin, Typography, Space, Card, Modal, Drawer } from 'antd';
 import { CloseOutlined, DownloadOutlined, ExpandOutlined, CompressOutlined, EyeOutlined, ShareAltOutlined, MenuOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import api from '../../axiosConfig';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { IFCLoader } from 'web-ifc-three/IFCLoader';
@@ -11,11 +12,7 @@ import './ViewerIFC.css';
 const { Text } = Typography;
 
 // ⭐ Helper function สำหรับสร้าง API URL
-const getApiUrl = (endpoint, isPublic = false) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-  const prefix = isPublic ? '/api/public' : '/api/dashboard';
-  return `${baseUrl}${prefix}${endpoint}`;
-};
+
 
 // Custom Icons
 const WireframeIcon = () => (
@@ -535,44 +532,35 @@ const ViewerIFC = () => {
         setLoadingStatus('กำลังดาวน์โหลดไฟล์...');
 
         const authToken = localStorage.getItem('token');
-
-        let apiEndpoint, headers;
+        let relativePath;
 
         // ⭐ Mode 0: Planning/Actual IFC (Special prefix)
         if (fileId && fileId.startsWith('planning_')) {
           const parts = fileId.split('_'); // planning_type_id or planning_subtype_id
           const type = parts[1]; // 'type' or 'subtype'
           const itemId = parts[2]; // the ID
-
-          apiEndpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:3050'}/api/planning/file/download/${type}/${itemId}`;
-          headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-          console.log(`🏗️ Using PLANNING endpoint (${type}): ${apiEndpoint}`);
+          relativePath = `/api/planning/file/download/${type}/${itemId}`;
+          console.log(`🏗️ Using PLANNING endpoint (${type}): ${relativePath}`);
         }
         // Mode 1: Share Token (ปลอดภัยที่สุด)
         else if (token) {
-          apiEndpoint = getApiUrl(`/shared/${token}/download`, true);
-          headers = {};
+          relativePath = `/api/public/shared/${token}/download`;
           console.log('🔐 Using SHARED TOKEN endpoint');
         }
         // Mode 2: Private (ต้อง login)
         else if (authToken) {
-          apiEndpoint = getApiUrl(`/project/${id}/file/${fileId}/download`, false);
-          headers = { Authorization: `Bearer ${authToken}` };
+          relativePath = `/api/dashboard/project/${id}/file/${fileId}/download`;
           console.log('🔒 Using PRIVATE endpoint (with auth)');
         }
         // Mode 3: Public (ไม่ต้อง login แต่ดู ID ได้)
         else {
-          apiEndpoint = getApiUrl(`/project/${id}/file/${fileId}/download`, true);
-          headers = {};
+          relativePath = `/api/public/project/${id}/file/${fileId}/download`;
           console.log('🌐 Using PUBLIC endpoint (fallback - no token)');
         }
 
-        const response = await axios.get(apiEndpoint, {
-          headers,
+        const response = await api.get(relativePath, {
           responseType: 'blob',
           timeout: 600000,
-          maxContentLength: 500000000,
-          maxBodyLength: 500000000,
           onDownloadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -815,27 +803,20 @@ const ViewerIFC = () => {
       message.loading({ content: 'กำลังเตรียมดาวน์โหลด...', key: 'download', duration: 0 });
 
       const authToken = localStorage.getItem('token');
-
-      let apiEndpoint, headers;
+      let relativePath;
 
       // ⭐ ดาวน์โหลดตาม mode ที่ใช้งาน
       if (token) {
-        apiEndpoint = getApiUrl(`/shared/${token}/download`, true);
-        headers = {};
+        relativePath = `/api/public/shared/${token}/download`;
       } else if (authToken) {
-        apiEndpoint = getApiUrl(`/project/${id}/file/${fileId}/download`, false);
-        headers = { Authorization: `Bearer ${authToken}` };
+        relativePath = `/api/dashboard/project/${id}/file/${fileId}/download`;
       } else {
-        apiEndpoint = getApiUrl(`/project/${id}/file/${fileId}/download`, true);
-        headers = {};
+        relativePath = `/api/public/project/${id}/file/${fileId}/download`;
       }
 
-      const response = await axios.get(apiEndpoint, {
-        headers,
+      const response = await api.get(relativePath, {
         responseType: 'blob',
         timeout: 600000,
-        maxContentLength: 500000000,
-        maxBodyLength: 500000000,
         onDownloadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -908,13 +889,10 @@ const ViewerIFC = () => {
       message.loading({ content: 'กำลังสร้างลิงก์แชร์...', key: 'share', duration: 0 });
 
       // ⭐ เรียก API สร้าง share token
-      const response = await axios.post(
-        getApiUrl(`/project/${id}/file/${fileId}/create-share-link`, true),
+      const response = await api.post(
+        `/api/public/project/${id}/file/${fileId}/create-share-link`,
         { expiresInDays: 7 },
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-          timeout: 30000
-        }
+        { timeout: 30000 }
       );
 
       const shareUrl = response.data.data.shareUrl;

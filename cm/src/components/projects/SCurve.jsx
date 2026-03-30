@@ -3,7 +3,7 @@ import { Button, Card, Typography, Space, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Navbar';
-import axios from 'axios';
+import api from '../../axiosConfig';
 
 const { Title, Text } = Typography;
 
@@ -17,12 +17,7 @@ const SCurve = ({ user, setUser, theme, setTheme }) => {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token');
-
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/project/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get(`/api/project/${id}`);
 
         setProject(response.data.project);
         setLoading(false);

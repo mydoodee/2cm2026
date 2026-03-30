@@ -3,33 +3,10 @@ import { Button, Space, Card, Typography, Input, Form, Checkbox, App, Empty, Tre
 import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, SaveOutlined, FolderAddOutlined, SearchOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import Navbar from '../Navbar';
-import axios from 'axios';
+import api from '../../axiosConfig';
 
 const { Option } = Select;
 const { Text, Title } = Typography;
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://app.spkconstruction.co.th:3050',
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
 
 const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
   const [projects, setProjects] = useState([]);

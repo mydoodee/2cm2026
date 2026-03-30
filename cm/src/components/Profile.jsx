@@ -5,51 +5,11 @@ import { UserOutlined, UploadOutlined, MailOutlined, LockOutlined, EditOutlined,
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import Navbar from './Navbar';
-import axios from 'axios';
+import api from '../axiosConfig';
 import clsx from 'clsx';
 import './Profile.css';
 
-const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-    timeout: 5000,
-});
 
-const retryRequest = async (config, retries = 3, delay = 1000) => {
-    for (let i = 0; i < retries; i++) {
-        try {
-            return await axiosInstance(config);
-        } catch (error) {
-            if (error.response?.status === 401 && i < retries - 1) {
-                try {
-                    const refreshToken = localStorage.getItem('refreshToken');
-                    if (!refreshToken) {
-                        message.error('ไม่มี refresh token กรุณาล็อกอินใหม่');
-                        window.location.href = '/login';
-                        throw new Error('ไม่มี refresh token');
-                    }
-                    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/refresh-token`, {
-                        refreshToken,
-                    });
-                    const newToken = response.data.token;
-                    localStorage.setItem('token', newToken);
-                    config.headers.Authorization = `Bearer ${newToken}`;
-                    continue;
-                } catch (refreshError) {
-                    console.error('Refresh token error:', refreshError);
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('refreshToken');
-                    message.error('เซสชันหมดอายุ กรุณาล็อกอินใหม่');
-                    window.location.href = '/login';
-                    throw refreshError;
-                }
-            } else if (error.code === 'ERR_NETWORK' && i < retries - 1) {
-                await new Promise(resolve => setTimeout(resolve, delay));
-                continue;
-            }
-            throw error;
-        }
-    }
-};
 
 function Profile({ user, setUser, theme, setTheme }) {
     const navigate = useNavigate();
@@ -134,14 +94,7 @@ function Profile({ user, setUser, theme, setTheme }) {
         }
 
         try {
-            const response = await retryRequest({
-                method: 'put',
-                url: `/api/user/${user.user_id}`,
-                data: formData,
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await api.put(`/api/user/${user.user_id}`, formData);
 
             const updatedUser = response.data.user;
             setUser(updatedUser);

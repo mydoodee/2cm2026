@@ -27,13 +27,13 @@ import {
   WarningOutlined
 } from '@ant-design/icons';
 
+import api from '../axiosConfig';
+
 // ⭐ API URLs
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-const API_URL = `${API_BASE_URL}/api`;
 const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost:3050';
 
 // ⭐ Socket.IO Base URL
-const SOCKET_BASE_URL = API_BASE_URL.replace('/cm-api', '');
+const SOCKET_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3050').replace('/cm-api', '');
 
 function History({ user, setUser, theme, setTheme }) {
   const [loading, setLoading] = useState(true);
@@ -48,42 +48,11 @@ function History({ user, setUser, theme, setTheme }) {
   const [chartData, setChartData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        throw new Error('ไม่มี refresh token ใน localStorage');
-      }
 
-      const response = await axios.post(
-        `${API_BASE_URL}/refresh-token`,
-        { refreshToken },
-        { timeout: 10000 }
-      );
-
-      const newToken = response.data.token;
-      localStorage.setItem('token', newToken);
-      return newToken;
-    } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      throw new Error('Token refresh failed');
-    }
-  }, [setUser]);
 
   const fetchUserProjects = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('กรุณาเข้าสู่ระบบ');
-        return;
-      }
-
-      const response = await axios.get(`${API_URL}/projects`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000
-      });
+      const response = await api.get('/api/projects');
       
       if (response.data && response.data.projects) {
         setUserProjects(response.data.projects);
@@ -91,29 +60,10 @@ function History({ user, setUser, theme, setTheme }) {
         setUserProjects([]);
       }
     } catch (error) {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        try {
-          const newToken = await refreshAccessToken();
-          const retryResponse = await axios.get(`${API_URL}/projects`, {
-            headers: { Authorization: `Bearer ${newToken}` },
-            timeout: 15000
-          });
-          
-          if (retryResponse.data && retryResponse.data.projects) {
-            setUserProjects(retryResponse.data.projects);
-          } else {
-            setUserProjects([]);
-          }
-        } catch (refreshError) {
-          console.error('Error refreshing token for projects:', refreshError);
-          setError('เซสชันของคุณหมดอายุ กรุณาล็อกอินใหม่');
-        }
-      } else {
-        console.error('Error fetching projects:', error);
-        setError('ไม่สามารถโหลดข้อมูลโครงการได้');
-      }
+      console.error('Error fetching projects:', error);
+      setError('ไม่สามารถโหลดข้อมูลโครงการได้');
     }
-  }, [refreshAccessToken]);
+  }, []);
 
   const generateChartData = useCallback((activities) => {
     const data = [];
@@ -155,39 +105,11 @@ function History({ user, setUser, theme, setTheme }) {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('กรุณาเข้าสู่ระบบ');
-        setLoading(false);
-        return;
-      }
-
-      const config = { 
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000
-      };
-
       const [statsResponse, activitiesResponse, downloadsResponse, uploadersResponse] = await Promise.all([
-        axios.get(
-          selectedProject !== 'all'
-            ? `${API_URL}/file-statistics/project/${selectedProject}`
-            : `${API_URL}/file-statistics`,
-          config
-        ),
-        axios.get(
-          selectedProject === 'all'
-            ? `${API_URL}/file-activities/recent?limit=100`
-            : `${API_URL}/file-activities/project/${selectedProject}?limit=100`,
-          config
-        ),
-        axios.get(
-          `${API_URL}/top-downloads?limit=5${selectedProject !== 'all' ? `&projectId=${selectedProject}` : ''}`,
-          config
-        ),
-        axios.get(
-          `${API_URL}/top-uploaders?limit=5${selectedProject !== 'all' ? `&projectId=${selectedProject}` : ''}`,
-          config
-        )
+        api.get(selectedProject !== 'all' ? `/api/file-statistics/project/${selectedProject}` : '/api/file-statistics'),
+        api.get(selectedProject === 'all' ? '/api/file-activities/recent?limit=100' : `/api/file-activities/project/${selectedProject}?limit=100`),
+        api.get(`/api/top-downloads?limit=5${selectedProject !== 'all' ? `&projectId=${selectedProject}` : ''}`),
+        api.get(`/api/top-uploaders?limit=5${selectedProject !== 'all' ? `&projectId=${selectedProject}` : ''}`)
       ]);
 
       setStatistics(statsResponse.data.statistics || {});
@@ -198,58 +120,13 @@ function History({ user, setUser, theme, setTheme }) {
       setTopUploaders(uploadersResponse.data.topUploaders || []);
 
     } catch (error) {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        try {
-          const newToken = await refreshAccessToken();
-          const config = { 
-            headers: { Authorization: `Bearer ${newToken}` },
-            timeout: 15000
-          };
-
-          const [statsResponse, activitiesResponse, downloadsResponse, uploadersResponse] = await Promise.all([
-            axios.get(
-              selectedProject !== 'all'
-                ? `${API_URL}/file-statistics/project/${selectedProject}`
-                : `${API_URL}/file-statistics`,
-              config
-            ),
-            axios.get(
-              selectedProject === 'all'
-                ? `${API_URL}/file-activities/recent?limit=100`
-                : `${API_URL}/file-activities/project/${selectedProject}?limit=100`,
-              config
-            ),
-            axios.get(
-              `${API_URL}/top-downloads?limit=5${selectedProject !== 'all' ? `&projectId=${selectedProject}` : ''}`,
-              config
-            ),
-            axios.get(
-              `${API_URL}/top-uploaders?limit=5${selectedProject !== 'all' ? `&projectId=${selectedProject}` : ''}`,
-              config
-            )
-          ]);
-
-          setStatistics(statsResponse.data.statistics || {});
-          const activities = activitiesResponse.data.activities || [];
-          setRecentActivities(activities.slice(0, 10));
-          setChartData(generateChartData(activities));
-          setTopDownloads(downloadsResponse.data.topFiles || []);
-          setTopUploaders(uploadersResponse.data.topUploaders || []);
-        } catch (refreshError) {
-          console.error('Error after token refresh:', refreshError);
-          setError('เซสชันของคุณหมดอายุ กรุณาล็อกอินใหม่');
-        }
-      } else {
-        console.error('Error fetching dashboard data:', error);
-        const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           'ไม่สามารถโหลดข้อมูลได้';
-        setError(errorMessage);
-      }
+      console.error('Error fetching dashboard data:', error);
+      const errorMessage = error.message || 'ไม่สามารถโหลดข้อมูลได้';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [selectedProject, refreshAccessToken, generateChartData]);
+  }, [selectedProject, generateChartData]);
 
   const addActivityIfValid = useCallback((activity) => {
     if (selectedProject !== 'all' && activity.project_id !== selectedProject) {

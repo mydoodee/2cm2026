@@ -13,20 +13,52 @@ import {
   CloseOutlined,
   DownOutlined,
   SafetyOutlined,
+  SwapOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
-import logoSpk from '../assets/logospk.png';
 import { Badge, Avatar } from 'antd';
+import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 
-function Navbar({ user, setUser, theme, setTheme }) {
+function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompany }) {
   const navigate = useNavigate();
+  const [localCompany, setLocalCompany] = useState(null);
+
+  // ดึงข้อมูลบริษัทจาก props หรือ localStorage
+  useEffect(() => {
+    if (activeCompany) {
+      setLocalCompany(activeCompany);
+    } else {
+      try {
+        const stored = localStorage.getItem('activeCompany');
+        if (stored) setLocalCompany(JSON.parse(stored));
+      } catch (e) { /* ignore */ }
+    }
+  }, [activeCompany]);
+
+  const companyName = localCompany?.company_name || 'SPK Construction';
+  const companySubtitle = localCompany?.company_subtitle || 'บริหารโครงการก่อสร้าง';
+  const companyLogo = localCompany?.company_logo;
+  const companyColor = localCompany?.company_color || '#dc2626';
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3050';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('activeCompanyId');
+    localStorage.removeItem('activeCompany');
+    localStorage.removeItem('pendingCompanies');
     setUser(null);
+    if (setActiveCompany) setActiveCompany(null);
     navigate('/login');
+  };
+
+  const handleSwitchCompany = () => {
+    localStorage.removeItem('activeCompanyId');
+    localStorage.removeItem('activeCompany');
+    if (setActiveCompany) setActiveCompany(null);
+    navigate('/select-company');
   };
 
   const toggleTheme = () => {
@@ -44,16 +76,23 @@ function Navbar({ user, setUser, theme, setTheme }) {
     ...(user?.isAdmin
       ? [{ name: 'ตั้งค่า', href: '/settings', icon: <SettingOutlined className="text-base" />, color: 'text-gray-500' }]
       : []),
+    { name: 'สลับบริษัท', action: handleSwitchCompany, icon: <SwapOutlined className="text-base" />, color: 'text-blue-500' },
     { name: 'ออกจากระบบ', action: handleLogout, icon: <LogoutOutlined className="text-base" />, color: 'text-red-500' },
   ];
+
+  const isTenderMode = companyName?.toLowerCase().includes('tender');
 
   return (
     <Disclosure
       as="nav"
       className={clsx(
         theme === 'dark'
-          ? 'bg-[#020617] shadow-[0_4px_40px_rgba(0,0,0,0.6)] border-b border-white/5'
-          : 'bg-slate-100 shadow-[0_4px_30px_rgba(0,0,0,0.05)] border-b border-slate-200/70',
+          ? isTenderMode 
+            ? 'bg-[#0f172a] shadow-[0_4px_40px_rgba(212,175,55,0.2)] border-b border-[#d4af37]/20'
+            : 'bg-[#020617] shadow-[0_4px_40px_rgba(0,0,0,0.6)] border-b border-white/5'
+          : isTenderMode
+            ? 'bg-amber-50 shadow-[0_4px_30px_rgba(212,175,55,0.1)] border-b border-amber-200/50'
+            : 'bg-slate-100 shadow-[0_4px_30px_rgba(0,0,0,0.05)] border-b border-slate-200/70',
         'sticky top-0 z-50 transition-all duration-500'
       )}
     >
@@ -64,47 +103,63 @@ function Navbar({ user, setUser, theme, setTheme }) {
               {/* Left Side: Logo and Navigation */}
               <div className="flex items-center space-x-6">
                 {/* Logo - ปรับใหม่ให้สวยพรีเมียม */}
-               {/* Logo - ปรับขนาดเล็กลง ดูสมดุล */}
+               {/* Logo - ใช้ dynamic company logo */}
 <div
   className="flex-shrink-0 flex items-center space-x-3 cursor-pointer group"
-  onClick={() => navigate('/dashboard')}
+  onClick={() => navigate('/projects')}
 >
-  {/* SPK Logo - ขนาดเล็กลง */}
+  {/* Company Logo - dynamic */}
   <div
     className={clsx(
       'relative p-1.5 rounded-lg transition-all duration-300 group-hover:scale-110',
       theme === 'dark'
-        ? 'bg-red-950/30 border border-red-900/50 shadow-[0_0_20px_rgba(220,38,38,0.15)]'
-        : 'bg-red-50 border border-red-100 shadow-[0_4px_12px_rgba(220,38,38,0.1)]'
+        ? 'bg-opacity-30 border border-opacity-50 shadow-[0_0_20px_rgba(220,38,38,0.15)]'
+        : 'bg-opacity-10 border border-opacity-20 shadow-[0_4px_12px_rgba(220,38,38,0.1)]'
     )}
+    style={{
+      backgroundColor: isTenderMode ? '#d4af3720' : companyColor + '15',
+      borderColor: isTenderMode ? '#d4af3750' : companyColor + '50'
+    }}
   >
     <div className="relative w-9 h-9 flex items-center justify-center">
-      <img src={logoSpk} alt="SPK Logo" className="w-full h-full object-contain" />
-    </div>
-
-    {/* Pulse on Hover */}
-    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-      <div className="absolute -inset-1 bg-red-500 rounded-full blur-xl animate-ping"></div>
+      {companyLogo ? (
+        <img src={`${API_BASE}/${companyLogo}`} alt={companyName} className="w-full h-full object-contain" 
+             onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+        />
+      ) : null}
+      <div className={clsx(
+        'w-full h-full items-center justify-center text-lg font-bold rounded',
+        companyLogo ? 'hidden' : 'flex'
+      )} style={{ color: isTenderMode ? '#d4af37' : companyColor }}>
+        {companyName?.charAt(0) || 'C'}
+      </div>
     </div>
   </div>
 
-  {/* Company Name */}
+  {/* Company Name - dynamic */}
   <div className="hidden sm:flex flex-col">
-    <span
-      className={clsx(
-        theme === 'dark' ? 'text-white' : 'text-gray-900',
-        'text-xl font-bold tracking-tight'
+    <div className="flex items-center space-x-2">
+      <span
+        className={clsx(
+          theme === 'dark' ? 'text-white' : 'text-gray-900',
+          'text-xl font-bold tracking-tight'
+        )}
+      >
+        {companyName}
+      </span>
+      {isTenderMode && (
+        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-[10px] font-black text-white animate-pulse shadow-sm shadow-amber-500/50 uppercase tracking-widest leading-tight">
+          Tender Mode
+        </span>
       )}
-    >
-      SPK Construction
-    </span>
+    </div>
     <span
       className={clsx(
-        theme === 'dark' ? 'text-red-400' : 'text-red-600',
         'text-xs font-bold tracking-wider'
       )}
+      style={{ color: isTenderMode ? '#b4941f' : companyColor }}
     >
-      บริหารโครงการก่อสร้าง
+      {companySubtitle}
     </span>
   </div>
 </div>

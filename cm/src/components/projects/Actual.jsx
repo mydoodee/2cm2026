@@ -15,6 +15,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Navbar';
 import axios from 'axios';
+import api from '../../axiosConfig';
 import dayjs from 'dayjs';
 import './Actual.css';
 
@@ -53,11 +54,7 @@ const Actual = ({ user, setUser, theme }) => {
 
   const fetchProject = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/project/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/project/${id}`);
       setProject(response.data.project);
     } catch (error) {
       console.error('Failed to fetch project:', error);
@@ -66,11 +63,7 @@ const Actual = ({ user, setUser, theme }) => {
 
   const fetchActualData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/actual/tree-with-actual/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/actual/tree-with-actual/${id}`);
 
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to fetch data');
@@ -103,11 +96,7 @@ const Actual = ({ user, setUser, theme }) => {
 
   const fetchAllHistories = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/actual/history/${id}?limit=1000`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/actual/history/${id}?limit=1000`);
 
       if (response.data.success) {
         const histories = response.data.data || [];
@@ -146,7 +135,6 @@ const Actual = ({ user, setUser, theme }) => {
 
   const fetchProgressHistory = async (record) => {
     try {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams({ limit: 100 });
 
       if (record.type === 'type' && record.data.type_id) {
@@ -159,10 +147,7 @@ const Actual = ({ user, setUser, theme }) => {
 
       console.log('🔍 Fetching history for:', record.type, params.toString());
 
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/actual/history/${id}?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/actual/history/${id}?${params.toString()}`);
 
       if (response.data.success) {
         const historyData = response.data.data || [];
@@ -183,11 +168,7 @@ const Actual = ({ user, setUser, theme }) => {
   const handleDeleteHistory = async (historyId) => {
     setDeletingHistory(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/actual/history-item/${historyId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.delete(`/api/actual/history-item/${historyId}`);
 
       if (response.data.success) {
         message.success('ลบประวัติสำเร็จ');
@@ -273,28 +254,16 @@ const Actual = ({ user, setUser, theme }) => {
       width: 500,
       onOk: async () => {
         try {
-          const token = localStorage.getItem('token');
           const params = new URLSearchParams();
+          if (selectedRecord.type === 'root') params.append('root_id', selectedRecord.data.root_id);
+          else if (selectedRecord.type === 'category') params.append('category_id', selectedRecord.data.category_id);
+          else if (selectedRecord.type === 'type') params.append('type_id', selectedRecord.data.type_id);
+          else if (selectedRecord.type === 'subtype') params.append('subtype_id', selectedRecord.data.subtype_id);
+          else if (selectedRecord.type === 'subsubtype') params.append('subsubtype_id', selectedRecord.data.subsubtype_id);
 
-          // ส่งเฉพาะ ID ที่จำเป็น
-          if (selectedRecord.type === 'root') {
-            params.append('root_id', selectedRecord.data.root_id);
-          } else if (selectedRecord.type === 'category') {
-            params.append('category_id', selectedRecord.data.category_id);
-          } else if (selectedRecord.type === 'type') {
-            params.append('type_id', selectedRecord.data.type_id);
-          } else if (selectedRecord.type === 'subtype') {
-            params.append('subtype_id', selectedRecord.data.subtype_id);
-          } else if (selectedRecord.type === 'subsubtype') {
-            params.append('subsubtype_id', selectedRecord.data.subsubtype_id);
-          }
-
-          const url = `${import.meta.env.VITE_API_URL}/api/actual/delete-all-history/${id}?${params.toString()}`;
+          const url = `/api/actual/delete-all-history/${id}?${params.toString()}`;
           console.log('🗑️ Deleting all history URL:', url);
-
-          const response = await axios.delete(url, {
-            headers: { Authorization: `Bearer ${token} ` }
-          });
+          const response = await api.delete(url);
 
           if (response.data.success) {
             message.success(`ลบประวัติทั้งหมดสำเร็จ(${response.data.data.deleted_count} รายการ)`);
@@ -305,10 +274,7 @@ const Actual = ({ user, setUser, theme }) => {
           }
         } catch (error) {
           console.error('Error deleting all history:', error);
-          message.error(
-            error.response?.data?.message ||
-            'เกิดข้อผิดพลาดในการลบประวัติทั้งหมด'
-          );
+          message.error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบประวัติทั้งหมด');
         }
       }
     });
@@ -725,9 +691,7 @@ const Actual = ({ user, setUser, theme }) => {
 
     setUpdating(true);
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
-
       formData.append('project_id', id);
       formData.append('actual_progress', finalProgress);
       formData.append('remarks', remarks || '');
@@ -739,20 +703,11 @@ const Actual = ({ user, setUser, theme }) => {
       else if (selectedRecord.type === 'subtype') formData.append('subtype_id', selectedRecord.data.subtype_id);
       else if (selectedRecord.type === 'subsubtype') formData.append('subsubtype_id', selectedRecord.data.subsubtype_id);
 
-      // 🔥 แนบรูปหลายรูป
       fileList.forEach(file => {
         formData.append('photos', file.originFileObj);
       });
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/actual/update-progress`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token} `
-          }
-        }
-      );
+      const response = await api.post('/api/actual/update-progress', formData);
 
       if (response.data.success) {
         message.success('บันทึกความคืบหน้าสำเร็จ');

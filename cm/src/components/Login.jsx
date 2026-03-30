@@ -9,6 +9,9 @@ import logoSpk from '../assets/logospk.png';
 
 const { Title, Text } = Typography;
 
+import Navbar from './Navbar';
+import api from '../axiosConfig';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
 const API_URL = `${API_BASE_URL}/api`;
 
@@ -39,10 +42,7 @@ function Login({ setUser, theme }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      axios.get(`${API_URL}/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000
-      })
+      api.get('/api/user')
       .then(res => {
         setUser(res.data.user);
         navigate('/dashboard');
@@ -69,7 +69,25 @@ function Login({ setUser, theme }) {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('refreshToken', res.data.refreshToken);
       setUser(res.data.user);
-      navigate('/dashboard');
+
+      // ✅ Multi-Company Logic
+      const { companies, activeCompany, requireCompanySelection } = res.data;
+
+      if (activeCompany) {
+        // บริษัทเดียว → เข้าเลย
+        localStorage.setItem('activeCompanyId', activeCompany.company_id);
+        localStorage.setItem('activeCompany', JSON.stringify(activeCompany));
+        navigate('/projects');
+      } else if (requireCompanySelection && companies?.length > 1) {
+        // หลายบริษัท → ไปเลือก
+        localStorage.setItem('pendingCompanies', JSON.stringify(companies));
+        navigate('/select-company');
+      } else if (companies?.length === 0) {
+        // ไม่มีบริษัท (Super Admin ที่ยังไม่สร้าง)
+        navigate('/projects');
+      } else {
+        navigate('/projects');
+      }
     } catch (err) {
       const msg = err.response?.data?.message || 'ล็อกอินไม่สำเร็จ';
       setError(msg === 'Invalid credentials' ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' : msg);

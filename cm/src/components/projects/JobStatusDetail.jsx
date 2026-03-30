@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import { Popover } from 'antd';
 import axios from 'axios';
+import api from '../../axiosConfig';
 import Navbar from '../Navbar';
 
 const { Title, Text } = Typography;
@@ -30,14 +31,9 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
             const [projRes, detailRes] = await Promise.all([
-                axios.get(`${import.meta.env.VITE_API_URL}/api/project/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                }),
-                axios.get(`${import.meta.env.VITE_API_URL}/api/project/${id}/job-status-details`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                api.get(`/api/project/${id}`),
+                api.get(`/api/project/${id}/job-status-details`)
             ]);
 
             setProjectName(projRes.data.project.project_name);
@@ -87,11 +83,8 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            const token = localStorage.getItem('token');
-            await axios.post(`${import.meta.env.VITE_API_URL}/api/project/${id}/job-status-details`, {
+            await api.post(`/api/project/${id}/job-status-details`, {
                 details: data
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
             message.success('บันทึกข้อมูลสำเร็จ');
             fetchData();

@@ -45,8 +45,8 @@ if (import.meta.env.PROD) {
 // ซ่อน locator-js errors
 const originalError = console.error;
 console.error = (...args) => {
-    if (args[0] && args[0].includes('locator-js')) {
-        return; // ไม่แสดง error ที่เกี่ยวข้องกับ locator-js
+    if (args[0] && typeof args[0] === 'string' && args[0].includes('locator-js')) {
+        return; 
     }
     originalError.apply(console, args);
 };

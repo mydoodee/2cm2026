@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Typography, Space, Progress, Badge, message, Input } from 'antd';
-import { FileTextOutlined, CalendarOutlined, TeamOutlined, UserOutlined, SearchOutlined } from '@ant-design/icons';
+import { FileTextOutlined, CalendarOutlined, TeamOutlined, UserOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import api from '../../axiosConfig';
@@ -10,7 +10,7 @@ import 'antd/dist/reset.css';
 
 const { Title, Text } = Typography;
 
-function Projects({ user, setUser, theme, setTheme }) {
+function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveCompany }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [projects, setProjects] = useState({});
   const [loading, setLoading] = useState(true);
@@ -171,20 +171,37 @@ function Projects({ user, setUser, theme, setTheme }) {
     );
   }
 
+  const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
+
+  const getTenderStatusConfig = (status) => {
+    switch (status) {
+      case 'tender_in_progress': return { label: 'กำลังดำเนินงาน', color: 'bg-blue-500 border-blue-400' };
+      case 'tender_win': return { label: 'ได้งาน', color: 'bg-emerald-500 border-emerald-400' };
+      case 'tender_loss': return { label: 'ไม่ได้งาน', color: 'bg-red-500 border-red-400' };
+      case 'tender_cancelled': return { label: 'ยกเลิกประมูล', color: 'bg-orange-500 border-orange-400' };
+      case 'tender_announcement_cancelled': return { label: 'ยกเลิกประกาศ', color: 'bg-slate-500 border-slate-400' };
+      default: return { label: 'กำลังดำเนินงาน', color: 'bg-blue-500 border-blue-400' };
+    }
+  };
+
   return (
     <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 overflow-auto pb-12`}>
-      <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
+      <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
 
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-3">
               <div className="flex items-center">
-                <div className={`p-3 rounded-2xl mr-4 ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
-                  <FileTextOutlined className={`text-3xl ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                <div className={`p-3 rounded-2xl mr-4 ${theme === 'dark' ? (isTenderMode ? 'bg-amber-500/10' : 'bg-indigo-500/10') : (isTenderMode ? 'bg-amber-50' : 'bg-indigo-50')}`}>
+                  {isTenderMode ? (
+                    <TrophyOutlined className={`text-3xl ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`} />
+                  ) : (
+                    <FileTextOutlined className={`text-3xl ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                  )}
                 </div>
                 <Title level={1} className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-3xl sm:text-4xl font-extrabold tracking-tight`}>
-                  โครงการก่อสร้าง
+                  {isTenderMode ? 'รายการประมูลโครงการ' : 'โครงการก่อสร้าง'}
                 </Title>
               </div>
 
@@ -203,7 +220,7 @@ function Projects({ user, setUser, theme, setTheme }) {
               </div>
             </div>
             <Text className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-lg`}>
-              ภาพรวมการบริหารจัดการโครงการแยกตามปีงบประมาณ
+              {isTenderMode ? 'ภาพรวมการจัดการข้อมูลเพื่อเตรียมการเสนอราคา' : 'ภาพรวมการบริหารจัดการโครงการแยกตามปีงบประมาณ'}
             </Text>
           </div>
 
@@ -214,10 +231,12 @@ function Projects({ user, setUser, theme, setTheme }) {
                 onClick={() => handleYearChange(year)}
                 className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
                   selectedYear === year
-                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105'
+                    ? isTenderMode 
+                      ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105'
+                      : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105'
                     : theme === 'dark'
                       ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
-                      : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 border border-slate-100'
+                      : `bg-white text-slate-600 hover:bg-slate-50 ${isTenderMode ? 'hover:text-amber-600' : 'hover:text-indigo-600'} border border-slate-100`
                 }`}
               >
                 <span>{year}</span>
@@ -252,8 +271,8 @@ function Projects({ user, setUser, theme, setTheme }) {
                   key={`${selectedYear}-${project.project_id}-${projectIndex}`}
                   className={`group relative rounded-[2.5rem] transition-all duration-500 border-0 ${
                     theme === 'dark' 
-                      ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' 
-                      : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+                      ? `bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${isTenderMode ? 'hover:shadow-[0_0_30px_rgba(245,158,11,0.15)] ring-1 ring-white/5 hover:ring-amber-500/30' : ''}` 
+                      : `bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)] ${isTenderMode ? 'hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] ring-1 ring-slate-100 hover:ring-amber-300' : ''}`
                   } overflow-hidden cursor-pointer`}
                   onClick={() => handleProjectClick(project.project_id)}
                 >
@@ -290,7 +309,7 @@ function Projects({ user, setUser, theme, setTheme }) {
                             percent={project.progress || 0}
                             size={52}
                             strokeWidth={10}
-                            strokeColor={project.progress >= 100 ? '#22c55e' : '#52c41a'}
+                            strokeColor={project.progress >= 100 ? (isTenderMode ? '#f59e0b' : '#22c55e') : (isTenderMode ? '#fbbf24' : '#52c41a')}
                             trailColor={theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}
                             format={(percent) => (
                               <div className="flex flex-col items-center justify-center">
@@ -303,9 +322,14 @@ function Projects({ user, setUser, theme, setTheme }) {
                         </div>
                       </div>
 
-                      {/* Job Number Badge */}
-                      <div className="absolute bottom-4 left-4 z-10">
-                        <div className="px-3 py-1.5 rounded-xl bg-indigo-500 text-white text-xs font-bold shadow-lg">
+                      {/* Job Number & Status Badge */}
+                      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2">
+                        {isTenderMode && (
+                          <div className={`px-3 py-1 rounded-xl text-white text-[10px] sm:text-xs font-bold shadow-lg border w-fit ${getTenderStatusConfig(project.tender_status).color}`}>
+                            {getTenderStatusConfig(project.tender_status).label}
+                          </div>
+                        )}
+                        <div className={`px-3 py-1.5 rounded-xl text-white text-xs font-bold shadow-lg w-fit ${isTenderMode ? 'bg-amber-600 shadow-amber-600/30' : 'bg-indigo-500 shadow-indigo-500/30'}`}>
                           {project.job_number || 'No Job #'}
                         </div>
                       </div>
@@ -340,8 +364,10 @@ function Projects({ user, setUser, theme, setTheme }) {
                       <div className="space-y-2">
                         <div className={`w-full rounded-full h-3 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-slate-100'}`}>
                           <div
-                            className={`h-3 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(99,102,241,0.3)] ${
-                              (project.progress || 0) >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-indigo-500 to-blue-500 shadow-indigo-500/20'
+                            className={`h-3 rounded-full transition-all duration-1000 ${
+                              isTenderMode
+                                ? (project.progress || 0) >= 100 ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] shadow-amber-500/20' : 'bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] shadow-amber-500/20'
+                                : (project.progress || 0) >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] shadow-emerald-500/20' : 'bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_15px_rgba(99,102,241,0.3)] shadow-indigo-500/20'
                             }`}
                             style={{ width: `${Math.min(project.progress || 0, 100)}%` }}
                           ></div>
@@ -383,7 +409,7 @@ function Projects({ user, setUser, theme, setTheme }) {
               }`}>
                 <FileTextOutlined className="text-7xl mb-6 opacity-20" />
                 <Title level={3} className={`font-kanit !mb-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {searchTerm ? 'ไม่พบโครงการที่ค้นหา' : `ยังไม่มีโครงการสำหรับปี ${selectedYear}`}
+                  {searchTerm ? 'ไม่พบข้อมูลที่ค้นหา' : `ยังไม่มี${isTenderMode ? 'รายการประมูล' : 'โครงการ'}สำหรับปี ${selectedYear}`}
                 </Title>
                 <Text className="text-lg opacity-50">กรุณาลองเปลี่ยนเงื่อนไขการค้นหา หรือ เลือกปีอื่น</Text>
               </div>

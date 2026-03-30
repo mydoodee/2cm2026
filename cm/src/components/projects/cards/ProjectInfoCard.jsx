@@ -1,7 +1,7 @@
-import { Card, Progress, Typography, Tag, Button, Skeleton, Space } from 'antd';
+import { Card, Progress, Typography, Tag, Button, Skeleton, Space, Select, message } from 'antd';
 import { Link } from 'react-router-dom';
 import {
-  CalendarOutlined, UserOutlined, ToolOutlined, EnvironmentOutlined
+  CalendarOutlined, UserOutlined, ToolOutlined, EnvironmentOutlined, TrophyOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
 
@@ -18,6 +18,9 @@ const ProjectInfoCard = ({
   getStatusColor,
   canViewProgress,
   user,
+  isTenderMode,
+  onMoveProject,
+  onTenderStatusChange,
 }) => {
   return (
     <Card className="image-card bg-white shadow-md rounded-lg overflow-hidden h-[360px]">
@@ -151,7 +154,7 @@ const ProjectInfoCard = ({
             )}
           </div>
 
-          {(user?.isAdmin || user?.is_pm || project.current_user_role) && (
+          {(user?.isAdmin || user?.is_pm) && (
             <div className="pt-2 mt-auto">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                 {/* 1. Planning + Actual – แบ่ง 2 คอลัมน์ใน sm+ */}
@@ -196,6 +199,34 @@ const ProjectInfoCard = ({
                     สถานะงาน
                   </Button>
                 </Link>
+
+                {/* ✅ ปุ่ม Win Tender & Status - เพิ่มเฉพาะตอนเป็น Tender Mode */}
+                {isTenderMode && (
+                   <div className="col-span-full mt-1.5 flex flex-col gap-2">
+                     <Select
+                        size="small"
+                        value={project.tender_status || 'tender_in_progress'}
+                        onChange={(val) => onTenderStatusChange(val)}
+                        className="w-full font-kanit text-xs"
+                        options={[
+                          { value: 'tender_in_progress', label: '🔵 กำลังดำเนินงาน' },
+                          { value: 'tender_win', label: '🟢 ได้งาน (Win)' },
+                          { value: 'tender_loss', label: '🔴 ไม่ได้งาน (Loss)' },
+                          { value: 'tender_cancelled', label: '🟠 ยกเลิกประมูล' },
+                          { value: 'tender_announcement_cancelled', label: '⚫ ยกเลิกประกาศ' },
+                        ]}
+                     />
+                     <Button
+                        type="primary"
+                        size="small"
+                        icon={<TrophyOutlined />}
+                        onClick={onMoveProject}
+                        className="w-full h-8 font-kanit text-xs bg-amber-500 border-amber-500 hover:bg-amber-600 hover:border-amber-600 shadow-sm shadow-amber-200"
+                      >
+                        ✅ Win Tender / ย้ายเข้างานจริง
+                      </Button>
+                   </div>
+                )}
               </div>
             </div>
           )}

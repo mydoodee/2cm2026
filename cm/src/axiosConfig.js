@@ -13,6 +13,12 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        // ✅ เพิ่ม Company Context Header
+        const activeCompanyId = localStorage.getItem('activeCompanyId');
+        if (activeCompanyId) {
+            config.headers['X-Company-Id'] = activeCompanyId;
+        }
+
         // ตรวจสอบว่า URL มี 'undefined' หรือไม่
         if (config.url && config.url.includes('undefined')) {
             console.error('❌ Invalid URL detected:', config.url);
@@ -36,6 +42,11 @@ api.interceptors.response.use(
         if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
             console.error('❌ Request Timeout:', error.message);
             return Promise.reject(new Error('คำขอหมดเวลา กรุณาลองใหม่อีกครั้ง (Timeout: 5 นาที)'));
+        }
+
+        // ✅ ข้ามการจัดการถ้าเป็น Cancelled Error (เช่น Component Unmounted)
+        if (axios.isCancel(error)) {
+            return Promise.reject(error);
         }
 
         // ถ้าไม่มี response (network error)

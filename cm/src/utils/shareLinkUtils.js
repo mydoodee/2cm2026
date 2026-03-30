@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../axiosConfig';
 import { message } from 'antd';
 
 /**
@@ -10,28 +10,10 @@ import { message } from 'antd';
  */
 export const createShareLink = async (projectId, fileId, expiresInDays = 7) => {
   try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      message.error('กรุณาเข้าสู่ระบบเพื่อสร้างลิงก์แชร์');
-      return null;
-    }
-
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-    
-    message.loading({ 
-      content: 'กำลังสร้างลิงก์แชร์...', 
-      key: 'createShareLink',
-      duration: 0 
-    });
-
-    const response = await axios.post(
-      `${baseUrl}/api/public/project/${projectId}/file/${fileId}/create-share-link`,
+    const response = await api.post(
+      `/api/public/project/${projectId}/file/${fileId}/create-share-link`,
       { expiresInDays },
-      { 
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 30000
-      }
+      { timeout: 30000 }
     );
 
     message.success({ 
@@ -166,10 +148,8 @@ export const createAndCopyShareLink = async (projectId, fileId, expiresInDays = 
  */
 export const getShareLinkInfo = async (token) => {
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-    
-    const response = await axios.get(
-      `${baseUrl}/api/public/shared/${token}/info`,
+    const response = await api.get(
+      `/api/public/shared/${token}/info`,
       { timeout: 10000 }
     );
 
@@ -197,27 +177,9 @@ export const getShareLinkInfo = async (token) => {
  */
 export const revokeShareLink = async (token) => {
   try {
-    const authToken = localStorage.getItem('token');
-    
-    if (!authToken) {
-      message.error('กรุณาเข้าสู่ระบบ');
-      return false;
-    }
-
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-    
-    message.loading({ 
-      content: 'กำลังยกเลิกลิงก์แชร์...', 
-      key: 'revokeShareLink',
-      duration: 0 
-    });
-
-    await axios.delete(
-      `${baseUrl}/api/public/shared/${token}`,
-      { 
-        headers: { Authorization: `Bearer ${authToken}` },
-        timeout: 10000
-      }
+    await api.delete(
+      `/api/public/shared/${token}`,
+      { timeout: 10000 }
     );
 
     message.success({ 

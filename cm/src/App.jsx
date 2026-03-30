@@ -30,6 +30,8 @@ import JobStatusDetail from './components/projects/JobStatusDetail';
 import Unauthorized from './components/Unauthorized';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import CompanySelector from './components/CompanySelector';
+import CompanySettings from './components/CompanySettings';
 import { useState, useEffect } from 'react';
 import api from './axiosConfig';
 import 'antd/dist/reset.css';
@@ -106,7 +108,16 @@ function App() {
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('light');
   const [loading, setLoading] = useState(true);
+  const [activeCompany, setActiveCompany] = useState(null);
   const navigate = useNavigate();
+
+  // โหลด activeCompany จาก localStorage ตอนเริ่ม
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('activeCompany');
+      if (stored) setActiveCompany(JSON.parse(stored));
+    } catch (e) { /* ignore */ }
+  }, []);
 
   // ========================================
   // Fetch User on Mount
@@ -173,6 +184,29 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword theme={theme} setTheme={setTheme} />} />
           <Route path="/confirm-password" element={<ConfirmPassword theme={theme} setTheme={setTheme} />} />
 
+          {/* ==================== COMPANY SELECTOR ==================== */}
+          <Route
+            path="/select-company"
+            element={
+              user ? (
+                <CompanySelector
+                  companies={JSON.parse(localStorage.getItem('pendingCompanies') || '[]')}
+                  user={user}
+                  setActiveCompany={(company) => {
+                    setActiveCompany(company);
+                    if (company) {
+                      localStorage.setItem('activeCompanyId', company.company_id);
+                      localStorage.setItem('activeCompany', JSON.stringify(company));
+                    }
+                  }}
+                  theme={theme}
+                />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
           {/* ==================== VIEWER IFC (Public / Shared / Private) ==================== */}
           <Route path="/viewer/shared/:token" element={<ViewerIFCWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
           <Route path="/viewer/:id/:fileId" element={<ViewerIFCWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
@@ -194,10 +228,10 @@ function App() {
             />
 
             {/* General Routes */}
-            <Route path="/dashboard" element={<Dashboard user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
-            <Route path="/history" element={<History user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} /> {/* เพิ่ม History */}
-            <Route path="/projects" element={<Projects user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
-            <Route path="/project/:id" element={<ProjectDetail user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+            <Route path="/dashboard" element={<Dashboard user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
+            <Route path="/history" element={<History user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
+            <Route path="/projects" element={<Projects user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
+            <Route path="/project/:id" element={<ProjectDetail user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
 
             {/* === PHASE ROUTES === */}
             <Route path="/project/:id/bidding" element={<Bidding user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
@@ -217,7 +251,8 @@ function App() {
             {/* === USER PAGES === */}
             <Route path="/progress" element={<Progress user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/profile" element={<Profile user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
-            <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+            <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
+            <Route path="/company-settings" element={<CompanySettings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/project-settings" element={<ProjectSetting user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/permission-folder" element={<PermissionFolder user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
           </Route>

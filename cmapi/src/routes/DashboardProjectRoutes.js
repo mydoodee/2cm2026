@@ -3,6 +3,9 @@ const express = require('express');
 const router = express.Router();
 const DashboardProjectController = require('../controllers/DashboardProjectController');
 const authenticateToken = require('../middleware/authenticateToken');
+const { requireCompany } = require('../middleware/companyContext');
+
+router.use(requireCompany);
 
 // ===================================
 // Dashboard Projects API Routes

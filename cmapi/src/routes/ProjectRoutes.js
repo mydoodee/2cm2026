@@ -13,6 +13,7 @@ const {
   createRole,
   updateRole,
   deleteRole,
+  moveProject,
 } = require('../controllers/projectController');
 const {
   getJobStatusDetails,
@@ -29,12 +30,14 @@ const {
   updateFolderPermissions,
 } = require('../controllers/folderController');
 const authenticateToken = require('../middleware/authenticateToken');
+const { companyContext, requireCompany } = require('../middleware/companyContext');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const { getConnection } = require('../config/db');
-
 const folderUpload = require('../middleware/multerConfig');
+
+router.use(companyContext);
 
 const projectStorage = multer.memoryStorage();
 const projectUpload = multer({
@@ -61,10 +64,10 @@ const multerErrorHandler = (err, req, res, next) => {
 };
 
 // Project Routes
-router.get('/projects', authenticateToken, getProjects);
-router.get('/project/:id', authenticateToken, getProjectById);
-router.get('/project/:projectId/users', authenticateToken, getProjectUsers);
-router.get('/roles', authenticateToken, getAllRoles);
+router.get('/projects', authenticateToken, requireCompany, getProjects);
+router.get('/project/:id', authenticateToken, requireCompany, getProjectById);
+router.get('/project/:projectId/users', authenticateToken, requireCompany, getProjectUsers);
+router.get('/roles', authenticateToken, requireCompany, getAllRoles);
 router.post('/project/upload-image', authenticateToken, projectUpload.single('projectImage'), multerErrorHandler, uploadProjectImage);
 router.post(
   '/project',
@@ -82,6 +85,7 @@ router.post(
     { name: 'job_status_image', maxCount: 1 },
   ]),
   multerErrorHandler,
+  requireCompany,
   createProject
 );
 router.put(
@@ -105,13 +109,13 @@ router.put(
 router.delete('/project/:id', authenticateToken, deleteProject);
 
 // Job Status Details Routes
-router.get('/project/:id/job-status-details', authenticateToken, getJobStatusDetails);
-router.post('/project/:id/job-status-details', authenticateToken, updateJobStatusDetails);
+router.get('/project/:id/job-status-details', authenticateToken, requireCompany, getJobStatusDetails);
+router.post('/project/:id/job-status-details', authenticateToken, requireCompany, updateJobStatusDetails);
 
 // Role Management Routes
-router.post('/role', authenticateToken, createRole);
-router.put('/role/:id', authenticateToken, updateRole);
-router.delete('/role/:id', authenticateToken, deleteRole);
+router.post('/role', authenticateToken, requireCompany, createRole);
+router.put('/role/:id', authenticateToken, requireCompany, updateRole);
+router.delete('/role/:id', authenticateToken, requireCompany, deleteRole);
 
 // PUBLIC SHARE ROUTES
 router.post('/project/:projectId/enable-public', authenticateToken, async (req, res) => {
@@ -212,19 +216,20 @@ router.post('/project/:projectId/disable-public', authenticateToken, async (req,
 });
 
 // Folder & File Management Routes
-router.get('/project/:projectId/folders', authenticateToken, getFolders);
-router.post('/project/:projectId/folder', authenticateToken, createFolder);
-router.put('/project/:projectId/folder/:id', authenticateToken, updateFolder);
-router.put('/project/:projectId/folder/:id/permissions', authenticateToken, updateFolderPermissions);
-router.delete('/project/:projectId/folder/:id', authenticateToken, deleteFolder);
-router.get('/project/:projectId/folder/:folderId/files', authenticateToken, getFiles);
+router.get('/project/:projectId/folders', authenticateToken, requireCompany, getFolders);
+router.post('/project/:projectId/folder', authenticateToken, requireCompany, createFolder);
+router.put('/project/:projectId/folder/:id', authenticateToken, requireCompany, updateFolder);
+router.put('/project/:projectId/folder/:id/permissions', authenticateToken, requireCompany, updateFolderPermissions);
+router.delete('/project/:projectId/folder/:id', authenticateToken, requireCompany, deleteFolder);
+router.get('/project/:projectId/folder/:folderId/files', authenticateToken, requireCompany, getFiles);
 router.post(
   '/project/:projectId/folder/:folderId/upload',
   authenticateToken,
+  requireCompany,
   folderUpload.single('file'),
   multerErrorHandler,
   uploadFile
 );
-router.delete('/project/:projectId/file/:id', authenticateToken, deleteFile);
+router.delete('/project/:projectId/file/:id', authenticateToken, requireCompany, deleteFile);
 
 module.exports = router;
