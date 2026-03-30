@@ -15,6 +15,7 @@ import {
   SafetyOutlined,
   SwapOutlined,
   BankOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
 import { Badge, Avatar } from 'antd';
 import { useState, useEffect } from 'react';
@@ -65,22 +66,26 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const isTenderMode = companyName?.toLowerCase().includes('tender');
+
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeOutlined className="text-lg" />, color: 'text-blue-500' },
     { name: 'History', href: '/history', icon: <ClockCircleOutlined className="text-lg" />, color: 'text-purple-500' },
-    { name: 'Projects', href: '/projects', icon: <ProjectOutlined className="text-lg" />, color: 'text-green-500' },
+    { name: isTenderMode ? 'Tender' : 'Projects', href: '/projects', icon: <ProjectOutlined className="text-lg" />, color: 'text-green-500' },
   ];
 
   const userMenuItems = [
     { name: 'โปรไฟล์', href: '/profile', icon: <UserOutlined className="text-base" />, color: 'text-purple-500' },
-    ...(user?.isAdmin
-      ? [{ name: 'ตั้งค่า', href: '/settings', icon: <SettingOutlined className="text-base" />, color: 'text-gray-500' }]
+    ...(user?.roles?.includes(1)
+      ? [
+          { name: 'ตั้งค่าระบบ', href: '/settings', icon: <SettingOutlined className="text-base" />, color: 'text-gray-500' },
+          { name: 'Master Folder', href: '/permission-folder', icon: <FolderOpenOutlined className="text-base" />, color: 'text-indigo-500' }
+        ]
       : []),
     { name: 'สลับบริษัท', action: handleSwitchCompany, icon: <SwapOutlined className="text-base" />, color: 'text-blue-500' },
     { name: 'ออกจากระบบ', action: handleLogout, icon: <LogoutOutlined className="text-base" />, color: 'text-red-500' },
   ];
 
-  const isTenderMode = companyName?.toLowerCase().includes('tender');
 
   return (
     <Disclosure

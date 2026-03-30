@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spin } from 'antd';
-import { ProjectOutlined, TeamOutlined, LockOutlined, FileTextOutlined, BankOutlined, RightOutlined } from '@ant-design/icons';
+import { ProjectOutlined, TeamOutlined, LockOutlined, FileTextOutlined, BankOutlined, RightOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import Navbar from './Navbar';
@@ -63,85 +63,99 @@ function Settings({ user, setUser, theme, setTheme }) {
 
     const cardData = [
         {
-            title: 'การจัดการบริษัท',
-            description: 'สร้าง แก้ไข ข้อมูลของแต่ละบริษัทในระบบ (Multi-Tenant) จัดการโลโก้ เครือข่าย',
+            title: 'จัดการบริษัท',
+            description: 'ข้อมูลบริษัท โลโก้ และเครือข่ายธุรกิจ',
             icon: <BankOutlined />,
-            iconColor: theme === 'dark' ? '#FADB14' : '#FAAD14', // เหลือง/ทอง
+            iconColor: theme === 'dark' ? '#FADB14' : '#FAAD14', 
             onClickTitle: 'การจัดการบริษัท',
         },
         {
-            title: 'การจัดการโครงการ',
-            description: 'สร้าง แก้ไข หรือลบโครงการในระบบ เช่น การก่อสร้างอาคาร ASS หรือถนน B',
+            title: 'จัดการโครงการ',
+            description: 'สร้างและแก้ไขโครงการทั้งหมดในระบบ',
             icon: <ProjectOutlined />,
-            iconColor: theme === 'dark' ? '#69B1FF' : '#1677FF', // น้ำเงิน
+            iconColor: theme === 'dark' ? '#69B1FF' : '#1677FF', 
             onClickTitle: 'การจัดการโครงการ',
         },
         {
-            title: 'การจัดการผู้ใช้',
-            description: 'เชิญผู้ใช้ใหม่และกำหนดบทบาท เช่น วิศวกรหรือนักบัญชีภายในโครงการ',
+            title: 'จัดการผู้ใช้',
+            description: 'จัดการสมาชิก บทบาท และสิทธิ์ผู้ใช้',
             icon: <TeamOutlined />,
-            iconColor: theme === 'dark' ? '#95DE64' : '#52C41A', // เขียว
+            iconColor: theme === 'dark' ? '#95DE64' : '#52C41A', 
             onClickTitle: 'การจัดการผู้ใช้',
         },
         {
-            title: 'การจัดการสิทธิ์โมดูล',
-            description: 'กำหนดสิทธิ์การเข้าถึงสำหรับโมดูล เช่น การจัดการโครงการ หรือเอกสาร',
-            icon: <LockOutlined />,
-            iconColor: theme === 'dark' ? '#FFA940' : '#FA8C16', // ส้ม
+            title: 'Master Folders',
+            description: 'จัดการโครงสร้างต้นแบบและสิทธิ์โฟลเดอร์',
+            icon: <FolderOpenOutlined />,
+            iconColor: theme === 'dark' ? '#FFA940' : '#FA8C16', 
             onClickTitle: 'การจัดการสิทธิ์โมดูล',
         },
         {
-            title: 'ดูบันทึกการใช้งาน',
-            description: 'ตรวจสอบบันทึกการกระทำ เช่น การล็อกอินล้มเหลวหรือการรีเซ็ตรหัสผ่าน',
+            title: 'บันทึกการใช้งาน',
+            description: 'ตรวจสอบประวัติกิจกรรมและ Log ระบบ',
             icon: <FileTextOutlined />,
-            iconColor: theme === 'dark' ? '#B37FEB' : '#722ED1', // ม่วง
+            iconColor: theme === 'dark' ? '#B37FEB' : '#722ED1', 
             onClickTitle: 'ดูบันทึกการใช้งาน',
         },
     ];
 
     return (
-        <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} transition-all duration-300 flex flex-col`}>
+        <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'} transition-all duration-500 flex flex-col`}>
             <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
             
-            <div className="flex-1 flex justify-center p-4 sm:p-6 lg:p-8">
-                <div className={`w-full max-w-5xl rounded-2xl p-6 sm:p-8 ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} shadow-sm border transition-all duration-300`}>
+            <div className="flex-1 flex justify-center p-6 sm:p-10">
+                <div className="w-full max-w-6xl">
                     
-                    <div className="mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
-                        <h1 className="text-2xl sm:text-3xl font-bold mb-1">การตั้งค่าผู้ดูแลระบบ</h1>
-                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 m-0">จัดการบัญชี สิทธิ์การเข้าถึง และส่วนต่างๆ ของระบบ</p>
+                    {/* Header Section */}
+                    <div className="mb-10 text-center sm:text-left">
+                        <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                            การตั้งค่าระบบ
+                        </h1>
+                        <p className={`text-sm sm:text-base ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                            จัดการบัญชี สิทธิ์การเข้าถึง และส่วนประกอบต่างๆ ของแพลตฟอร์ม
+                        </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Compact Grid Layout */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         {cardData.map((card, index) => (
                             <div 
                                 key={index}
                                 onClick={() => handleCardClick(card.onClickTitle)}
                                 className={`
-                                    group flex items-center p-4 cursor-pointer rounded-xl transition-all duration-200 border
+                                    group relative flex flex-col p-6 cursor-pointer rounded-2xl transition-all duration-300 border
                                     ${theme === 'dark' 
-                                        ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-700 hover:border-gray-500' 
-                                        : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-indigo-300'
-                                    } hover:shadow-sm
+                                        ? 'bg-slate-800/40 border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' 
+                                        : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10'
+                                    } hover:scale-[1.02] active:scale-[0.98]
                                 `}
+                                style={{ 
+                                    animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
+                                }}
                             >
-                                <div 
-                                    className="flex items-center justify-center rounded-lg w-12 h-12 flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
-                                    style={{ backgroundColor: `${card.iconColor}20`, color: card.iconColor }}
-                                >
-                                    <div className="text-2xl leading-none flex">{card.icon}</div>
+                                <div className="flex items-start justify-between mb-4">
+                                    <div 
+                                        className="flex items-center justify-center rounded-xl w-12 h-12 flex-shrink-0 transition-all duration-300 group-hover:shadow-lg"
+                                        style={{ 
+                                            backgroundColor: `${card.iconColor}15`, 
+                                            color: card.iconColor,
+                                            boxShadow: `0 0 20px ${card.iconColor}10`
+                                        }}
+                                    >
+                                        <div className="text-2xl flex">{card.icon}</div>
+                                    </div>
+                                    <div className={`text-slate-400 group-hover:text-indigo-500 transition-all duration-300 transform group-hover:translate-x-1`}>
+                                        <RightOutlined />
+                                    </div>
                                 </div>
                                 
-                                <div className="ml-4 flex-grow">
-                                    <h3 className={`text-base font-semibold m-0 leading-tight ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                                <div className="mt-auto">
+                                    <h3 className={`text-base font-bold mb-1 tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
                                         {card.title}
                                     </h3>
-                                    <p className={`text-sm m-0 mt-1 leading-snug line-clamp-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    <p className={`text-xs leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                                         {card.description}
                                     </p>
-                                </div>
-                                
-                                <div className={`ml-2 text-gray-400 group-hover:text-indigo-500 transition-colors`}>
-                                    <RightOutlined />
                                 </div>
                             </div>
                         ))}
@@ -150,11 +164,18 @@ function Settings({ user, setUser, theme, setTheme }) {
             </div>
             
             <style jsx="true">{`
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
                 .font-kanit {
                     font-family: 'Kanit', sans-serif !important;
-                }
-                .ant-spin-dot-item {
-                    background-color: ${theme === 'dark' ? '#4f46e5' : '#1677ff'};
                 }
             `}</style>
         </div>

@@ -201,32 +201,40 @@ const ProjectInfoCard = ({
                 </Link>
 
                 {/* ✅ ปุ่ม Win Tender & Status - เพิ่มเฉพาะตอนเป็น Tender Mode */}
-                {isTenderMode && (
-                   <div className="col-span-full mt-1.5 flex flex-col gap-2">
-                     <Select
-                        size="small"
-                        value={project.tender_status || 'tender_in_progress'}
-                        onChange={(val) => onTenderStatusChange(val)}
-                        className="w-full font-kanit text-xs"
-                        options={[
-                          { value: 'tender_in_progress', label: '🔵 กำลังดำเนินงาน' },
-                          { value: 'tender_win', label: '🟢 ได้งาน (Win)' },
-                          { value: 'tender_loss', label: '🔴 ไม่ได้งาน (Loss)' },
-                          { value: 'tender_cancelled', label: '🟠 ยกเลิกประมูล' },
-                          { value: 'tender_announcement_cancelled', label: '⚫ ยกเลิกประกาศ' },
-                        ]}
-                     />
-                     <Button
-                        type="primary"
-                        size="small"
-                        icon={<TrophyOutlined />}
-                        onClick={onMoveProject}
-                        className="w-full h-8 font-kanit text-xs bg-amber-500 border-amber-500 hover:bg-amber-600 hover:border-amber-600 shadow-sm shadow-amber-200"
-                      >
-                        ✅ Win Tender / ย้ายเข้างานจริง
-                      </Button>
-                   </div>
-                )}
+                 {isTenderMode && (
+                    <div className="col-span-full mt-2 flex items-stretch gap-2 h-8">
+                      <Select
+                         size="small"
+                         value={project.tender_status || 'tender_in_progress'}
+                         onChange={(val) => onTenderStatusChange(val)}
+                         className="flex-[1.5] font-kanit text-xs"
+                         style={{ fontFamily: 'Kanit, sans-serif' }}
+                         classNames={{ popup: { root: 'tender-status-select font-kanit font-medium' } }}
+                         styles={{ popup: { root: { fontFamily: 'Kanit, sans-serif' } } }}
+                         options={[
+                           { value: 'tender_in_progress', label: '🔵 กำลังดำเนินงาน' },
+                           { value: 'tender_win', label: '🟢 ได้งาน (Win)' },
+                           { value: 'tender_loss', label: '🔴 ไม่ได้งาน (Loss)' },
+                           { value: 'tender_cancelled', label: '🟠 ยกเลิกประมูล' },
+                           { value: 'tender_announcement_cancelled', label: '⚫ ยกเลิกประกาศ' },
+                         ]}
+                      />
+                      <Button
+                         type="primary"
+                         size="small"
+                         icon={<TrophyOutlined className="text-[10px]" />}
+                         onClick={onMoveProject}
+                         disabled={project.tender_status !== 'tender_win'}
+                         className={`flex-1 h-full font-kanit text-[10px] sm:text-[11px] font-bold shadow-sm rounded-lg flex items-center justify-center transition-all ${
+                           project.tender_status === 'tender_win' 
+                             ? '!bg-amber-500 !text-white !border-amber-500 hover:!bg-amber-600 hover:!border-amber-600 shadow-amber-200 hover:scale-[1.02] active:scale-95' 
+                             : 'opacity-50 grayscale cursor-not-allowed !bg-slate-200 !text-slate-400 !border-slate-300'
+                         }`}
+                       >
+                         Win Tender
+                       </Button>
+                    </div>
+                 )}
               </div>
             </div>
           )}

@@ -51,7 +51,7 @@ const JobStatusCard = ({
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }}
-      bodyStyle={{ padding: '16px' }}
+      styles={{ body: { padding: '16px' } }}
     >
       {/* Overlay for readability */}
       <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-white/50 z-0" style={{ backdropFilter: 'blur(2px)' }} />
@@ -179,7 +179,7 @@ const JobStatusCard = ({
                 <Progress
                   type="circle"
                   percent={progressValue}
-                  width={140}
+                  size={140}
                   strokeColor={{ '0%': '#13c2c2', '100%': '#52c41a' }}
                   strokeWidth={10}
                 />

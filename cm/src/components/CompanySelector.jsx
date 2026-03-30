@@ -94,7 +94,7 @@ function CompanySelector({ companies, user, setActiveCompany, theme }) {
             <Spin size="large" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="flex flex-wrap justify-center gap-5">
             {compList.map((company, index) => (
               <button
               key={company.company_id}
@@ -102,6 +102,7 @@ function CompanySelector({ companies, user, setActiveCompany, theme }) {
               disabled={loading}
               className={clsx(
                 'group relative p-6 rounded-2xl text-left transition-all duration-500 border-2',
+                'w-full sm:w-[calc(50%-10px)] max-w-full sm:max-w-none',
                 'hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98]',
                 selectedId === company.company_id
                   ? theme === 'dark'

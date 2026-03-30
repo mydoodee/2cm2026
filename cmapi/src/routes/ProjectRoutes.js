@@ -29,6 +29,16 @@ const {
   deleteFile,
   updateFolderPermissions,
 } = require('../controllers/folderController');
+const {
+  getTemplates,
+  getTemplateItems,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  addTemplateItem,
+  updateTemplateItem,
+  deleteTemplateItem
+} = require('../controllers/templateController');
 const authenticateToken = require('../middleware/authenticateToken');
 const { companyContext, requireCompany } = require('../middleware/companyContext');
 const multer = require('multer');
@@ -107,6 +117,7 @@ router.put(
   updateProject
 );
 router.delete('/project/:id', authenticateToken, deleteProject);
+router.post('/project/:id/move', authenticateToken, requireCompany, moveProject);
 
 // Job Status Details Routes
 router.get('/project/:id/job-status-details', authenticateToken, requireCompany, getJobStatusDetails);
@@ -231,5 +242,15 @@ router.post(
   uploadFile
 );
 router.delete('/project/:projectId/file/:id', authenticateToken, requireCompany, deleteFile);
+
+// Template Management Routes
+router.get('/folder-templates', authenticateToken, requireCompany, getTemplates);
+router.get('/folder-templates/:id/items', authenticateToken, requireCompany, getTemplateItems);
+router.post('/folder-templates', authenticateToken, requireCompany, createTemplate);
+router.put('/folder-templates/:id', authenticateToken, requireCompany, updateTemplate);
+router.delete('/folder-templates/:id', authenticateToken, requireCompany, deleteTemplate);
+router.post('/folder-template-items', authenticateToken, requireCompany, addTemplateItem);
+router.put('/folder-template-items/:id', authenticateToken, requireCompany, updateTemplateItem);
+router.delete('/folder-template-items/:id', authenticateToken, requireCompany, deleteTemplateItem);
 
 module.exports = router;

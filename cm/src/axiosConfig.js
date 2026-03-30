@@ -62,6 +62,7 @@ api.interceptors.response.use(
             url: originalRequest?.url,
             method: originalRequest?.method,
             status: status,
+            data: error.response?.data,
             message: error.response?.data?.message || error.message
         });
 

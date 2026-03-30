@@ -7,7 +7,7 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 
-dotenv.config();
+dotenv.config(); // Reload env vars
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
