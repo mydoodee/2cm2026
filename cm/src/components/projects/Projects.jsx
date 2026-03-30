@@ -439,6 +439,18 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
           overflow: hidden;
         }
 
+        /* Fix invisible text in tender status dropdown caused by global CSS bleed */
+        .tender-status-select .ant-select-item-option-selected {
+          color: #334155 !important;
+          background-color: #f1f5f9 !important;
+          font-weight: 600 !important;
+        }
+        .dark .tender-status-select .ant-select-item-option-selected,
+        [data-theme='dark'] .tender-status-select .ant-select-item-option-selected {
+          color: #f8fafc !important;
+          background-color: #334155 !important;
+        }
+
         /* Customize scrollbar */
         ::-webkit-scrollbar {
           width: 8px;

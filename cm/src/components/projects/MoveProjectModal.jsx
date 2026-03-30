@@ -76,7 +76,7 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
             cancelText="ยกเลิก"
             okButtonProps={{ 
                 size: 'large', 
-                className: 'bg-amber-500 border-amber-500 hover:bg-amber-600 hover:border-amber-600'
+                className: '!bg-amber-500 !border-amber-500 hover:!bg-amber-600 hover:!border-amber-600 !text-white'
             }}
         >
             <div className="py-2">

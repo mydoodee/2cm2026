@@ -208,6 +208,7 @@ const ProjectInfoCard = ({
                         value={project.tender_status || 'tender_in_progress'}
                         onChange={(val) => onTenderStatusChange(val)}
                         className="w-full font-kanit text-xs"
+                        popupClassName="tender-status-select"
                         options={[
                           { value: 'tender_in_progress', label: '🔵 กำลังดำเนินงาน' },
                           { value: 'tender_win', label: '🟢 ได้งาน (Win)' },
@@ -217,11 +218,11 @@ const ProjectInfoCard = ({
                         ]}
                      />
                      <Button
-                        type="primary"
+                        type="default"
                         size="small"
                         icon={<TrophyOutlined />}
                         onClick={onMoveProject}
-                        className="w-full h-8 font-kanit text-xs bg-amber-500 border-amber-500 hover:bg-amber-600 hover:border-amber-600 shadow-sm shadow-amber-200"
+                        className="w-full h-8 font-kanit text-xs !bg-amber-500 !text-white !border-amber-500 hover:!bg-amber-600 hover:!border-amber-600 shadow-sm shadow-amber-200"
                       >
                         ✅ Win Tender / ย้ายเข้างานจริง
                       </Button>
