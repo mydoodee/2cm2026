@@ -29,7 +29,7 @@ const getProjects = async (req, res) => {
                DATE_FORMAT(start_date, '%Y-%m-%d') as start_date, 
                DATE_FORMAT(end_date, '%Y-%m-%d') as end_date, 
                p.image, p.progress_summary_image, p.payment_image, p.design_image, 
-               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, 
+               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
@@ -43,7 +43,7 @@ const getProjects = async (req, res) => {
                DATE_FORMAT(p.start_date, '%Y-%m-%d') as start_date, 
                DATE_FORMAT(p.end_date, '%Y-%m-%d') as end_date, 
                p.image, p.progress_summary_image, p.payment_image, p.design_image, 
-               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
+               p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
@@ -109,7 +109,7 @@ const getProjectById = async (req, res) => {
                 DATE_FORMAT(start_date, '%Y-%m-%d') as start_date, 
                 DATE_FORMAT(end_date, '%Y-%m-%d') as end_date, 
                 p.image, p.progress_summary_image, p.payment_image, p.design_image, 
-                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
+                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                 p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
@@ -123,7 +123,7 @@ const getProjectById = async (req, res) => {
                 DATE_FORMAT(p.start_date, '%Y-%m-%d') as start_date, 
                 DATE_FORMAT(p.end_date, '%Y-%m-%d') as end_date, 
                 p.image, p.progress_summary_image, p.payment_image, p.design_image, 
-                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image,
+                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                 p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
@@ -307,7 +307,7 @@ const createProject = async (req, res) => {
       `INSERT INTO projects (
         project_id, job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
         owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, 
-        pre_construction_image, construction_image, cm_image, precast_image, bidding_image, 
+        pre_construction_image, construction_image, cm_image, precast_image, bidding_image, job_status_image,
         show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
         bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

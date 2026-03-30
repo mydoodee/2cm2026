@@ -214,10 +214,10 @@ function Projects({ user, setUser, theme, setTheme }) {
                 onClick={() => handleYearChange(year)}
                 className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
                   selectedYear === year
-                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30 scale-105'
+                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105'
                     : theme === 'dark'
                       ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
-                      : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-purple-600 border border-slate-100'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 border border-slate-100'
                 }`}
               >
                 <span>{year}</span>
@@ -305,7 +305,7 @@ function Projects({ user, setUser, theme, setTheme }) {
 
                       {/* Job Number Badge */}
                       <div className="absolute bottom-4 left-4 z-10">
-                        <div className="px-3 py-1.5 rounded-xl bg-purple-500 text-white text-xs font-bold shadow-lg">
+                        <div className="px-3 py-1.5 rounded-xl bg-indigo-500 text-white text-xs font-bold shadow-lg">
                           {project.job_number || 'No Job #'}
                         </div>
                       </div>
@@ -340,8 +340,8 @@ function Projects({ user, setUser, theme, setTheme }) {
                       <div className="space-y-2">
                         <div className={`w-full rounded-full h-3 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-slate-100'}`}>
                           <div
-                            className={`h-3 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(168,85,247,0.3)] ${
-                              (project.progress || 0) >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500 shadow-purple-500/20'
+                            className={`h-3 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(99,102,241,0.3)] ${
+                              (project.progress || 0) >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-indigo-500 to-blue-500 shadow-indigo-500/20'
                             }`}
                             style={{ width: `${Math.min(project.progress || 0, 100)}%` }}
                           ></div>
