@@ -24,7 +24,7 @@ const login = async (req, res) => {
     try {
         connection = await getConnection();
         const [rows] = await connection.execute(
-            'SELECT user_id, username, password_hash, first_name, last_name, email, profile_image FROM users WHERE username = ? AND active = 1',
+            'SELECT user_id, username, password_hash, first_name, last_name, email, profile_image, is_pm FROM users WHERE username = ? AND active = 1',
             [username]
         );
 
@@ -69,14 +69,14 @@ const login = async (req, res) => {
 
         // ✅ สร้าง token อายุ 8 ชั่วโมง
         const token = jwt.sign(
-            { user_id: user.user_id, username: user.username, roles: userRoles },
+            { user_id: user.user_id, username: user.username, roles: userRoles, is_pm: !!user.is_pm },
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );
 
         // ✅ สร้าง refresh token อายุ 7 วัน
         const refreshToken = jwt.sign(
-            { user_id: user.user_id, username: user.username, roles: userRoles },
+            { user_id: user.user_id, username: user.username, roles: userRoles, is_pm: !!user.is_pm },
             process.env.JWT_REFRESH_SECRET,
             { expiresIn: '7d' }
         );
@@ -97,7 +97,8 @@ const login = async (req, res) => {
                 email: user.email,
                 profile_image: user.profile_image,
                 roles: userRoles,
-                isAdmin: userRoles.includes(1)
+                isAdmin: userRoles.includes(1),
+                is_pm: !!user.is_pm
             }
         });
     } catch (error) {
@@ -122,10 +123,16 @@ const getUser = async (req, res) => {
 
         connection = await getConnection();
         const [rows] = await connection.execute(
-            'SELECT user_id, username, first_name, last_name, email, profile_image FROM users WHERE user_id = ? AND active = 1',
+            'SELECT user_id, username, first_name, last_name, email, profile_image, is_pm FROM users WHERE user_id = ? AND active = 1',
             [req.user.user_id]
         );
-        const [roles] = await connection.execute(
+        
+        // ดึงทั้ง global roles และ project roles
+        const [globalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ?',
+            [req.user.user_id]
+        );
+        const [projectRoles] = await connection.execute(
             'SELECT role_id FROM project_user_roles WHERE user_id = ?',
             [req.user.user_id]
         );
@@ -134,8 +141,12 @@ const getUser = async (req, res) => {
             return res.status(404).json({ message: 'ไม่พบผู้ใช้' });
         }
 
-        let userRoles = roles.map(r => r.role_id);
-        if (rows[0].username === 'adminspk' && !userRoles.includes(1)) {
+        let userRoles = [...new Set([
+            ...globalRoles.map(r => r.role_id),
+            ...projectRoles.map(r => r.role_id)
+        ])];
+
+        if ((rows[0].username === 'adminspk' || rows[0].username === 'admin') && !userRoles.includes(1)) {
             userRoles.push(1);
         }
 
@@ -148,7 +159,8 @@ const getUser = async (req, res) => {
                 email: rows[0].email,
                 profile_image: rows[0].profile_image,
                 roles: userRoles,
-                isAdmin: userRoles.includes(1)
+                isAdmin: userRoles.includes(1),
+                is_pm: !!rows[0].is_pm
             }
         });
     } catch (error) {
@@ -164,9 +176,12 @@ const getUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-    const { username, email, first_name, last_name, password, role_id, project_id } = req.body;
+    const { username, email, first_name, last_name, password, role_id, project_id, is_pm } = req.body;
     const profileImage = req.file;
     const { id } = req.params;
+
+    console.log(`DEBUG: updateUser called for ID: ${id}`);
+    console.log(`DEBUG: req.body:`, JSON.stringify(req.body, null, 2));
 
     let connection = null;
     try {
@@ -176,23 +191,42 @@ const updateUser = async (req, res) => {
 
         connection = await getConnection();
 
-        const isSelfUpdate = req.user.user_id === parseInt(id);
-        const [adminRoles] = await connection.execute(
-            'SELECT role_id FROM project_user_roles WHERE user_id = ?',
-            [req.user.user_id]
+        const targetId = parseInt(id);
+        const currentUserId = parseInt(req.user.user_id);
+        const isSelfUpdate = currentUserId === targetId;
+
+        console.log(`DEBUG: targetId=${targetId}, currentUserId=${currentUserId}, isSelfUpdate=${isSelfUpdate}`);
+
+        // ดึงสิทธิ์ทั้งหมดของผู้ที่กำลังแก้ไข (Admin Check)
+        const [userGlobalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ?',
+            [currentUserId]
         );
-        const isAdmin = adminRoles.some(r => r.role_id === 1) || req.user.username === 'adminspk';
+        const [userProjectRoles] = await connection.execute(
+            'SELECT role_id FROM project_user_roles WHERE user_id = ?',
+            [currentUserId]
+        );
+        
+        const allUserRoles = [...new Set([
+            ...userGlobalRoles.map(r => r.role_id),
+            ...userProjectRoles.map(r => r.role_id)
+        ])];
+
+        const isAdmin = allUserRoles.includes(1) || req.user.username === 'adminspk' || req.user.username === 'admin';
+        
+        console.log(`DEBUG: isAdmin=${isAdmin}, roles:`, allUserRoles);
+
         if (!isAdmin && !isSelfUpdate) {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์แก้ไขผู้ใช้นี้' });
         }
 
         if (!username || !email || !first_name || !last_name) {
-            return res.status(400).json({ message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด' });
+            return res.status(400).json({ message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด (username, email, firstName, lastName)' });
         }
 
         const [userRows] = await connection.execute(
             'SELECT user_id, username, profile_image FROM users WHERE user_id = ? AND active = 1',
-            [id]
+            [targetId]
         );
         if (userRows.length === 0) {
             return res.status(404).json({ message: 'ไม่พบผู้ใช้' });
@@ -200,7 +234,7 @@ const updateUser = async (req, res) => {
 
         const [usernameRows] = await connection.execute(
             'SELECT user_id FROM users WHERE username = ? AND user_id != ?',
-            [username, id]
+            [username, targetId]
         );
         if (usernameRows.length > 0) {
             return res.status(400).json({ message: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
@@ -208,7 +242,7 @@ const updateUser = async (req, res) => {
 
         const [emailRows] = await connection.execute(
             'SELECT user_id FROM users WHERE email = ? AND user_id != ?',
-            [email, id]
+            [email, targetId]
         );
         if (emailRows.length > 0) {
             return res.status(400).json({ message: 'อีเมลนี้ถูกใช้แล้ว' });
@@ -229,20 +263,28 @@ const updateUser = async (req, res) => {
         let updateQuery = 'UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?';
         let queryParams = [username, email, first_name, last_name];
 
+        if (isAdmin && is_pm !== undefined) {
+            updateQuery += ', is_pm = ?';
+            queryParams.push(is_pm ? 1 : 0);
+        }
+
         if (profileImagePath && profileImagePath !== userRows[0].profile_image) {
             updateQuery += ', profile_image = ?';
             queryParams.push(profileImagePath);
         }
 
         if (password) {
+            console.log('DEBUG: Updating password...');
             updateQuery += ', password_hash = ?';
             queryParams.push(await bcrypt.hash(password, 10));
         }
 
         updateQuery += ' WHERE user_id = ?';
-        queryParams.push(id);
+        queryParams.push(targetId);
 
+        console.log('DEBUG: Executing update query:', updateQuery);
         await connection.execute(updateQuery, queryParams);
+        console.log('DEBUG: Update successful');
 
         if (role_id && isAdmin) {
             await connection.execute(
@@ -324,45 +366,54 @@ const getAllUsers = async (req, res) => {
         }
 
         connection = await getConnection();
-        const [roles] = await connection.execute(
+        // เช็คสิทธิ์ Admin (ทั้ง global และ project)
+        const [userGlobalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ?',
+            [req.user.user_id]
+        );
+        const [userProjectRoles] = await connection.execute(
             'SELECT role_id FROM project_user_roles WHERE user_id = ?',
             [req.user.user_id]
         );
-        if (!roles.some(r => r.role_id === 1) && req.user.username !== 'adminspk') {
+        const allRoles = [...new Set([
+            ...userGlobalRoles.map(r => r.role_id),
+            ...userProjectRoles.map(r => r.role_id)
+        ])];
+
+        if (!allRoles.includes(1) && req.user.username !== 'adminspk' && req.user.username !== 'admin') {
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถดูรายการผู้ใช้ได้' });
         }
 
+        const includeInactive = req.query.includeInactive === 'true';
         const [users] = await connection.execute(`
-            SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image,
+            SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
                    GROUP_CONCAT(DISTINCT pur.role_id) as role_ids,
                    GROUP_CONCAT(pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name) as project_roles
             FROM users u
             LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
             LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1
             LEFT JOIN roles r ON pur.role_id = r.role_id
-            WHERE u.active = 1
+            WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
             GROUP BY u.user_id
         `);
 
         const formattedUsers = users.map(user => {
             let userRoles = user.role_ids ? user.role_ids.split(',').map(Number) : [];
-            if (user.username === 'adminspk' && !userRoles.includes(1)) {
+            if ((user.username === 'adminspk' || user.username === 'admin') && !userRoles.includes(1)) {
                 userRoles.push(1);
             }
+
             return {
-                user_id: user.user_id,
-                username: user.username,
-                email: user.email,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                profile_image: user.profile_image,
+                ...user,
+                user_id: Number(user.user_id),
                 roles: userRoles,
                 isAdmin: userRoles.includes(1),
+                is_pm: !!user.is_pm,
                 project_roles: user.project_roles
                     ? user.project_roles.split(',').map(pr => {
                           const [project_id, job_number, role_id, role_name] = pr.split(':');
                           return {
-                              project_id: project_id ? Number(project_id) : null,
+                              project_id: project_id || null,
                               job_number: job_number || 'ไม่ระบุหมายเลขงาน',
                               role_id: Number(role_id),
                               role_name
@@ -386,7 +437,7 @@ const getAllUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-    const { username, email, first_name, last_name, password, role_id, project_id } = req.body;
+    const { username, email, first_name, last_name, password, role_id, project_id, is_pm } = req.body;
     const profileImage = req.file;
 
     let connection;
@@ -396,13 +447,19 @@ const createUser = async (req, res) => {
         }
 
         connection = await getConnection();
+        console.error('DEBUG: DB Connection acquired for createUser');
+
         await connection.beginTransaction();
+        console.error('DEBUG: Transaction started for createUser');
 
         const [adminRoles] = await connection.execute(
             'SELECT role_id FROM user_roles WHERE user_id = ?',
             [req.user.user_id]
         );
-        if (!adminRoles.some(r => r.role_id === 1) && req.user.username !== 'admin') {
+        const isAdmin = adminRoles.some(r => r.role_id === 1) || req.user.username === 'admin' || req.user.username === 'adminspk';
+        if (!isAdmin) {
+            console.error('DEBUG: User is not admin', { username: req.user.username, user_id: req.user.user_id });
+            await connection.rollback();
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถสร้างผู้ใช้ได้' });
         }
 
@@ -412,10 +469,9 @@ const createUser = async (req, res) => {
             });
         }
 
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-        if (!passwordRegex.test(password)) {
+        if (password.length < 4) {
             return res.status(400).json({
-                message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวอักษรและตัวเลข'
+                message: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร'
             });
         }
 
@@ -465,12 +521,15 @@ const createUser = async (req, res) => {
             profileImagePath = `Uploads/${fileName}`;
         }
 
+        console.error('DEBUG: Salting and hashing password...');
         const passwordHash = await bcrypt.hash(password, 10);
+        console.error('DEBUG: Password hashed');
 
         const [result] = await connection.execute(
-            'INSERT INTO users (username, password_hash, email, first_name, last_name, profile_image, created_by, active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
-            [username, passwordHash, email, first_name, last_name, profileImagePath, req.user.user_id]
+            'INSERT INTO users (username, password_hash, email, first_name, last_name, profile_image, is_pm, created_by, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+            [username, passwordHash, email, first_name, last_name, profileImagePath, is_pm ? 1 : 0, req.user.user_id]
         );
+        console.error('DEBUG: User inserted', { insertId: result.insertId });
 
         await connection.execute(
             'INSERT INTO user_roles (user_id, role_id, created_at) VALUES (?, ?, NOW())',
@@ -510,8 +569,10 @@ const createUser = async (req, res) => {
             message: 'สร้างผู้ใช้สำเร็จ'
         });
     } catch (error) {
+        console.error('DEBUG: ERROR in createUser:', error);
         if (connection) {
             await connection.rollback();
+            console.error('DEBUG: Transaction rolled back');
         }
         res.status(500).json({
             message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์',
@@ -564,6 +625,136 @@ const deleteUser = async (req, res) => {
     } catch (error) {
         res.status(500).json({ 
             message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', 
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        });
+    } finally {
+        if (connection) {
+            await connection.release();
+        }
+    }
+};
+
+const restoreUser = async (req, res) => {
+    const { id } = req.params;
+
+    let connection;
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+        }
+
+        connection = await getConnection();
+        const [adminRoles] = await connection.execute(
+            'SELECT role_id FROM project_user_roles WHERE user_id = ?',
+            [req.user.user_id]
+        );
+        const isAdmin = adminRoles.some(r => r.role_id === 1) || req.user.username === 'admin' || req.user.username === 'adminspk';
+        
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถกู้คืนผู้ใช้ได้' });
+        }
+
+        const [userRows] = await connection.execute(
+            'SELECT user_id, username FROM users WHERE user_id = ? AND active = 0',
+            [id]
+        );
+        
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'ไม่พบผู้ใช้ที่ถูกปิดใช้งานหรือผู้ใช้นี้เปิดใช้งานอยู่แล้ว' });
+        }
+
+        await connection.execute(
+            'UPDATE users SET active = 1 WHERE user_id = ?',
+            [id]
+        );
+
+        res.json({ message: 'กู้คืนผู้ใช้สำเร็จ', username: userRows[0].username });
+    } catch (error) {
+        res.status(500).json({ 
+            message: 'เกิดข้อผิดพลาดในการกู้คืนผู้ใช้', 
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        });
+    } finally {
+        if (connection) {
+            await connection.release();
+        }
+    }
+};
+
+const hardDeleteUser = async (req, res) => {
+    const { id } = req.params;
+
+    let connection;
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+        }
+
+        connection = await getConnection();
+        
+        // ตรวจสอบสิทธิ์ Admin (เฉพาะบทบาท 1 หรือชื่อ admin/adminspk เท่านั้นที่มีสิทธิ์ลบทิ้งถาวร)
+        const [adminRoles] = await connection.execute(
+            'SELECT role_id FROM project_user_roles WHERE user_id = ?',
+            [req.user.user_id]
+        );
+        const isAdmin = adminRoles.some(r => r.role_id === 1) || req.user.username === 'admin' || req.user.username === 'adminspk';
+        
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถลบผู้ใช้ถาวรได้' });
+        }
+
+        // ตรวจสอบสถานะว่าถูกลบแบบ Soft Delete (active=0) แล้วหรือไม่ก่อนลบจริง
+        const [userRows] = await connection.execute(
+            'SELECT user_id, username FROM users WHERE user_id = ?',
+            [id]
+        );
+        
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'ไม่พบข้อมูลผู้ใช้' });
+        }
+
+        const [inactiveRows] = await connection.execute(
+            'SELECT user_id FROM users WHERE user_id = ? AND active = 0',
+            [id]
+        );
+
+        if (inactiveRows.length === 0) {
+             return res.status(400).json({ message: 'ต้องลบผู้ใช้เบื้องต้น (Soft Delete) ก่อนจึงจะลบถาวรได้' });
+        }
+
+        await connection.beginTransaction();
+
+        const adminId = req.user.user_id;
+
+        // ลบ/อัปเดตความสัมพันธ์ที่มี Foreign Key เพื่อให้ลบได้จริง
+        // 1. ลบข้อมูลที่ผูกติดกับตัวบุคคล (Session/Token/Permissions/Logs)
+        await connection.execute('DELETE FROM refresh_tokens WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM reset_tokens WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM user_roles WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM project_user_roles WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM folder_permissions WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM project_permissions WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM file_downloads WHERE user_id = ?', [id]);
+        
+        // 2. อัปเดตข้อมูลที่ต้องเก็บไว้แต่เปลี่ยนคนดูแล (Reassign to Admin)
+        // เนื่องจากคอลัมน์เหล่านี้ใน DB ตั้งค่าเป็น NOT NULL จึงต้องโอนสิทธิ์ให้ Admin แทนการตั้งเป็น NULL
+        await connection.execute('UPDATE files SET uploaded_by = ? WHERE uploaded_by = ?', [adminId, id]);
+        await connection.execute('UPDATE folders SET created_by = ? WHERE created_by = ?', [adminId, id]);
+        await connection.execute('UPDATE project_user_invitations SET invited_by = ? WHERE invited_by = ?', [adminId, id]);
+        
+        // สำหรับคอลัมน์ที่อนุญาตให้เป็น NULL (Nullable)
+        await connection.execute('UPDATE users SET created_by = NULL WHERE created_by = ?', [id]);
+        
+        // 3. ลบตัวตนผู้ใช้
+        await connection.execute('DELETE FROM users WHERE user_id = ?', [id]);
+
+        await connection.commit();
+
+        res.json({ message: 'ลบผู้ใช้ถาวรสำเร็จแล้ว', username: userRows[0].username });
+    } catch (error) {
+        if (connection) await connection.rollback();
+        res.status(500).json({ 
+            message: 'เกิดข้อผิดพลาดในการลบผู้ใช้ถาวร', 
             error: process.env.NODE_ENV === 'development' ? error.message : undefined 
         });
     } finally {
@@ -730,13 +921,13 @@ const deleteProjectUserRole = async (req, res) => {
             });
         }
 
-        const projectIdNum = parseInt(project_id, 10);
+        const projectIdStr = project_id;
         const userIdNum = parseInt(user_id, 10);
 
-        if (isNaN(projectIdNum) || isNaN(userIdNum)) {
+        if (!projectIdStr || isNaN(userIdNum)) {
             return res.status(400).json({ 
                 success: false,
-                message: 'project_id และ user_id ต้องเป็นตัวเลข' 
+                message: 'project_id ต้องระบุ และ user_id ต้องเป็นตัวเลข' 
             });
         }
 
@@ -766,7 +957,7 @@ const deleteProjectUserRole = async (req, res) => {
 
         const [projectRows] = await connection.execute(
             'SELECT project_id, project_name, job_number FROM projects WHERE project_id = ? AND active = 1',
-            [projectIdNum]
+            [projectIdStr]
         );
 
         if (projectRows.length === 0) {
@@ -790,7 +981,7 @@ const deleteProjectUserRole = async (req, res) => {
 
         const [existingRoles] = await connection.execute(
             'SELECT * FROM project_user_roles WHERE project_id = ? AND user_id = ?',
-            [projectIdNum, userIdNum]
+            [projectIdStr, userIdNum]
         );
 
         if (existingRoles.length === 0) {
@@ -802,14 +993,14 @@ const deleteProjectUserRole = async (req, res) => {
 
         const [deleteResult] = await connection.execute(
             'DELETE FROM project_user_roles WHERE project_id = ? AND user_id = ?',
-            [projectIdNum, userIdNum]
+            [projectIdStr, userIdNum]
         );
 
         res.json({
             success: true,
             message: 'ลบสิทธิ์การเข้าใช้งานสำเร็จ',
             data: {
-                project_id: projectIdNum,
+                project_id: projectIdStr,
                 project_name: projectRows[0].project_name,
                 job_number: projectRows[0].job_number,
                 user_id: userIdNum,
@@ -948,6 +1139,102 @@ const confirmPassword = async (req, res) => {
     }
 };
 
+const copyUserPermissions = async (req, res) => {
+    const { sourceUserId, targetUserId } = req.body;
+
+    if (!sourceUserId || !targetUserId) {
+        return res.status(400).json({ message: 'กรุณาระบุ sourceUserId และ targetUserId' });
+    }
+
+    if (sourceUserId === targetUserId) {
+        return res.status(400).json({ message: 'ผู้ใช้ต้นทางและปลายทางต้องไม่ใช่คนเดียวกัน' });
+    }
+
+    let connection;
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+        }
+
+        connection = await getConnection();
+        
+        // ตรวจสอบสิทธิ์ Admin
+        const [adminRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
+            [req.user.user_id]
+        );
+        const isAdmin = adminRoles.length > 0 || req.user.username === 'admin' || req.user.username === 'adminspk';
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถคัดลอกสิทธิ์ได้' });
+        }
+
+        // ตรวจสอบว่าผู้ใช้ทั้งสองคนมีอยู่จริง
+        const [users] = await connection.execute(
+            'SELECT user_id, username FROM users WHERE user_id IN (?, ?) AND active = 1',
+            [sourceUserId, targetUserId]
+        );
+        if (users.length < 2) {
+            return res.status(404).json({ message: 'ไม่พบข้อมูลผู้ใช้ต้นทางหรือปลายทาง' });
+        }
+
+        await connection.beginTransaction();
+
+        // 1. คัดลอก Project Roles (project_user_roles)
+        const [sourceProjectRoles] = await connection.execute(
+            'SELECT project_id, role_id FROM project_user_roles WHERE user_id = ?',
+            [sourceUserId]
+        );
+
+        for (const role of sourceProjectRoles) {
+            await connection.execute(
+                `INSERT INTO project_user_roles (project_id, user_id, role_id, created_at) 
+                 VALUES (?, ?, ?, NOW()) 
+                 ON DUPLICATE KEY UPDATE role_id = ?, updated_at = NOW()`,
+                [role.project_id, targetUserId, role.role_id, role.role_id]
+            );
+        }
+
+        // 2. คัดลอก Folder Permissions (folder_permissions)
+        const [sourceFolderPerms] = await connection.execute(
+            'SELECT folder_id, permission_type FROM folder_permissions WHERE user_id = ?',
+            [sourceUserId]
+        );
+
+        for (const perm of sourceFolderPerms) {
+            await connection.execute(
+                `INSERT INTO folder_permissions (folder_id, user_id, permission_type, created_at) 
+                 VALUES (?, ?, ?, NOW()) 
+                 ON DUPLICATE KEY UPDATE permission_type = ?, updated_at = NOW()`,
+                [perm.folder_id, targetUserId, perm.permission_type, perm.permission_type]
+            );
+        }
+
+        await connection.execute(
+            'INSERT INTO logs (message) VALUES (?)',
+            [`Permissions copied from user_id: ${sourceUserId} to user_id: ${targetUserId} by admin_id: ${req.user.user_id}`]
+        );
+
+        await connection.commit();
+
+        res.json({
+            message: 'คัดลอกสิทธิ์สำเร็จ',
+            details: {
+                projectRolesCount: sourceProjectRoles.length,
+                folderPermissionsCount: sourceFolderPerms.length
+            }
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        res.status(500).json({
+            message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        if (connection) await connection.release();
+    }
+};
+
 module.exports = {
     login,
     getUser,
@@ -955,9 +1242,12 @@ module.exports = {
     getAllUsers,
     createUser,
     deleteUser,
+    restoreUser,
+    hardDeleteUser,
     refreshToken,
     assignProjectRole,
     deleteProjectUserRole,
     resetPassword,
-    confirmPassword
+    confirmPassword,
+    copyUserPermissions
 };

@@ -8,11 +8,14 @@ const {
   getAllUsers,
   createUser,
   deleteUser,
+  restoreUser,
+  hardDeleteUser,
   refreshToken,
   assignProjectRole,
   deleteProjectUserRole,
   resetPassword,
   confirmPassword,
+  copyUserPermissions,
 } = require('../controllers/authController');
 const authenticateToken = require('../middleware/authenticateToken');
 const multer = require('multer');
@@ -105,6 +108,15 @@ router.post('/user', authenticateToken, upload.single('profile_image'), multerEr
 
 // Route: ลบผู้ใช้
 router.delete('/user/:id', authenticateToken, deleteUser);
+
+// Route: กู้คืนผู้ใช้
+router.put('/user/restore/:id', authenticateToken, restoreUser);
+
+// Route: ลบผู้ใช้ถาวร
+router.delete('/user/permanent/:id', authenticateToken, hardDeleteUser);
+
+// Route: คัดลอกสิทธิ์ผู้ใช้
+router.post('/users/copy-permissions', authenticateToken, copyUserPermissions);
 
 // Route: รีเฟรช token
 router.post('/refresh-token', refreshToken);

@@ -11,13 +11,6 @@ function emitFileActivity(projectId, activityData) {
       project_id: projectId,
       timestamp: new Date()
     });
-    
-    // Emit to all users (for "all projects" view)
-    global.io.emit('file-activity-global', {
-      ...activityData,
-      project_id: projectId,
-      timestamp: new Date()
-    });
   } else {
   }
 }
@@ -92,11 +85,8 @@ exports.recordDownloadActivity = async (fileId, userId) => {
   try {
     db = await getConnection();
     
-    // บันทึกการดาวน์โหลดในฐานข้อมูล
-    await db.query(`
-      INSERT INTO file_downloads (file_id, user_id, downloaded_at)
-      VALUES (?, ?, NOW())
-    `, [fileId, userId]);
+    // การบันทึกการดาวน์โหลดทำโดย caller (เช่น DashboardController) แล้ว
+    // ฟังก์ชันนี้ทำหน้าที่ดึงข้อมูลเพิ่มเพื่อ emit WebSocket เท่านั้น
     
     // ดึงข้อมูลไฟล์ และ user ที่ download
     const [fileData] = await db.query(`

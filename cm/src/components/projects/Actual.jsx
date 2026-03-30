@@ -728,7 +728,7 @@ const Actual = ({ user, setUser, theme }) => {
       const token = localStorage.getItem('token');
       const formData = new FormData();
 
-      formData.append('project_id', parseInt(id));
+      formData.append('project_id', id);
       formData.append('actual_progress', finalProgress);
       formData.append('remarks', remarks || '');
       formData.append('update_date', updateDate.format('YYYY-MM-DD'));
@@ -749,8 +749,7 @@ const Actual = ({ user, setUser, theme }) => {
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token} `,
-            'Content-Type': 'multipart/form-data'
+            'Authorization': `Bearer ${token} `
           }
         }
       );

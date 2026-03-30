@@ -1,0 +1,320 @@
+/* Bidding.css - Specific Styles for Bidding Page */
+
+/* Utility Classes for Colors */
+.bg-gray-50 { background-color: var(--light-bg) !important; }
+.bg-gray-100 { background-color: var(--light-bg-secondary) !important; }
+.border-gray-200 { border-color: var(--light-border) !important; }
+.text-gray-600 { color: var(--light-text-secondary) !important; }
+.text-gray-700 { color: var(--light-text) !important; }
+.bg-gray-900 { background-color: var(--dark-bg) !important; }
+.bg-gray-800 { background-color: var(--dark-bg-secondary) !important; }
+.bg-gray-700 { background-color: var(--dark-border) !important; }
+.border-gray-700 { border-color: var(--dark-border) !important; }
+.border-gray-600 { border-color: var(--dark-border-secondary) !important; }
+.text-gray-400 { color: var(--dark-text-secondary) !important; }
+.text-gray-300 { color: var(--dark-text-secondary) !important; }
+.text-white { color: var(--dark-text) !important; }
+
+/* ✅ Override Ant Design Card to fill height */
+.ant-card {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-card {
+  background-color: var(--dark-bg-secondary) !important;
+  border-color: var(--dark-border) !important;
+}
+
+.ant-card-head {
+  flex-shrink: 0 !important;
+}
+
+/* ✅ Force full height on Tree containers */
+.ant-card-body {
+  padding: 16px !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.ant-spin-nested-loading {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.ant-spin-container {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Tree Component Styles */
+.custom-tree,
+.custom-file-tree {
+  height: 100% !important;
+  min-height: 400px !important;
+  max-height: calc(100vh - 400px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.ant-tree {
+  background: transparent !important;
+}
+
+/* ✅ ทำให้คลิกที่ title ได้ทั้งหมด */
+.custom-tree .ant-tree-node-content-wrapper,
+.custom-file-tree .ant-tree-node-content-wrapper {
+  width: 100% !important;
+  cursor: pointer !important;
+}
+
+/* ✅ ให้ switcher (+ icon) คลิกได้ง่าย */
+.custom-tree .ant-tree-switcher,
+.custom-file-tree .ant-tree-switcher {
+  cursor: pointer !important;
+}
+
+.custom-tree .ant-tree-treenode,
+.custom-file-tree .ant-tree-treenode {
+  padding: 4px 0;
+}
+
+.custom-tree .ant-tree-node-content-wrapper,
+.custom-file-tree .ant-tree-node-content-wrapper {
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+
+.custom-tree .ant-tree-node-content-wrapper:hover,
+.custom-file-tree .ant-tree-node-content-wrapper:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .custom-tree .ant-tree-node-content-wrapper:hover,
+:where(.css-dev-only-do-not-override-1xg9z9n) .custom-file-tree .ant-tree-node-content-wrapper:hover {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.custom-tree .ant-tree-title,
+.custom-file-tree .ant-tree-title {
+  color: var(--light-text) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .custom-tree .ant-tree-title,
+:where(.css-dev-only-do-not-override-1xg9z9n) .custom-file-tree .ant-tree-title {
+  color: var(--dark-text) !important;
+}
+
+/* Upload Dragger Styles */
+.upload-dragger .ant-upload {
+  background: transparent !important;
+  border: none !important;
+  padding: 16px !important;
+}
+
+.upload-dragger .ant-upload-drag {
+  border: 2px dashed var(--light-border) !important;
+  border-radius: 8px !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-drag {
+  border-color: var(--dark-border-secondary) !important;
+}
+
+.upload-dragger .ant-upload-text, 
+.upload-dragger .ant-upload-hint {
+  color: var(--light-text-secondary) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-text,
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-hint {
+  color: var(--dark-text-secondary) !important;
+}
+
+.upload-dragger .ant-upload-drag:hover {
+  border-color: var(--primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-dragger .ant-upload-drag:hover {
+  border-color: var(--primary-hover) !important;
+}
+
+/* Modal Styles */
+.upload-modal .ant-modal-content {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-modal .ant-modal-content {
+  background-color: var(--dark-bg-secondary) !important;
+}
+
+.upload-modal .ant-modal-title, 
+.upload-modal .ant-form-item-label > label {
+  color: var(--light-text) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-modal .ant-modal-title,
+:where(.css-dev-only-do-not-override-1xg9z9n) .upload-modal .ant-form-item-label > label {
+  color: var(--dark-text) !important;
+}
+
+/* Input and Select Styles */
+.ant-input, 
+.ant-select-selector {
+  background-color: var(--light-bg-secondary) !important;
+  border-color: var(--light-border) !important;
+  color: var(--light-text) !important;
+  border-radius: 6px !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-input,
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-select-selector {
+  background-color: var(--dark-bg-secondary) !important;
+  border-color: var(--dark-border-secondary) !important;
+  color: var(--dark-text) !important;
+}
+
+.ant-select-item-option-selected {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-select-item-option-selected {
+  background-color: var(--primary-hover) !important;
+}
+
+/* Breadcrumb Styles */
+.custom-breadcrumb .ant-breadcrumb a,
+.custom-breadcrumb .ant-breadcrumb span {
+  color: var(--dark-text) !important;
+}
+
+.custom-breadcrumb .ant-breadcrumb a:hover {
+  color: var(--primary-color) !important;
+}
+
+/* Table Styles */
+.ant-table {
+  background-color: var(--light-bg) !important;
+  border-radius: 8px !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-table {
+  background-color: var(--dark-bg-secondary) !important;
+}
+
+.ant-table-thead > tr > th {
+  background-color: var(--light-bg-secondary) !important;
+  color: var(--light-text) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-table-thead > tr > th {
+  background-color: var(--dark-bg) !important;
+  color: var(--dark-text) !important;
+}
+
+.ant-table-row:hover > td {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-table-row:hover > td {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.table-header-icon {
+  font-size: 18px !important;
+  margin: 0 auto !important;
+  display: block !important;
+  color: var(--light-text) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .table-header-icon {
+  color: var(--dark-text) !important;
+}
+
+/* Header Styles */
+.custom-header {
+  position: relative;
+  width: 100%;
+  height: 128px;
+}
+
+@media (min-width: 768px) {
+  .custom-header {
+    height: 192px;
+  }
+}
+
+.custom-header .bg-black.bg-opacity-50 {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.text-shadow-lg {
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Construction Management Specific Button */
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-primary.construction-management-btn {
+  background-color: var(--construction-management-color) !important;
+  border-color: var(--construction-management-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-primary.construction-management-btn:hover {
+  background-color: #d97706 !important;
+  border-color: #d97706 !important;
+}
+
+/* Scrollbar Styling */
+.custom-tree::-webkit-scrollbar,
+.custom-file-tree::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-tree::-webkit-scrollbar-track,
+.custom-file-tree::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-tree::-webkit-scrollbar-thumb,
+.custom-file-tree::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.custom-tree::-webkit-scrollbar-thumb:hover,
+.custom-file-tree::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ✅ Responsive adjustments */
+@media (max-width: 768px) {
+  .custom-tree,
+  .custom-file-tree {
+    min-height: 300px !important;
+    max-height: calc(100vh - 500px) !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .custom-tree,
+  .custom-file-tree {
+    min-height: 400px !important;
+    max-height: calc(100vh - 450px) !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .custom-tree,
+  .custom-file-tree {
+    min-height: 500px !important;
+    max-height: calc(100vh - 350px) !important;
+  }
+}

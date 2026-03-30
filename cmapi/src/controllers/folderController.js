@@ -12,11 +12,11 @@ async function getFolders(req, res) {
   let connection;
   try {
     connection = await getConnection();
-    const projectId = parseInt(req.query.project_id);
+    const projectId = req.query.project_id;
 
-    if (!projectId || isNaN(projectId)) {
+    if (!projectId) {
       return res.status(400).json({
-        message: 'Project ID is required and must be a valid number'
+        message: 'Project ID is required'
       });
     }
 
@@ -26,7 +26,7 @@ async function getFolders(req, res) {
              COALESCE(
                JSON_ARRAYAGG(
                  JSON_OBJECT(
-                   'permission_id', fp.id,
+                  'permission_id', fp.permission_id,
                    'user_id', fp.user_id,
                    'permission_type', fp.permission_type
                  )
@@ -37,6 +37,7 @@ async function getFolders(req, res) {
       LEFT JOIN folder_permissions fp ON f.folder_id = fp.folder_id
       WHERE f.project_id = ? AND f.active = 1
       GROUP BY f.folder_id
+      ORDER BY f.folder_name ASC
     `;
 
     let folders;
@@ -48,6 +49,7 @@ async function getFolders(req, res) {
         SELECT f.folder_id, f.folder_name, f.parent_folder_id, f.project_id, f.active
         FROM folders f
         WHERE f.project_id = ? AND f.active = 1
+        ORDER BY f.folder_name ASC
       `;
       [folders] = await connection.query(query, [projectId]);
 
@@ -78,7 +80,7 @@ async function getFolders(req, res) {
       }
       return {
         ...folder,
-        permissions: Array.isArray(permissions) ? permissions : []
+        permissions: Array.isArray(permissions) ? permissions.filter(p => p && p.user_id) : []
       };
     });
 
@@ -102,11 +104,11 @@ async function getFoldersWithSubfolders(req, res) {
   let connection;
   try {
     connection = await getConnection();
-    const projectId = parseInt(req.query.project_id);
+    const projectId = req.query.project_id;
 
-    if (!projectId || isNaN(projectId)) {
+    if (!projectId) {
       return res.status(400).json({
-        message: 'Project ID is required and must be a valid number'
+        message: 'Project ID is required'
       });
     }
 
@@ -127,6 +129,7 @@ async function getFoldersWithSubfolders(req, res) {
       LEFT JOIN folder_permissions fp ON f.folder_id = fp.folder_id
       WHERE f.project_id = ? AND f.active = 1
       GROUP BY f.folder_id
+      ORDER BY f.folder_name ASC
     `;
 
     let folders;
@@ -137,6 +140,7 @@ async function getFoldersWithSubfolders(req, res) {
         SELECT f.folder_id, f.folder_name, f.parent_folder_id, f.project_id, f.active
         FROM folders f
         WHERE f.project_id = ? AND f.active = 1
+        ORDER BY f.folder_name ASC
       `;
       [folders] = await connection.query(query, [projectId]);
 
@@ -1053,6 +1057,125 @@ const getProjectUsers = async (req, res) => {
   }
 };
 
+/**
+ * คัดลอกโครงสร้างโฟลเดอร์จากโครงการหนึ่งไปยังอีกโครงการหนึ่ง
+ * (copy เฉพาะโครงสร้าง ไม่รวมไฟล์และสิทธิ์)
+ */
+const copyFolderStructure = async (req, res) => {
+  let connection;
+  try {
+    if (!req.user || !req.user.user_id) {
+      return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+    }
+
+    const { sourceProjectId, targetProjectId } = req.body;
+
+    if (!sourceProjectId || !targetProjectId) {
+      return res.status(400).json({ message: 'กรุณาระบุ sourceProjectId และ targetProjectId' });
+    }
+
+    if (sourceProjectId === targetProjectId) {
+      return res.status(400).json({ message: 'โครงการต้นทางและปลายทางต้องไม่เป็นโครงการเดียวกัน' });
+    }
+
+    connection = await getConnection();
+
+    // ตรวจสอบว่าโครงการทั้งสองมีอยู่จริง
+    const [sourceProject] = await connection.execute(
+      'SELECT project_id FROM projects WHERE project_id = ? AND active = 1',
+      [sourceProjectId]
+    );
+    const [targetProject] = await connection.execute(
+      'SELECT project_id FROM projects WHERE project_id = ? AND active = 1',
+      [targetProjectId]
+    );
+
+    if (sourceProject.length === 0) {
+      return res.status(404).json({ message: 'ไม่พบโครงการต้นทาง' });
+    }
+    if (targetProject.length === 0) {
+      return res.status(404).json({ message: 'ไม่พบโครงการปลายทาง' });
+    }
+
+    // ตรวจสอบสิทธิ์ admin
+    const [userRoles] = await connection.execute(
+      'SELECT role_id FROM project_user_roles WHERE user_id = ? AND role_id = 1',
+      [req.user.user_id]
+    );
+    const isAdmin = userRoles.length > 0;
+
+    // ตรวจสอบสิทธิ์ใน target project
+    const [roleRows] = await connection.execute(
+      'SELECT role_id FROM project_user_roles WHERE project_id = ? AND user_id = ?',
+      [targetProjectId, req.user.user_id]
+    );
+    if (roleRows.length === 0 && !isAdmin) {
+      return res.status(403).json({ message: 'คุณไม่มีสิทธิ์สร้างโฟลเดอร์ในโครงการปลายทาง' });
+    }
+
+    // ดึงโฟลเดอร์ทั้งหมดจาก source project
+    const [sourceFolders] = await connection.execute(
+      'SELECT folder_id, folder_name, parent_folder_id FROM folders WHERE project_id = ? AND active = 1 ORDER BY parent_folder_id ASC',
+      [sourceProjectId]
+    );
+
+    if (sourceFolders.length === 0) {
+      return res.status(400).json({ message: 'โครงการต้นทางไม่มีโฟลเดอร์' });
+    }
+
+    await connection.beginTransaction();
+
+    // Map: old_folder_id → new_folder_id
+    const oldToNewIdMap = {};
+    let createdCount = 0;
+
+    // ฟังก์ชัน recursive สร้างโฟลเดอร์ตามลำดับ parent → child
+    const createFoldersRecursive = async (parentId, newParentId) => {
+      const children = sourceFolders.filter(f => f.parent_folder_id === parentId);
+
+      for (const child of children) {
+        const [result] = await connection.execute(
+          `INSERT INTO folders (project_id, folder_name, parent_folder_id, created_by, active, created_at)
+           VALUES (?, ?, ?, ?, 1, NOW())`,
+          [targetProjectId, child.folder_name, newParentId, req.user.user_id]
+        );
+
+        oldToNewIdMap[child.folder_id] = result.insertId;
+        createdCount++;
+
+        // Recursive: สร้าง subfolder ต่อ
+        await createFoldersRecursive(child.folder_id, result.insertId);
+      }
+    };
+
+    // เริ่มจาก root folders (parent_folder_id = null)
+    await createFoldersRecursive(null, null);
+
+    await connection.commit();
+
+    console.log(`✅ Copied ${createdCount} folders from project ${sourceProjectId} to ${targetProjectId}`);
+
+    res.json({
+      message: `คัดลอกโครงสร้างโฟลเดอร์สำเร็จ (${createdCount} โฟลเดอร์)`,
+      created_count: createdCount,
+      source_project_id: sourceProjectId,
+      target_project_id: targetProjectId
+    });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('❌ Copy folder structure error:', error);
+    res.status(500).json({
+      message: 'เกิดข้อผิดพลาดในการคัดลอกโครงสร้าง',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      await connection.release();
+    }
+  }
+};
+
 // ใน exports เพิ่ม
 module.exports = {
   // Folder functions
@@ -1062,6 +1185,7 @@ module.exports = {
   updateFolder,
   deleteFolder,
   updateFolderPermissions,
+  copyFolderStructure,
 
   // File functions
   getFiles,

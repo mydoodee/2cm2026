@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Navbar from './Navbar';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import {
   BarChartOutlined,
   FileOutlined,
@@ -20,7 +21,10 @@ import {
   FileImageOutlined,
   FileTextOutlined,
   ToolOutlined,
-  DeleteOutlined // ✅ เพิ่ม DeleteOutlined
+  DeleteOutlined,
+  RiseOutlined,
+  ThunderboltOutlined,
+  WarningOutlined
 } from '@ant-design/icons';
 
 // ⭐ API URLs
@@ -28,7 +32,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
 const API_URL = `${API_BASE_URL}/api`;
 const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost:3050';
 
-// ⭐ Socket.IO Base URL (ไม่รวม /cm-api)
+// ⭐ Socket.IO Base URL
 const SOCKET_BASE_URL = API_BASE_URL.replace('/cm-api', '');
 
 function History({ user, setUser, theme, setTheme }) {
@@ -42,7 +46,6 @@ function History({ user, setUser, theme, setTheme }) {
   const [userProjects, setUserProjects] = useState([]);
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState([]);
-  const [hoveredBar, setHoveredBar] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   const refreshAccessToken = useCallback(async () => {
@@ -67,7 +70,7 @@ function History({ user, setUser, theme, setTheme }) {
       setUser(null);
       throw new Error('Token refresh failed');
     }
-  }, [API_BASE_URL, setUser]);
+  }, [setUser]);
 
   const fetchUserProjects = useCallback(async () => {
     try {
@@ -110,7 +113,7 @@ function History({ user, setUser, theme, setTheme }) {
         setError('ไม่สามารถโหลดข้อมูลโครงการได้');
       }
     }
-  }, [API_URL, refreshAccessToken]);
+  }, [refreshAccessToken]);
 
   const generateChartData = useCallback((activities) => {
     const data = [];
@@ -137,7 +140,7 @@ function History({ user, setUser, theme, setTheme }) {
       }).length;
       
       data.push({
-        date: dateStr,
+        name: dateStr,
         uploads,
         downloads,
         total: uploads + downloads
@@ -246,38 +249,32 @@ function History({ user, setUser, theme, setTheme }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedProject, API_URL, refreshAccessToken, generateChartData]);
+  }, [selectedProject, refreshAccessToken, generateChartData]);
 
   const addActivityIfValid = useCallback((activity) => {
-    if (selectedProject !== 'all' && activity.project_id !== parseInt(selectedProject)) {
+    if (selectedProject !== 'all' && activity.project_id !== selectedProject) {
       return;
     }
 
-   // แก้ไขตรงนี้: เพิ่ม user_id และทำให้ key แม่นยำขึ้น
-  const getActivityKey = (act) => {
-    const time = new Date(act.activity_time);
-    const minute = time.getMinutes();
-    const roundedSeconds = Math.floor(time.getSeconds() / 10) * 10; // ปัดเป็น 10 วินาที
-    return `${act.user_id}-${act.file_id}-${act.activity_type}-${time.getFullYear()}-${time.getMonth()}-${time.getDate()}-${time.getHours()}-${minute}-${roundedSeconds}`;
-  };
+    const getActivityKey = (act) => {
+      const time = new Date(act.activity_time);
+      const minute = time.getMinutes();
+      const roundedSeconds = Math.floor(time.getSeconds() / 10) * 10;
+      return `${act.user_id}-${act.file_id}-${act.activity_type}-${time.getFullYear()}-${time.getMonth()}-${time.getDate()}-${time.getHours()}-${minute}-${roundedSeconds}`;
+    };
 
     setRecentActivities(prev => {
       const key = getActivityKey(activity);
       const exists = prev.some(a => getActivityKey(a) === key);
-      if (exists) {
-        console.log('⏭️ Skipping duplicate activity:', key);
-        return prev;
-      }
+      if (exists) return prev;
 
       const newActivity = {
         ...activity,
         file_size_mb: activity.file_size_mb || (activity.file_size / (1024 * 1024)).toFixed(2)
       };
-      console.log('➕ Adding new activity:', newActivity.file_name, newActivity.activity_type);
       return [newActivity, ...prev].slice(0, 10);
     });
 
-    // Update statistics
     if (activity.activity_type === 'upload') {
       setStatistics(prev => ({
         ...prev,
@@ -302,7 +299,7 @@ function History({ user, setUser, theme, setTheme }) {
         
         if (activity.activity_type === 'upload') {
           lastDay.uploads += 1;
-        } else {
+        } else if (activity.activity_type === 'download') {
           lastDay.downloads += 1;
         }
         lastDay.total = lastDay.uploads + lastDay.downloads;
@@ -331,84 +328,36 @@ function History({ user, setUser, theme, setTheme }) {
   }, [fetchUserProjects, fetchDashboardData]);
 
   useEffect(() => {
-    if (userProjects.length === 0) {
-      console.log('⏳ Waiting for userProjects...');
-      return;
-    }
+    if (userProjects.length === 0) return;
 
     const token = localStorage.getItem('token');
-    if (!token) {
-      console.warn('⚠️ No token found, skipping WebSocket connection');
-      return;
-    }
-
-    console.log('🔧 Setting up WebSocket with token...');
+    if (!token) return;
     
     const socketInstance = io(SOCKET_BASE_URL, {
       auth: { token: token },
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
       withCredentials: true,
       autoConnect: true
     });
 
     socketInstance.on('connect', () => {
-      console.log('✅ WebSocket connected successfully');
       setIsConnected(true);
-      
       const projectIds = userProjects.map(p => p.project_id);
       if (projectIds.length > 0) {
         socketInstance.emit('join-projects', projectIds);
-        console.log(`📁 Emitted join-projects with IDs:`, projectIds);
       }
     });
 
-    socketInstance.on('disconnect', (reason) => {
-      console.log('❌ WebSocket disconnected:', reason);
-      setIsConnected(false);
-    });
-
-    socketInstance.on('connect_error', (error) => {
-      console.error('🔴 WebSocket connection error:', error.message);
-      
-      if (error.message.includes('Authentication') || 
-          error.message.includes('Invalid token') ||
-          error.message.includes('No token')) {
-        console.log('🔄 Token issue detected, trying to refresh...');
-        
-        refreshAccessToken()
-          .then(newToken => {
-            console.log('✅ Token refreshed successfully');
-            socketInstance.auth.token = newToken;
-            socketInstance.connect();
-          })
-          .catch(err => {
-            console.error('❌ Failed to refresh token:', err);
-            setIsConnected(false);
-          });
-      }
-    });
-
-    socketInstance.on('file-activity', (activity) => {
-      console.log('📨 Received file activity:', activity);
-      addActivityIfValid(activity);
-    });
-
-    socketInstance.on('file-activity-global', (activity) => {
-      console.log('🌍 Received global activity:', activity);
-      addActivityIfValid(activity);
-    });
+    socketInstance.on('disconnect', () => setIsConnected(false));
+    socketInstance.on('file-activity', (activity) => addActivityIfValid(activity));
 
     return () => {
-      console.log('🧹 Cleaning up WebSocket connection');
       socketInstance.offAny();
       socketInstance.disconnect();
     };
-  }, [userProjects.length, addActivityIfValid, refreshAccessToken]);
+  }, [userProjects.length, addActivityIfValid]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -425,173 +374,86 @@ function History({ user, setUser, theme, setTheme }) {
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} วันที่แล้ว`;
     
     return date.toLocaleDateString('th-TH', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
   const getFileIcon = (fileType) => {
-    if (['pdf'].includes(fileType)) return <FilePdfOutlined className="text-red-500" />;
-    if (['doc', 'docx'].includes(fileType)) return <FileWordOutlined className="text-blue-500" />;
-    if (['xls', 'xlsx'].includes(fileType)) return <FileExcelOutlined className="text-green-600" />;
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileType)) return <FileImageOutlined className="text-purple-500" />;
-    if (['dwg', 'dxf'].includes(fileType)) return <ToolOutlined className="text-orange-500" />;
+    const type = fileType ? fileType.toLowerCase() : '';
+    if (['pdf'].includes(type)) return <FilePdfOutlined className="text-red-500" />;
+    if (['doc', 'docx'].includes(type)) return <FileWordOutlined className="text-blue-500" />;
+    if (['xls', 'xlsx'].includes(type)) return <FileExcelOutlined className="text-green-600" />;
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(type)) return <FileImageOutlined className="text-purple-500" />;
+    if (['dwg', 'dxf'].includes(type)) return <ToolOutlined className="text-orange-500" />;
     return <FileTextOutlined className="text-gray-500" />;
   };
 
-  const CustomBarChart = ({ data }) => {
-    if (!data || data.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-64">
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
-            ยังไม่มีข้อมูล
-          </p>
-        </div>
-      );
+  const ActivityIcon = ({ type }) => {
+    switch (type) {
+      case 'upload': return <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-sm"><UploadOutlined className="text-xl" /></div>;
+      case 'download': return <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-500 shadow-sm"><DownloadOutlined className="text-xl" /></div>;
+      case 'delete': return <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 shadow-sm"><DeleteOutlined className="text-xl" /></div>;
+      default: return <div className="p-3 rounded-2xl bg-slate-500/10 text-slate-500 shadow-sm"><ClockCircleOutlined className="text-xl" /></div>;
     }
-
-    const maxValue = Math.max(...data.map(d => Math.max(d.uploads, d.downloads)));
-    const chartHeight = 200;
-    const barWidth = 32;
-
-    return (
-      <div className="overflow-x-auto pb-4">
-        <div className="relative min-w-[600px] h-[280px]">
-          <div className="absolute left-0 top-0 flex flex-col justify-between h-[200px] text-xs text-gray-500">
-            <span>{maxValue}</span>
-            <span>{Math.floor(maxValue * 0.75)}</span>
-            <span>{Math.floor(maxValue * 0.5)}</span>
-            <span>{Math.floor(maxValue * 0.25)}</span>
-            <span>0</span>
-          </div>
-
-          <div className="ml-8 flex items-end justify-start h-[200px] border-l border-b border-gray-300 dark:border-gray-600">
-            {data.map((item, index) => {
-              const uploadHeight = maxValue > 0 ? (item.uploads / maxValue) * chartHeight : 0;
-              const downloadHeight = maxValue > 0 ? (item.downloads / maxValue) * chartHeight : 0;
-
-              return (
-                <div key={index} className="flex flex-col items-center mr-4" style={{ width: `${barWidth * 2 + 16}px` }}>
-                  <div className="flex items-end gap-1 mb-2" style={{ height: `${chartHeight}px` }}>
-                    <div
-                      className="relative cursor-pointer transition-all hover:opacity-80"
-                      style={{
-                        width: `${barWidth}px`,
-                        height: `${uploadHeight}px`,
-                        backgroundColor: '#6366f1',
-                        borderRadius: '4px 4px 0 0',
-                        minHeight: item.uploads > 0 ? '2px' : '0'
-                      }}
-                      onMouseEnter={() => setHoveredBar({ index, type: 'upload', value: item.uploads, date: item.date })}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    >
-                      {hoveredBar?.index === index && hoveredBar?.type === 'upload' && (
-                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded-md text-xs shadow-md whitespace-nowrap z-10 ${
-                          theme === 'dark' ? 'bg-gray-700 border border-gray-600 text-white' : 'bg-white border border-gray-200 text-gray-900'
-                        }`}>
-                          <p className="font-medium">{item.date}</p>
-                          <p className="text-indigo-500">อัพโหลด: {item.uploads}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div
-                      className="relative cursor-pointer transition-all hover:opacity-80"
-                      style={{
-                        width: `${barWidth}px`,
-                        height: `${downloadHeight}px`,
-                        backgroundColor: '#10b981',
-                        borderRadius: '4px 4px 0 0',
-                        minHeight: item.downloads > 0 ? '2px' : '0'
-                      }}
-                      onMouseEnter={() => setHoveredBar({ index, type: 'download', value: item.downloads, date: item.date })}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    >
-                      {hoveredBar?.index === index && hoveredBar?.type === 'download' && (
-                        <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded-md text-xs shadow-md whitespace-nowrap z-10 ${
-                          theme === 'dark' ? 'bg-gray-700 border border-gray-600 text-white' : 'bg-white border border-gray-200 text-gray-900'
-                        }`}>
-                          <p className="font-medium">{item.date}</p>
-                          <p className="text-green-500">ดาวน์โหลด: {item.downloads}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{item.date}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex justify-center gap-4 mt-4">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-indigo-500 rounded"></div>
-              <span className="text-sm text-gray-700 dark:text-gray-300">อัพโหลด</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span className="text-sm text-gray-700 dark:text-gray-300">ดาวน์โหลด</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  const projectYears = [...new Set(userProjects.map(p => new Date(p.start_date).getFullYear()))].sort((a, b) => b - a);
-  const yearFilteredProjects = selectedYear === 'all'
-    ? userProjects
-    : userProjects.filter(p => new Date(p.start_date).getFullYear() === parseInt(selectedYear));
-
-  if (error && !loading) {
-    return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-          <div className={`max-w-sm w-full rounded-lg p-6 shadow-lg ${
-            theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
-          }`}>
-            <h3 className={`text-xl font-semibold mb-4 ${
-              theme === 'dark' ? 'text-red-400' : 'text-red-600'
-            }`}>
-              เกิดข้อผิดพลาด
-            </h3>
-            <p className={`mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-              {error}
+  const LeaderboardItem = ({ item, type, index }) => (
+    <div className={`flex items-center justify-between p-5 rounded-3xl transition-all duration-300 mb-3 ${
+      theme === 'dark' ? 'bg-slate-900/40 hover:bg-slate-900/60' : 'bg-white shadow-sm hover:shadow-lg'
+    }`}>
+      <div className="flex items-center gap-5">
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shadow-md ${
+          index === 0 ? 'bg-amber-400 text-amber-900 ring-4 ring-amber-400/20' : 
+          index === 1 ? 'bg-slate-300 text-slate-800 ring-4 ring-slate-300/20' :
+          index === 2 ? 'bg-amber-700 text-white ring-4 ring-amber-700/20' :
+          theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
+        }`}>
+          {index + 1}
+        </div>
+        <div className="flex items-center gap-3">
+          {item.profile_image ? (
+            <img 
+              src={`${IMAGE_BASE_URL}/${item.profile_image}`} 
+              className="w-10 h-10 rounded-full object-cover shadow-sm"
+              alt={item.first_name}
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            />
+          ) : null}
+          <div className={`w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold ${item.profile_image ? 'hidden' : 'flex'}`}>
+            {item.first_name?.[0] || 'U'}
+          </div>
+          <div>
+            <p className={`font-bold text-base line-clamp-1 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              {item.first_name} {item.last_name}
             </p>
-            <button
-              onClick={() => {
-                setError(null);
-                fetchUserProjects();
-                fetchDashboardData();
-              }}
-              className={`w-full py-2 rounded-md font-medium transition-colors ${
-                theme === 'dark' 
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                  : 'bg-indigo-500 hover:bg-indigo-600 text-white'
-              }`}
-            >
-              ลองใหม่
-            </button>
+            <p className={`text-[10px] font-bold tracking-wide uppercase ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+              {type === 'upload' ? `${item.total_size_gb} GB` : 'TOP DOWNLOADER'}
+            </p>
           </div>
         </div>
       </div>
-    );
-  }
+      <div className="text-right">
+        <div className={`text-2xl font-black ${type === 'upload' ? 'text-indigo-500' : 'text-emerald-500'}`}>
+          {type === 'upload' ? item.upload_count : item.download_count}
+        </div>
+        <div className="text-[10px] font-bold opacity-40 uppercase tracking-tighter">
+          {type === 'upload' ? 'อัปโหลด' : 'ดาวน์โหลด'}
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'}`}>
         <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <div className="text-center">
-            <div className={`inline-block animate-spin rounded-full h-8 w-8 border-2 border-t-indigo-500 mb-4 ${
-              theme === 'dark' ? 'border-indigo-400' : 'border-indigo-600'
+            <div className={`inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-indigo-500 mb-6 ${
+              theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
             }`}></div>
-            <p className={`text-lg ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`text-xl font-bold ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
               กำลังโหลดข้อมูล...
             </p>
           </div>
@@ -600,358 +462,346 @@ function History({ user, setUser, theme, setTheme }) {
     );
   }
 
+  if (error) {
+    return (
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'}`}>
+        <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+          <div className={`max-w-md w-full rounded-[2.5rem] p-10 text-center ${
+            theme === 'dark' ? 'bg-slate-800 shadow-2xl' : 'bg-white shadow-xl'
+          }`}>
+            <WarningOutlined className="text-6xl text-rose-500 mb-6" />
+            <h3 className={`text-2xl font-black mb-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>เกิดข้อผิดพลาด</h3>
+            <p className={`mb-8 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{error}</p>
+            <button
+              onClick={() => { setError(null); fetchDashboardData(); }}
+              className="w-full py-4 rounded-2xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+            >
+              ลองใหม่อีกครั้ง
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const projectYears = [...new Set(userProjects.map(p => new Date(p.start_date).getFullYear()))].sort((a, b) => b - a);
+  const yearFilteredProjects = selectedYear === 'all'
+    ? userProjects
+    : userProjects.filter(p => new Date(p.start_date).getFullYear() === parseInt(selectedYear));
+
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 overflow-auto pb-12`}>
       <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
       
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <div>
-              <h1 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                <BarChartOutlined /> การจัดการไฟล์
-              </h1>
-              <p className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                ภาพรวมการเคลื่อนไหวของไฟล์ในระบบ
-              </p>
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header Section */}
+        <div className="mb-12 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-8">
+          <div>
+            <div className="flex items-center mb-4">
+              <div className={`p-4 rounded-[1.5rem] mr-5 ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
+                <ClockCircleOutlined className={`text-4xl ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+              </div>
+              <div>
+                <h1 className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-3xl sm:text-4xl font-extrabold tracking-tight`}>
+                  History & Activity
+                </h1>
+                <p className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-lg mt-1`}>
+                  บันทึกกิจกรรมย้อนหลังและสรุปสถิติผู้ใช้งาน
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <div className={`flex p-1.5 rounded-2xl shadow-xl ${theme === 'dark' ? 'bg-slate-800/80 border border-slate-700/50' : 'bg-white border border-slate-100'}`}>
               <select
                 value={selectedYear}
                 onChange={(e) => {
                   setSelectedYear(e.target.value);
                   setSelectedProject('all');
                 }}
-                className={`px-3 py-2 rounded-md border focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                className={`bg-transparent px-4 py-2 font-bold focus:outline-none cursor-pointer ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}
               >
                 <option value="all">ทุกปี ({userProjects.length})</option>
-                {projectYears.map((year) => {
-                  const yearProjects = userProjects.filter(p => new Date(p.start_date).getFullYear() === year);
-                  return (
-                    <option key={year} value={year}>
-                      {year + 543} ({yearProjects.length})
-                    </option>
-                  );
-                })}
-              </select>
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                className={`px-3 py-2 rounded-md border focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-              >
-                <option value="all">
-                  {selectedYear === 'all' ? `ทุกโครงการ (${userProjects.length})` : `ปี ${parseInt(selectedYear) + 543} (${yearFilteredProjects.length})`}
-                </option>
-                {yearFilteredProjects.map((project) => (
-                  <option key={project.project_id} value={project.project_id}>
-                    {project.project_name}
+                {projectYears.map((year) => (
+                  <option key={year} value={year} className={theme === 'dark' ? 'bg-slate-800' : 'bg-white'}>
+                    ปี {year + 543}
                   </option>
                 ))}
               </select>
-              <button
-                onClick={() => fetchDashboardData()}
-                disabled={loading}
-                className={`p-2 rounded-md border transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white hover:bg-gray-700'
-                    : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
-                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={isConnected ? 'Connected via WebSocket' : 'Disconnected'}
+              <div className={`w-px h-6 self-center mx-2 ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`}></div>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className={`bg-transparent px-4 py-2 font-bold focus:outline-none max-w-[250px] cursor-pointer ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}
               >
-                <ReloadOutlined spin={loading} className={isConnected ? 'text-green-500' : 'text-gray-500'} />
-              </button>
+                <option value="all">ทุกโครงการ</option>
+                {yearFilteredProjects.map((p) => (
+                  <option key={p.project_id} value={p.project_id} className={theme === 'dark' ? 'bg-slate-800' : 'bg-white'}>
+                    {p.project_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <button
+              onClick={() => fetchDashboardData()}
+              className={`p-4 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 ${
+                theme === 'dark' ? 'bg-indigo-600 text-white shadow-indigo-500/20' : 'bg-white text-indigo-600 border border-slate-100'
+              }`}
+            >
+              <ReloadOutlined spin={loading} className={`text-xl ${isConnected ? 'text-green-400' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+           <div className={`group relative rounded-[2rem] p-6 transition-all duration-300 border-0 ${
+            theme === 'dark' ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ไฟล์ทั้งหมด</p>
+                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalFiles?.toLocaleString() || 0}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-lg"><FileOutlined className="text-2xl" /></div>
+            </div>
+          </div>
+
+          <div className={`group relative rounded-[2rem] p-6 transition-all duration-300 border-0 ${
+            theme === 'dark' ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ดาวน์โหลดรวม</p>
+                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalDownloads?.toLocaleString() || 0}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-emerald-500/10 text-emerald-500 shadow-lg"><DownloadOutlined className="text-2xl" /></div>
+            </div>
+          </div>
+
+          <div className={`group relative rounded-[2rem] p-6 transition-all duration-300 border-0 ${
+            theme === 'dark' ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>พื้นที่ใช้งาน</p>
+                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalSizeGB || 0} GB</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-violet-500/10 text-violet-500 shadow-lg"><DatabaseOutlined className="text-2xl" /></div>
+            </div>
+          </div>
+
+          <div className={`group relative rounded-[2rem] p-6 transition-all duration-300 border-0 ${
+            theme === 'dark' ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>โครงการที่เข้าถึง</p>
+                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedYear === 'all' ? userProjects.length : yearFilteredProjects.length}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-500 shadow-lg"><FolderOutlined className="text-2xl" /></div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className={`rounded-lg p-4 border ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-12">
+          <div className={`xl:col-span-2 rounded-[3rem] p-10 transition-all duration-300 ${
+            theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
           }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  ไฟล์ทั้งหมด
-                </p>
-                <p className={`text-2xl font-bold mt-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {statistics?.totalFiles?.toLocaleString() || 0}
-                </p>
-              </div>
-              <div className={`p-2 rounded-full ${
-                theme === 'dark' ? 'bg-indigo-900/30' : 'bg-indigo-50'
-              }`}>
-                <FileOutlined className="text-xl text-indigo-500" />
-              </div>
-            </div>
-            {statistics?.recentUploads > 0 && (
-              <p className="text-xs text-green-500 mt-2">+{statistics.recentUploads} ใน 24 ชม.</p>
-            )}
-          </div>
-
-          <div className={`rounded-lg p-4 border ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  ดาวน์โหลดทั้งหมด
-                </p>
-                <p className={`text-2xl font-bold mt-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {statistics?.totalDownloads?.toLocaleString() || 0}
-                </p>
-              </div>
-              <div className={`p-2 rounded-full ${
-                theme === 'dark' ? 'bg-green-900/30' : 'bg-green-50'
-              }`}>
-                <DownloadOutlined className="text-xl text-green-500" />
-              </div>
-            </div>
-          </div>
-
-          <div className={`rounded-lg p-4 border ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  พื้นที่ใช้งาน
-                </p>
-                <p className={`text-2xl font-bold mt-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {statistics?.totalSizeGB || '0'} GB
-                </p>
-              </div>
-              <div className={`p-2 rounded-full ${
-                theme === 'dark' ? 'bg-violet-900/30' : 'bg-violet-50'
-              }`}>
-                <DatabaseOutlined className="text-xl text-violet-500" />
-              </div>
-            </div>
-          </div>
-
-          <div className={`rounded-lg p-4 border ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  โครงการที่เข้าถึงได้
-                </p>
-                <p className={`text-2xl font-bold mt-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {selectedYear === 'all' ? userProjects.length : yearFilteredProjects.length}
-                </p>
-              </div>
-              <div className={`p-2 rounded-full ${
-                theme === 'dark' ? 'bg-yellow-900/30' : 'bg-yellow-50'
-              }`}>
-                <FolderOutlined className="text-xl text-yellow-500" />
-              </div>
-            </div>
-            {selectedYear !== 'all' && (
-              <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                ปี {parseInt(selectedYear) + 543}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <div className={`rounded-lg border p-4 ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}>
-            <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              <ClockCircleOutlined /> กิจกรรมล่าสุด
+            <h2 className={`text-2xl font-black mb-8 flex items-center gap-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <div className="w-2.5 h-10 bg-indigo-500 rounded-full"></div>
+              สถิติช่วง 7 วันที่ผ่านมา
             </h2>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {recentActivities.length === 0 ? (
-                <div className="text-center py-8">
-                  <ClockCircleOutlined className={`text-4xl ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-                  <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>ยังไม่มีกิจกรรม</p>
-                </div>
-              ) : (
-                recentActivities.map((activity, index) => (
-                  <div key={index} className={`flex items-start gap-3 p-2 rounded-md ${
-                    theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
-                  }`}>
-                    {/* ✅ แก้ไขตรงนี้ - เพิ่ม delete icon */}
-                    <span className="text-lg mt-0.5">
-                      {activity.activity_type === 'upload' ? (
-                        <UploadOutlined className="text-blue-500" />
-                      ) : activity.activity_type === 'delete' ? (
-                        <DeleteOutlined className="text-red-500" />
-                      ) : (
-                        <DownloadOutlined className="text-green-500" />
-                      )}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                          {activity.profile_image ? (
-                            <img
-                              src={`${IMAGE_BASE_URL}/${activity.profile_image}`}
-                              alt={activity.first_name}
-                              className="w-6 h-6 rounded-full object-cover"
-                              onError={(e) => e.target.style.display = 'none'}
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-bold">
-                              {activity.first_name?.[0] || 'U'}
-                            </div>
-                          )}
-                          <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                            {activity.first_name} {activity.last_name}
-                          </p>
-                        </div>
-                        {/* ✅ แก้ไขตรงนี้ - เพิ่มข้อความ "ลบ" */}
-                        <span className={`text-xs truncate max-w-md ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {activity.activity_type === 'upload' 
-                            ? 'อัพโหลด' 
-                            : activity.activity_type === 'delete' 
-                            ? 'ลบ' 
-                            : 'ดาวน์โหลด'
-                          } <span className="font-medium">{activity.file_name}</span>
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
-                        <div className="flex items-center gap-2">
-                          {activity.project_name && <span className="flex items-center gap-1"><ToolOutlined /> {activity.project_name}</span>}
-                          <span>• {formatDate(activity.activity_time)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-1"><FolderOutlined /> {activity.folder_name}</span>
-                          <span>{activity.file_size_mb} MB</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="w-full h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fontWeight: 600, fill: theme === 'dark' ? '#64748b' : '#94a3b8' }}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 13, fontWeight: 600, fill: theme === 'dark' ? '#64748b' : '#94a3b8' }}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
+                    contentStyle={{ 
+                      borderRadius: '25px', 
+                      border: 'none',
+                      boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
+                      backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
+                      padding: '20px',
+                      color: theme === 'dark' ? 'white' : 'black'
+                    }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '30px' }} />
+                  <Bar dataKey="uploads" name="อัปโหลด" fill="#6366f1" radius={[10, 10, 0, 0]} barSize={35} />
+                  <Bar dataKey="downloads" name="ดาวน์โหลด" fill="#10b981" radius={[10, 10, 0, 0]} barSize={35} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          <div className={`rounded-lg border p-4 ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          <div className={`rounded-[3rem] p-10 transition-all duration-300 ${
+            theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
           }`}>
-            <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              <FireOutlined /> ไฟล์ยอดนิยม
+             <h2 className={`text-2xl font-black mb-10 flex items-center gap-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <div className="w-2.5 h-10 bg-amber-500 rounded-full"></div>
+              ไฟล์ยอดนิยม
             </h2>
-            <div className="space-y-2">
-              {topDownloads.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileOutlined className={`text-4xl ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-                  <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>ยังไม่มีข้อมูล</p>
-                </div>
-              ) : (
-                topDownloads.map((file, index) => (
-                  <div key={index} className={`flex items-center gap-3 p-2 rounded-md ${
-                    theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
-                  }`}>
-                    <span className="text-2xl">{getFileIcon(file.file_type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-medium text-sm truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                        {file.file_name}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                        <span className="flex items-center gap-1"><DownloadOutlined /> {file.download_count} ครั้ง</span>
-                        <span>{file.file_size_mb} MB</span>
-                      </div>
-                    </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                      index === 1 ? 'bg-gray-100 text-gray-800' :
-                      index === 2 ? 'bg-orange-100 text-orange-800' :
-                      'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
-                    }`}>
-                      #{index + 1}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-lg border p-4 mb-6 ${
-          theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-        }`}>
-          <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            <LineChartOutlined /> สถิติการใช้งานย้อนหลัง 7 วัน
-          </h2>
-          <CustomBarChart data={chartData} />
-        </div>
-
-        <div className={`rounded-lg border p-4 ${
-          theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-        }`}>
-          <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            <TeamOutlined /> ผู้อัพโหลดอันดับต้น
-          </h2>
-          {topUploaders.length === 0 ? (
-            <div className="text-center py-8">
-              <TeamOutlined className={`text-4xl ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-              <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>ยังไม่มีข้อมูล</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {topUploaders.map((uploader, index) => (
-                <div key={index} className={`text-center p-3 rounded-md ${
-                  theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
+            <div className="space-y-4">
+              {topDownloads.map((file, index) => (
+                <div key={index} className={`flex items-center gap-4 p-4 rounded-3xl transition-all duration-300 ${
+                  theme === 'dark' ? 'bg-slate-900/40 hover:bg-slate-900/60' : 'bg-slate-50 hover:bg-slate-100'
                 }`}>
-                  <div className="relative mx-auto mb-2 w-12 h-12">
-                    {uploader.profile_image ? (
-                      <img
-                        src={`${IMAGE_BASE_URL}/${uploader.profile_image}`}
-                        alt={uploader.first_name}
-                        className="w-12 h-12 rounded-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div className={`w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center absolute top-0 left-0 ${
-                      uploader.profile_image ? 'hidden' : 'flex'
-                    }`}>
-                      <span className="text-white text-sm font-bold">{uploader.first_name?.[0] || 'U'}</span>
-                    </div>
-                    {index < 3 && (
-                      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                        index === 0 ? 'bg-yellow-400 text-yellow-900' :
-                        index === 1 ? 'bg-gray-300 text-gray-800' :
-                        'bg-orange-400 text-orange-900'
-                      }`}>
-                        {index + 1}
-                      </div>
-                    )}
+                  <div className="text-3xl">{getFileIcon(file.file_type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-bold text-sm truncate ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{file.file_name}</p>
+                    <p className="text-[10px] font-bold text-indigo-500 uppercase mt-1">{file.download_count} ดาวน์โหลด</p>
                   </div>
-                  <p className={`font-medium text-sm truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    {uploader.first_name} {uploader.last_name}
-                  </p>
-                  <div className="mt-1 space-y-1 text-xs text-gray-500">
-                    <p className="flex items-center justify-center gap-1"><UploadOutlined /> {uploader.upload_count} ไฟล์</p>
-                    <p className="flex items-center justify-center gap-1"><DatabaseOutlined /> {uploader.total_size_gb} GB</p>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                    index === 0 ? 'bg-amber-400 text-amber-900 shadow-lg shadow-amber-400/20' : 
+                    theme === 'dark' ? 'bg-slate-800 text-slate-500' : 'bg-white text-slate-400 shadow-sm'
+                  }`}>
+                    {index + 1}
                   </div>
                 </div>
               ))}
+              {topDownloads.length === 0 && (
+                <div className="py-20 text-center opacity-20">
+                  <DatabaseOutlined className="text-6xl mb-4" />
+                  <p className="text-sm font-bold uppercase tracking-widest">ไม่มีข้อมูลไฟล์ยอดนิยม</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Recent Activity and Leaderboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-10">
+          <div className={`2xl:col-span-1 rounded-[3rem] p-10 transition-all duration-300 ${
+            theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          }`}>
+            <h2 className={`text-2xl font-black mb-10 flex items-center justify-between ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <span className="flex items-center gap-4">
+                <div className="w-2.5 h-10 bg-indigo-500 rounded-full"></div>
+                กิจกรรมล่าสุด
+              </span>
+              <span className={`text-[10px] px-4 py-2 rounded-2xl font-bold uppercase tracking-widest ${theme === 'dark' ? 'bg-slate-900/60 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                LIVE
+              </span>
+            </h2>
+            
+            <div className="space-y-4 max-h-[700px] overflow-auto pr-4 -mr-4 scrollbar-hide">
+              {recentActivities.map((activity, idx) => (
+                <div key={idx} className={`group flex gap-5 p-5 rounded-[2.5rem] transition-all duration-300 ${
+                  theme === 'dark' ? 'hover:bg-slate-900/60' : 'hover:bg-slate-50'
+                }`}>
+                  <ActivityIcon type={activity.activity_type} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                         {activity.profile_image ? (
+                           <img 
+                            src={`${IMAGE_BASE_URL}/${activity.profile_image}`} 
+                            className="w-6 h-6 rounded-full object-cover" 
+                            alt=""
+                            onError={(e) => e.target.style.display = 'none'}
+                          />
+                         ) : (
+                           <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] text-white font-black">
+                            {activity.first_name?.[0] || 'U'}
+                           </div>
+                         )}
+                         <p className={`font-bold text-sm truncate ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                           {activity.first_name} {activity.last_name}
+                         </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        {formatDate(activity.activity_time)}
+                      </span>
+                    </div>
+                    <p className={`text-xs line-clamp-1 mb-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <span className="font-bold text-indigo-500">{activity.activity_type === 'upload' ? 'อัปโหลด' : activity.activity_type === 'delete' ? 'ลบ' : 'ดาวน์โหลด'}</span>: {activity.file_name}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest ${
+                        theme === 'dark' ? 'bg-slate-900/80 text-slate-500' : 'bg-white shadow-sm text-slate-400'
+                      }`}>
+                        {activity.project_name}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 opacity-50">{activity.file_size_mb} MB</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {recentActivities.length === 0 && (
+                <div className="py-20 text-center opacity-20">
+                  <ClockCircleOutlined className="text-6xl mb-4" />
+                  <p className="font-bold uppercase tracking-widest">ยังไม่มีกิจกรรม</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="2xl:col-span-2 space-y-10">
+            <div className={`rounded-[3rem] p-10 transition-all duration-300 ${
+              theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+            }`}>
+              <h2 className={`text-2xl font-black mb-10 flex items-center gap-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                <div className="w-2.5 h-10 bg-emerald-500 rounded-full"></div>
+                ผู้อัปโหลดสูงสุด (Top Contributors)
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {topUploaders.map((uploader, idx) => (
+                  <LeaderboardItem key={idx} item={uploader} type="upload" index={idx} />
+                ))}
+              </div>
+              {topUploaders.length === 0 && (
+                <div className="py-20 text-center opacity-20">
+                  <TeamOutlined className="text-6xl mb-4" />
+                  <p className="font-bold uppercase tracking-widest">ยังไม่มีข้อมูล</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      <style jsx="true">{`
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600;700;800;900&display=swap');
+        
+        body {
+          font-family: 'Kanit', sans-serif !important;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        ::-webkit-scrollbar {
+          width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${theme === 'dark' ? '#1e293b' : '#e2e8f0'};
+          border-radius: 10px;
+        }
+      `}</style>
     </div>
   );
 }

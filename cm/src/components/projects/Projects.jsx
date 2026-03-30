@@ -19,7 +19,7 @@ function Projects({ user, setUser, theme, setTheme }) {
   const navigate = useNavigate();
 
   const processProjectData = useCallback((projectsData) => {
-    return projectsData.reduce((acc, project) => {
+    const grouped = projectsData.reduce((acc, project) => {
       const formattedStartDate = project.start_date && dayjs(project.start_date).isValid()
         ? dayjs(project.start_date).format('YYYY-MM-DD')
         : null;
@@ -44,6 +44,17 @@ function Projects({ user, setUser, theme, setTheme }) {
       });
       return acc;
     }, {});
+
+    // ✅ Sort projects within each year (latest job_number first)
+    Object.keys(grouped).forEach(year => {
+      grouped[year].sort((a, b) => {
+        const jobA = a.job_number || '';
+        const jobB = b.job_number || '';
+        return jobB.localeCompare(jobA, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    });
+
+    return grouped;
   }, []);
 
   const fetchProjects = useCallback(async () => {
@@ -161,272 +172,261 @@ function Projects({ user, setUser, theme, setTheme }) {
   }
 
   return (
-    <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} transition-all duration-300 overflow-auto`}>
+    <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 overflow-auto pb-12`}>
       <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
 
-      <div className="p-4 sm:p-6 lg:p-8 w-full">
-        <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <FileTextOutlined className={`text-4xl mr-3 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
-            <Title level={1} className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-gray-900'} !mb-0 text-3xl sm:text-4xl font-bold`}>
-              โครงการก่อสร้าง
-            </Title>
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-3">
+              <div className="flex items-center">
+                <div className={`p-3 rounded-2xl mr-4 ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
+                  <FileTextOutlined className={`text-3xl ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                </div>
+                <Title level={1} className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-3xl sm:text-4xl font-extrabold tracking-tight`}>
+                  โครงการก่อสร้าง
+                </Title>
+              </div>
+
+              {/* Compact Search Bar */}
+              <div className={`flex-1 max-w-md p-1 rounded-2xl shadow-sm transition-all duration-300 ${
+                theme === 'dark' ? 'bg-slate-800/50' : 'bg-white border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+              }`}>
+                <Input
+                  placeholder="ค้นหาโครงการ..."
+                  prefix={<SearchOutlined className={theme === 'dark' ? 'text-slate-500 text-lg' : 'text-slate-400 text-lg'} />}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  variant="borderless"
+                  className={`font-kanit py-2 px-3 text-base ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}
+                />
+              </div>
+            </div>
+            <Text className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-lg`}>
+              ภาพรวมการบริหารจัดการโครงการแยกตามปีงบประมาณ
+            </Text>
           </div>
-          <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} text-base sm:text-lg`}>
-            ภาพรวมโครงการทั้งหมด แยกตามปี
-          </Text>
+
+          <div className="flex flex-wrap gap-3">
+            {years.map(year => (
+              <button
+                key={year}
+                onClick={() => handleYearChange(year)}
+                className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
+                  selectedYear === year
+                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30 scale-105'
+                    : theme === 'dark'
+                      ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-purple-600 border border-slate-100'
+                }`}
+              >
+                <span>{year}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  selectedYear === year 
+                    ? 'bg-white/20 text-white' 
+                    : theme === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {projects[year]?.length || 0}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <div className="flex items-center justify-center h-[50vh]">
             <div className="text-center">
-              <div className={`inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${theme === 'dark' ? 'border-indigo-400' : 'border-indigo-600'} mb-4`}></div>
-              <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-lg block`}>
-                กำลังโหลดข้อมูล...
+              <div className={`inline-block animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 ${theme === 'dark' ? 'border-indigo-400' : 'border-indigo-600'} mb-6`}></div>
+              <Text className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-xl block`}>
+                กำลังเตรียมข้อมูลโครงการ...
               </Text>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 h-full">
-            <div className="lg:w-72">
-              <Card
-                className={`font-kanit ${theme === 'dark' ? 'bg-gray-800/95 border-gray-700/50' : 'bg-white border-gray-200'
-                  } shadow-lg rounded-2xl backdrop-blur-md border sticky top-4 transition-all duration-300 hover:shadow-xl`}
-                styles={{ body: { padding: '16px' } }}
-              >
-                <div className="flex items-center mb-4">
-                  <SearchOutlined className={`text-xl mr-2 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`} />
-                  <Title level={4} className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-gray-900'} !mb-0 text-lg font-semibold`}>
-                    ค้นหาโครงการ
-                  </Title>
-                </div>
+          <div className="space-y-10">
 
-                <div className="space-y-3 mb-4">
-                  <Input
-                    placeholder="ค้นหาชื่อหรือคำอธิบาย..."
-                    prefix={<SearchOutlined className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} />}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`font-kanit ${theme === 'dark'
-                      ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-                      : 'bg-gray-50 border-gray-300'
-                      }`}
-                    style={{
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : '#f9fafb',
-                      borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
-                      color: theme === 'dark' ? '#fff' : '#000'
-                    }}
-                  />
-                  {searchTerm && (
-                    <Text className={`font-kanit text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} block`}>
-                      พบ {filteredProjects.length} โครงการ
-                    </Text>
-                  )}
-                </div>
-
-                <div className={`w-full h-px ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'} mb-4`}></div>
-
-                <Space direction="vertical" className="w-full" size="small">
-                  {years.map(year => (
-                    <button
-                      key={year}
-                      className={`font-kanit w-full text-left h-11 px-4 rounded-lg transition-all duration-200 text-base font-medium ${selectedYear === year
-                        ? 'bg-indigo-500 text-white shadow-md'
-                        : theme === 'dark'
-                          ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-600 hover:text-indigo-300'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-indigo-600'
-                        } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                      onClick={() => handleYearChange(year)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span>{year}</span>
-                        <Badge
-                          count={projects[year]?.length || 0}
-                          className="ml-2"
-                          style={{ backgroundColor: theme === 'dark' ? '#4f46e5' : '#2563eb', fontSize: '12px' }}
+            {/* Projects Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {filteredProjects.map((project, projectIndex) => (
+                <div
+                  key={`${selectedYear}-${project.project_id}-${projectIndex}`}
+                  className={`group relative rounded-[2.5rem] transition-all duration-500 border-0 ${
+                    theme === 'dark' 
+                      ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' 
+                      : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+                  } overflow-hidden cursor-pointer`}
+                  onClick={() => handleProjectClick(project.project_id)}
+                >
+                  {/* Image Container */}
+                  <div className="relative h-60 w-full overflow-hidden p-3 pb-0">
+                    <div className="h-full w-full rounded-[2rem] overflow-hidden relative">
+                      {project.image ? (
+                        <img
+                          alt={project.project_name}
+                          src={`${import.meta.env.VITE_API_URL}/${project.image}`}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
                         />
+                      ) : null}
+                      <div className={`h-full ${project.image ? 'hidden' : 'flex'} items-center justify-center ${
+                          theme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'
+                        }`}>
+                        <FileTextOutlined className={`text-4xl ${theme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
                       </div>
-                    </button>
-                  ))}
-                </Space>
-              </Card>
-            </div>
-
-            <div className="w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {filteredProjects.map((project, projectIndex) => (
-                  <Card
-                    key={`${selectedYear}-${project.project_id}-${projectIndex}`}
-                    className={`font-kanit ${theme === 'dark' ? 'bg-gray-800/95 border-gray-700/50' : 'bg-white border-gray-200'
-                      } shadow-lg rounded-2xl overflow-hidden backdrop-blur-md border hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer h-[460px]`}
-                    styles={{ body: { padding: '16px' } }}
-                    onClick={() => handleProjectClick(project.project_id)}
-                    cover={
-                      <div className="relative h-56 overflow-hidden">
-                        {project.image ? (
-                          <img
-                            alt={project.project_name}
-                            src={`${import.meta.env.VITE_API_URL}/${project.image}`}
-                            className="h-full w-full object-cover rounded-t-2xl transition-transform duration-500 hover:scale-105"
-                            loading="lazy"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div
-                          className={`h-full ${project.image ? 'hidden' : 'flex'} items-center justify-center ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
-                            } rounded-t-2xl`}
-                        >
-                          <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-sm`}>
-                            ไม่มีรูปภาพ
-                          </Text>
-                        </div>
-                        <div className="absolute top-3 right-3">
+                      
+                      {/* Overlay Info - Redesigned Progress */}
+                      <div className="absolute top-4 right-4 z-10">
+                        <div className={`group/progress relative flex items-center justify-center p-1 rounded-full backdrop-blur-2xl transition-all duration-300 ${
+                          theme === 'dark' 
+                            ? 'bg-black/40 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]' 
+                            : 'bg-white/70 border border-white/20 shadow-[0_8px_32px_rgba(31,38,135,0.15)]'
+                        } hover:scale-110`}>
                           <Progress
                             type="circle"
                             percent={project.progress || 0}
-                            size={40}
-                            strokeWidth={6}
-                            strokeColor={project.progress >= 100 ? '#22c55e' : '#a78bfa'}
-                            trailColor={theme === 'dark' ? 'rgba(167, 139, 250, 0.2)' : 'rgba(167, 139, 250, 0.15)'}
+                            size={52}
+                            strokeWidth={10}
+                            strokeColor={project.progress >= 100 ? '#22c55e' : '#52c41a'}
+                            trailColor={theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}
+                            format={(percent) => (
+                              <div className="flex flex-col items-center justify-center">
+                                <span className={`text-[13px] font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                                  {percent}%
+                                </span>
+                              </div>
+                            )}
                           />
                         </div>
                       </div>
-                    }
-                  >
-                    <div className="space-y-3">
-                      <Title
-                        level={4}
-                        className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-gray-900'} !mb-0 line-clamp-2 font-semibold text-base`}
-                      >
-                        {project.project_name}
-                      </Title>
-                      <Text
-                        className={`font-kanit ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} block text-sm line-clamp-2`}
-                      >
-                        {project.description || 'ไม่มีคำอธิบาย'}
-                      </Text>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs">
-                          <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                            เริ่ม: {formatThaiDate(project.start_date)}
-                          </Text>
-                          <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                            สิ้นสุด: {formatThaiDate(project.end_date)}
-                          </Text>
+
+                      {/* Job Number Badge */}
+                      <div className="absolute bottom-4 left-4 z-10">
+                        <div className="px-3 py-1.5 rounded-xl bg-purple-500 text-white text-xs font-bold shadow-lg">
+                          {project.job_number || 'No Job #'}
                         </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-xs`}>
-                              ความคืบหน้า
-                            </Text>
-                            <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} text-xs font-medium`}>
-                              {project.progress || 0}%
-                            </Text>
-                          </div>
-                          <div className={`w-full rounded-full h-2 ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-200'}`}>
-                            <div
-                              className={`h-2 rounded-full transition-all duration-300 ${(project.progress || 0) >= 100
-                                ? 'bg-green-500'
-                                : 'bg-violet-400'
-                                }`}
-                              style={{ width: `${Math.min(project.progress || 0, 100)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        {project.team_members && project.team_members.length > 0 && (
-                          <div>
-                            <div className="flex items-center mb-1">
-                              <TeamOutlined className={`text-xs mr-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
-                              <Text className={`font-kanit text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                                ทีมงาน ({project.team_members.length} คน)
-                              </Text>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {project.team_members.slice(0, 3).map((member, memberIndex) => (
-                                <Badge
-                                  key={`${selectedYear}-${project.project_id}-${projectIndex}-member-${memberIndex}`}
-                                  count={
-                                    <div className={`font-kanit text-xs px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                                      }`}>
-                                      <UserOutlined className="mr-1 text-xs" />
-                                      {member.name}
-                                    </div>
-                                  }
-                                />
-                              ))}
-                              {project.team_members.length > 3 && (
-                                <Text className={`font-kanit text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                                  +{project.team_members.length - 3} คนอื่นๆ
-                                </Text>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
-              {(!filteredProjects || filteredProjects.length === 0) && (
-                <Card
-                  className={`font-kanit ${theme === 'dark' ? 'bg-gray-800/95 border-gray-700/50' : 'bg-white border-gray-200'
-                    } shadow-lg rounded-2xl backdrop-blur-md border text-center p-8 h-[460px] flex items-center justify-center col-span-full`}
-                  styles={{ body: { padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' } }}
-                >
-                  <FileTextOutlined className={`text-5xl mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-300'}`} />
-                  <Title level={3} className={`font-kanit ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} !mb-2 text-lg font-semibold`}>
-                    {searchTerm ? 'ไม่พบโครงการที่ค้นหา' : `ไม่มีโครงการในปี ${selectedYear}`}
-                  </Title>
-                  <Text className={`font-kanit ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} text-sm`}>
-                    {searchTerm ? 'ลองค้นหาด้วยคำอื่น' : 'ยังไม่มีโครงการในปีนี้'}
-                  </Text>
-                </Card>
-              )}
+                  </div>
+
+                  {/* Content Container */}
+                  <div className="p-7 space-y-4">
+                    <div className="space-y-1">
+                      <Title level={4} className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-xl font-bold leading-tight line-clamp-1`}>
+                        {project.project_name}
+                      </Title>
+                      <Text className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} block text-sm line-clamp-2 min-h-[40px]`}>
+                        {project.description || 'ไม่มีคำอธิบายโครงการ'}
+                      </Text>
+                    </div>
+
+                    <div className={`h-px w-full ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-slate-100'}`}></div>
+
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex flex-col gap-1">
+                          <Text className={`${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>วันเริ่มโครงการ</Text>
+                          <Text strong className={theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}>{formatThaiDate(project.start_date)}</Text>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end">
+                          <Text className={`${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>แผนงานสิ้นสุด</Text>
+                          <Text strong className={theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}>{formatThaiDate(project.end_date)}</Text>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className={`w-full rounded-full h-3 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-slate-100'}`}>
+                          <div
+                            className={`h-3 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(168,85,247,0.3)] ${
+                              (project.progress || 0) >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500 shadow-purple-500/20'
+                            }`}
+                            style={{ width: `${Math.min(project.progress || 0, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {project.team_members && project.team_members.length > 0 && (
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="flex -space-x-3">
+                            {project.team_members.slice(0, 4).map((member, i) => (
+                              <div 
+                                key={i}
+                                className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-slate-800 bg-slate-700' : 'border-white bg-slate-200'} flex items-center justify-center overflow-hidden`}
+                                title={member.name}
+                              >
+                                <UserOutlined className={theme === 'dark' ? 'text-slate-400 text-xs' : 'text-slate-500 text-xs'} />
+                              </div>
+                            ))}
+                            {project.team_members.length > 4 && (
+                              <div className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-slate-800 bg-indigo-900/50 text-indigo-400' : 'border-white bg-indigo-50 text-indigo-600'} flex items-center justify-center text-[10px] font-bold`}>
+                                +{project.team_members.length - 4}
+                              </div>
+                            )}
+                          </div>
+                          <span className={`${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} text-xs italic`}>
+                            ทีมงาน {project.team_members.length} ท่าน
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {(!filteredProjects || filteredProjects.length === 0) && (
+              <div className={`p-20 rounded-[3rem] text-center border-2 border-dashed ${
+                theme === 'dark' ? 'bg-slate-800/20 border-slate-800 text-slate-600' : 'bg-slate-50/50 border-slate-200 text-slate-400'
+              }`}>
+                <FileTextOutlined className="text-7xl mb-6 opacity-20" />
+                <Title level={3} className={`font-kanit !mb-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {searchTerm ? 'ไม่พบโครงการที่ค้นหา' : `ยังไม่มีโครงการสำหรับปี ${selectedYear}`}
+                </Title>
+                <Text className="text-lg opacity-50">กรุณาลองเปลี่ยนเงื่อนไขการค้นหา หรือ เลือกปีอื่น</Text>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       <style jsx="true">{`
-        .ant-card {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600;700;800&display=swap');
+        
+        body {
+          font-family: 'Kanit', sans-serif !important;
         }
-        .ant-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
-        .ant-progress-bg {
-          transition: all 0.3s ease;
-        }
-        .ant-progress:hover .ant-progress-bg {
-          filter: brightness(1.1);
-        }
-        .progress-bar {
-          transition: width 0.3s ease;
-        }
-        button:hover {
-          transform: translateY(-1px);
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
+
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .line-clamp-3 {
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+
+        /* Customize scrollbar */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${theme === 'dark' ? '#1e293b' : '#e2e8f0'};
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${theme === 'dark' ? '#334155' : '#cbd5e1'};
         }
       `}</style>
     </div>

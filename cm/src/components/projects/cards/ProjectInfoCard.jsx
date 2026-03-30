@@ -17,12 +17,13 @@ const ProjectInfoCard = ({
   handleRetry,
   getStatusColor,
   canViewProgress,
+  user,
 }) => {
   return (
-    <Card className="image-card bg-white shadow-md rounded-lg overflow-hidden h-[420px]">
+    <Card className="image-card bg-white shadow-md rounded-lg overflow-hidden h-[360px]">
       <div className="flex flex-col h-full">
         {/* ---------- รูปภาพ ---------- */}
-        <div className="relative h-[200px] w-full overflow-hidden">
+        <div className="relative h-[160px] w-full overflow-hidden">
           {project.image && !imageErrors.general ? (
             <>
               <Skeleton.Image
@@ -150,66 +151,54 @@ const ProjectInfoCard = ({
             )}
           </div>
 
-          <div className="pt-2 mt-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-              {/* 1. Planning + Actual – แบ่ง 2 คอลัมน์ใน sm+ */}
-              <div className="grid grid-cols-2 gap-1.5 col-span-1">
-                <Link to={`/project/${project.project_id}/planning`} className="col-span-1">
-                  <Button
-                    type="default"
-                    size="small"
-                    className="w-full h-7 font-kanit text-xs leading-tight"
-                  >
-                    Planning
-                  </Button>
-                </Link>
-                <Link to={`/project/${project.project_id}/Actual`} className="col-span-1">
-                  <Button
-                    type="default"
-                    size="small"
-                    className="w-full h-7 font-kanit text-xs leading-tight"
-                  >
-                    Actual
-                  </Button>
-                </Link>
-                {/* <Link to={`/project/${project.project_id}/Schedule`} className="col-span-1">
-        <Button 
-          type="default" 
-          size="small" 
-          className="w-full h-7 font-kanit text-xs leading-tight"
-        >
-          Schedule
-        </Button>
-      </Link> */}
-              </div>
-
-              {/* 2. & 3. ความคืบหน้า + S-Curve – เฉพาะผู้มีสิทธิ์ */}
-              {canViewProgress() ? (
-                <>
-                  <Link to={`/project/${project.project_id}/progress`} className="col-span-1">
+          {(user?.isAdmin || user?.is_pm || project.current_user_role) && (
+            <div className="pt-2 mt-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                {/* 1. Planning + Actual – แบ่ง 2 คอลัมน์ใน sm+ */}
+                <div className="grid grid-cols-2 gap-1.5 col-span-1">
+                  <Link to={`/project/${project.project_id}/planning`} className="col-span-1">
                     <Button
                       type="default"
                       size="small"
                       className="w-full h-7 font-kanit text-xs leading-tight"
                     >
-                      ความคืบหน้า
+                      Planning
                     </Button>
                   </Link>
-                  {/* <Link to={`/project/${project.project_id}/scurve`} className="col-span-1">
-          <Button type="default" size="small" className="w-full h-7 font-kanit text-xs">
-            S‑Curve
-          </Button>
-        </Link> */}
-                </>
-              ) : (
-                <div className="col-span-full text-center">
-                  <Text className="text-[11px] text-gray-600 font-kanit italic leading-tight">
-                    เฉพาะผู้ดูแลระบบและผู้จัดการโครงการเท่านั้นที่สามารถดูความคืบหน้าได้
-                  </Text>
+                  <Link to={`/project/${project.project_id}/Actual`} className="col-span-1">
+                    <Button
+                      type="default"
+                      size="small"
+                      className="w-full h-7 font-kanit text-xs leading-tight"
+                    >
+                      Actual
+                    </Button>
+                  </Link>
                 </div>
-              )}
+
+                {/* 2. & 3. ความคืบหน้า + สถานะงาน */}
+                <Link to={`/project/${project.project_id}/progress`} className="col-span-1">
+                  <Button
+                    type="default"
+                    size="small"
+                    className="w-full h-7 font-kanit text-xs leading-tight"
+                  >
+                    ความคืบหน้า
+                  </Button>
+                </Link>
+
+                <Link to={`/project/${project.project_id}/job-status`} title="Job Status Detail" className="col-span-1">
+                  <Button
+                    type="default"
+                    size="small"
+                    className="w-full h-7 font-kanit text-xs border-teal-200 text-teal-600 hover:border-teal-400 hover:text-teal-700 bg-teal-50"
+                  >
+                    สถานะงาน
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </Card>

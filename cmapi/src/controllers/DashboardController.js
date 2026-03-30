@@ -438,7 +438,7 @@ const getFolderFiles = async (req, res) => {
         // ดึงไฟล์ในโฟลเดอร์
         const [files] = await connection.execute(
             `SELECT f.file_id, f.folder_id, f.file_name, f.file_path, f.file_type, f.file_size,
-                    DATE_FORMAT(f.created_at, '%Y-%m-%d') as created_at, u.username as uploaded_by
+                    DATE_FORMAT(f.created_at, '%Y-%m-%d %H:%i:%s') as created_at, u.username as uploaded_by
              FROM files f
              JOIN users u ON f.uploaded_by = u.user_id
              WHERE f.folder_id = ? AND f.active = 1
@@ -690,7 +690,7 @@ const uploadFile = async (req, res) => {
                 file_path: finalFilePath,
                 file_type: fileExtension,
                 file_size: size,
-                created_at: new Date().toISOString().split('T')[0],
+                created_at: new Date().toISOString(),
                 uploaded_by: req.user.username
             }
         });

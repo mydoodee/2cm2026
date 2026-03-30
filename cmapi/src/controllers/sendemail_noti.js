@@ -383,7 +383,7 @@ const sendEmailNotification = async (req, res) => {
     }
 
     // สร้างลิงก์ไปยังหน้าโปรเจกต์
-    const projectLink = `${process.env.FRONTEND_URL || 'https://app.spkconstruction.co.th'}/project/${projectId}`;
+    const projectLink = `${process.env.FRONTEND_URL || 'https://app.spkconstruction.co.th/cm'}/project/${projectId}`;
 
     // สร้าง HTML template (ปรับสำหรับ multiple files)
     const htmlContent = createEmailTemplate(fileCount, folderName, projectName, projectLink, uploadedBy);

@@ -620,7 +620,7 @@ const Actual = ({ user, setUser, theme }) => {
       const token = localStorage.getItem('token');
 
       const payload = {
-        project_id: parseInt(id),
+        project_id: id,
         actual_progress: finalProgress,
         remarks: remarks || null
       };

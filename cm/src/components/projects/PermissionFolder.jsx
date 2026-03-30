@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Space, Card, Typography, Input, Form, Checkbox, App, Empty, Tree, Breadcrumb, Modal, Select, List, Tag, Divider, Tooltip, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, SaveOutlined, FolderAddOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, SaveOutlined, FolderAddOutlined, SearchOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import Navbar from '../Navbar';
 import axios from 'axios';
@@ -48,6 +48,13 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [applyToSubfolders, setApplyToSubfolders] = useState(false);
   const selectedFolderRef = useRef(null);
+
+  // Copy Folder Structure states
+  const [isCopyModalVisible, setIsCopyModalVisible] = useState(false);
+  const [sourceProjectId, setSourceProjectId] = useState(null);
+  const [sourceFolders, setSourceFolders] = useState([]);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isFetchingSourceFolders, setIsFetchingSourceFolders] = useState(false);
 
   const fetchProjects = async () => {
     try {
@@ -109,7 +116,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
           const newPendingPermissions = {};
           projectUsers.forEach(user => {
             const userPermissions = updatedFolder.permissions
-              ?.filter(p => p.user_id === user.user_id)
+              ?.filter(p => p && p.user_id === user.user_id)
               ?.map(p => `${user.user_id}-${p.permission_type}`) || [];
             newPendingPermissions[user.user_id] = userPermissions;
           });
@@ -328,9 +335,11 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
         key: `year-${year}`,
         selectable: false,
         children: yearMap[year].map(project => {
+          const isSelected = selectedProject === project.project_id;
           const folderCount = folders.filter(f => f.project_id === project.project_id).length;
+          const titleSuffix = isSelected ? ` (${folderCount} โฟลเดอร์)` : '';
           return {
-            title: `${project.project_name} (${folderCount} โฟลเดอร์)`,
+            title: `${project.project_name}${titleSuffix}`,
             key: project.project_id.toString(),
             icon: <FolderOutlined />,
           };
@@ -438,6 +447,65 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
     }
   };
 
+  // ===== Copy Folder Structure handlers =====
+  const handleOpenCopyModal = () => {
+    setSourceProjectId(null);
+    setSourceFolders([]);
+    setIsCopyModalVisible(true);
+  };
+
+  const fetchSourceFolders = async (projectId) => {
+    if (!projectId) {
+      setSourceFolders([]);
+      return;
+    }
+    setIsFetchingSourceFolders(true);
+    try {
+      const response = await api.get(`/api/folders?project_id=${projectId}`);
+      setSourceFolders(response.data.folders || []);
+    } catch {
+      message.error('ไม่สามารถดึงโฟลเดอร์ต้นทางได้');
+      setSourceFolders([]);
+    } finally {
+      setIsFetchingSourceFolders(false);
+    }
+  };
+
+  const getSourceFolderTreeData = () => {
+    const buildTree = (parentId = null) => {
+      return sourceFolders
+        .filter(f => f.parent_folder_id === parentId)
+        .map(folder => {
+          const children = buildTree(folder.folder_id);
+          return {
+            title: folder.folder_name,
+            key: folder.folder_id.toString(),
+            icon: <FolderOutlined />,
+            children,
+          };
+        });
+    };
+    return buildTree();
+  };
+
+  const handleCopyStructure = async () => {
+    if (!sourceProjectId || !selectedProject) return;
+    setIsCopying(true);
+    try {
+      const response = await api.post('/api/folders/copy-structure', {
+        sourceProjectId,
+        targetProjectId: selectedProject,
+      });
+      message.success(response.data.message || 'คัดลอกโครงสร้างสำเร็จ');
+      setIsCopyModalVisible(false);
+      await fetchFoldersData(selectedProject);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'ไม่สามารถคัดลอกโครงสร้างได้');
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
   }, []);
@@ -454,7 +522,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
       const initialPermissions = {};
       projectUsers.forEach(user => {
         const userPermissions = selectedFolder.permissions
-          ?.filter(p => p.user_id === user.user_id)
+          ?.filter(p => p && p.user_id === user.user_id)
           ?.map(p => `${user.user_id}-${p.permission_type}`) || [];
         initialPermissions[user.user_id] = userPermissions;
       });
@@ -483,7 +551,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                 className={theme === 'dark' ? 'dark-tree' : ''}
                 onSelect={(keys) => {
                   if (keys.length && !keys[0].startsWith('year-')) {
-                    setSelectedProject(parseInt(keys[0]));
+                    setSelectedProject(keys[0]);
                     setSelectedFolder(null);
                     selectedFolderRef.current = null;
                     setPendingPermissions({});
@@ -527,15 +595,25 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                     allowClear
                     size="large"
                   />
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => showFolderModal()}
-                    size="large"
-                    style={{ borderRadius: '8px' }}
-                  >
-                    เพิ่มโฟลเดอร์หลัก
-                  </Button>
+                  <Space>
+                    <Button
+                      icon={<CopyOutlined />}
+                      onClick={handleOpenCopyModal}
+                      size="large"
+                      style={{ borderRadius: '8px' }}
+                    >
+                      คัดลอกโครงสร้าง
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => showFolderModal()}
+                      size="large"
+                      style={{ borderRadius: '8px' }}
+                    >
+                      เพิ่มโฟลเดอร์หลัก
+                    </Button>
+                  </Space>
                 </div>
 
                 <Divider style={{ margin: '16px 0' }} />
@@ -641,52 +719,64 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                   }}
                 >
                   <div className="flex justify-between items-center mb-3">
-                    <Text strong style={{ fontSize: '14px', color: theme === 'dark' ? '#818cf8' : '#096dd9' }}>
+                    <Text strong style={{ fontSize: '13px', color: theme === 'dark' ? '#818cf8' : '#096dd9' }}>
                       <TeamOutlined className="mr-2" />
-                      จัดการสิทธิ์แบบกลุ่ม (ทุกคนในโครงการ)
+                      ตั้งค่าสิทธิ์กลุ่ม
                     </Text>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('read')}
-                      className="text-[12px] h-9"
-                    >
-                      ให้สิทธิ์ "อ่าน" ทั้งหมด
-                    </Button>
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('write')}
-                      className="text-[12px] h-9"
-                    >
-                      ให้สิทธิ์ "เขียน" ทั้งหมด
-                    </Button>
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('admin')}
-                      className="text-[12px] h-9"
-                    >
-                      ให้สิทธิ์ "ผู้ดูแล" ทั้งหมด
-                    </Button>
-                    <Button
-                      danger
-                      ghost
-                      size="small"
-                      onClick={() => handleGlobalSelectAll('none')}
-                      className="text-[12px] h-9"
-                    >
-                      ล้างสิทธิ์ทั้งหมด
-                    </Button>
+                  <div className="grid grid-cols-4 gap-2">
+                    <Tooltip title="ให้สิทธิ์ 'อ่าน' ทุกคน">
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('read')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        อ่าน
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="ให้สิทธิ์ 'เขียน' ทุกคน">
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('write')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        เขียน
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="ให้สิทธิ์ 'ผู้ดูแล' ทุกคน">
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('admin')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        ผู้ดูแล
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="ล้างสิทธิ์ทุกคน">
+                      <Button
+                        danger
+                        ghost
+                        size="small"
+                        onClick={() => handleGlobalSelectAll('none')}
+                        className="text-[13px] h-9 font-medium"
+                        style={{ borderRadius: '6px' }}
+                      >
+                        ล้าง
+                      </Button>
+                    </Tooltip>
                   </div>
                   <div className="mt-3 text-center">
-                    <Text italic style={{ fontSize: '11px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>
-                      * คลิกปุ่มด้านบนเพื่อกำหนดสิทธิ์เริ่มต้นให้ทุกคนพร้อมกัน
+                    <Text italic style={{ fontSize: '12px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>
+                      * คลิกเพื่อกำหนดสิทธิ์เริ่มต้นให้ทุกคนพร้อมกัน
                     </Text>
                   </div>
                 </div>
@@ -709,7 +799,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
                           </div>
                           <div className="flex flex-wrap justify-end gap-1">
                             {selectedFolder.permissions
-                              ?.filter(p => p.user_id === user.user_id)
+                              ?.filter(p => p && p.user_id === user.user_id)
                               ?.map(permission => (
                                 <Tag
                                   key={permission.permission_type}
@@ -725,7 +815,7 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
 
                         <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                           <div className="flex justify-between items-center mb-2">
-                            <Text size="small" type="secondary" className="text-[11px] uppercase tracking-wider">กำหนดสิทธิ์ใหม่</Text>
+                            <Text size="small" type="secondary" className="text-[11px] uppercase tracking-wider">กำหนดสิทธิ์</Text>
                             <Space size={4}>
                               <Button size="small" type="link" className="text-[11px] p-0" onClick={() => handleSelectAllPermissions(user.user_id, 'all')}>เลือกทั้งหมด</Button>
                               <Divider type="vertical" />
@@ -868,6 +958,116 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
           background: transparent !important;
         }
       `}</style>
+
+      {/* Copy Folder Structure Modal */}
+      <Modal
+        title={
+          <span>
+            <CopyOutlined className="mr-2" />
+            คัดลอกโครงสร้างโฟลเดอร์
+          </span>
+        }
+        open={isCopyModalVisible}
+        onCancel={() => setIsCopyModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsCopyModalVisible(false)}>
+            ยกเลิก
+          </Button>,
+          <Button
+            key="copy"
+            type="primary"
+            icon={<CopyOutlined />}
+            onClick={handleCopyStructure}
+            loading={isCopying}
+            disabled={!sourceProjectId || sourceFolders.length === 0}
+          >
+            คัดลอกโครงสร้าง
+          </Button>,
+        ]}
+        width={600}
+        className={theme === 'dark' ? 'dark-modal' : ''}
+      >
+        <div style={{ marginTop: 16 }}>
+          <Text style={{ color: theme === 'dark' ? '#d1d5db' : undefined }}>
+            เลือกโครงการต้นทางที่ต้องการคัดลอกโครงสร้างโฟลเดอร์มา
+          </Text>
+
+          <Select
+            placeholder="เลือกโครงการต้นทาง"
+            style={{ width: '100%', marginTop: 12 }}
+            size="large"
+            value={sourceProjectId}
+            onChange={(value) => {
+              setSourceProjectId(value);
+              fetchSourceFolders(value);
+            }}
+            className={theme === 'dark' ? 'dark-select' : ''}
+            showSearch
+            optionFilterProp="children"
+          >
+            {projects
+              .filter(p => p.project_id !== selectedProject)
+              .map(p => (
+                <Option key={p.project_id} value={p.project_id}>
+                  {p.project_name}
+                </Option>
+              ))}
+          </Select>
+
+          {sourceProjectId && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 12,
+                border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
+                backgroundColor: theme === 'dark' ? '#111827' : '#fafafa',
+                maxHeight: 350,
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text strong style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>
+                  📂 โครงสร้างโฟลเดอร์ ({sourceFolders.length} โฟลเดอร์)
+                </Text>
+              </div>
+
+              {isFetchingSourceFolders ? (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <Text style={{ color: theme === 'dark' ? '#9ca3af' : undefined }}>กำลังโหลด...</Text>
+                </div>
+              ) : sourceFolders.length === 0 ? (
+                <Empty description="โครงการนี้ไม่มีโฟลเดอร์" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              ) : (
+                <Tree
+                  showLine
+                  showIcon
+                  defaultExpandAll
+                  treeData={getSourceFolderTreeData()}
+                  selectable={false}
+                  className={theme === 'dark' ? 'dark-tree' : ''}
+                />
+              )}
+            </div>
+          )}
+
+          {sourceProjectId && sourceFolders.length > 0 && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: '8px 12px',
+                borderRadius: 8,
+                backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : '#eff6ff',
+                border: `1px solid ${theme === 'dark' ? '#4f46e5' : '#bfdbfe'}`,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme === 'dark' ? '#818cf8' : '#3b82f6' }}>
+                ℹ️ จะคัดลอกเฉพาะโครงสร้างโฟลเดอร์เท่านั้น (ไม่รวมไฟล์และสิทธิ์)
+              </Text>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
