@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Button, Space, Card, Typography, Input, Form, Checkbox, App, Empty, Tree, Breadcrumb, Modal, Select, List, Tag, Divider, Tooltip, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, SaveOutlined, FolderAddOutlined, SearchOutlined, TeamOutlined, CopyOutlined } from '@ant-design/icons';
+import { 
+  Button, Space, Card, Typography, Input, Form, Checkbox, App, 
+  Empty, Tree, Breadcrumb, Modal, Select, List, Tag, Divider, 
+  Tooltip, message, Tabs, Layout, Menu, Popconfirm, Spin 
+} from 'antd';
+import { 
+  PlusOutlined, EditOutlined, DeleteOutlined, FolderOutlined, 
+  SaveOutlined, FolderAddOutlined, SearchOutlined, TeamOutlined, 
+  CopyOutlined, AppstoreOutlined, ProjectOutlined 
+} from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import Navbar from '../Navbar';
 import api from '../../axiosConfig';
@@ -9,6 +17,7 @@ const { Option } = Select;
 const { Text, Title } = Typography;
 
 const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
+  const [activeTab, setActiveTab] = useState('projects');
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [folders, setFolders] = useState([]);
@@ -25,6 +34,20 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [applyToSubfolders, setApplyToSubfolders] = useState(false);
   const selectedFolderRef = useRef(null);
+
+  // Template states
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateItems, setTemplateItems] = useState([]);
+  const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [isItemModalVisible, setIsItemModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [parentItemForNew, setParentItemForNew] = useState(null);
+  const [templateForm] = Form.useForm();
+  const [itemForm] = Form.useForm();
+  const [isFetchingTemplates, setIsFetchingTemplates] = useState(false);
+  const [isFetchingItems, setIsFetchingItems] = useState(false);
 
   // Copy Folder Structure states
   const [isCopyModalVisible, setIsCopyModalVisible] = useState(false);
@@ -483,8 +506,201 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
     }
   };
 
+  const fetchTemplates = async () => {
+    setIsFetchingTemplates(true);
+    try {
+      const response = await api.get('/api/folder-templates');
+      setTemplates(response.data.templates || []);
+    } catch {
+      message.error('ไม่สามารถดึงข้อมูล Template ได้');
+    } finally {
+      setIsFetchingTemplates(false);
+    }
+  };
+
+  const fetchTemplateItems = async (templateId) => {
+    if (!templateId) {
+      setTemplateItems([]);
+      return;
+    }
+    setIsFetchingItems(true);
+    try {
+      const response = await api.get(`/api/folder-templates/${templateId}/items`);
+      setTemplateItems(response.data.items || []);
+    } catch {
+      message.error('ไม่สามารถดึงข้อมูลโฟลเดอร์ใน Template ได้');
+    } finally {
+      setIsFetchingItems(false);
+    }
+  };
+
+  const showTemplateModal = (template = null) => {
+    setEditingTemplate(template);
+    if (template) {
+      templateForm.setFieldsValue({
+        template_name: template.template_name,
+        description: template.description,
+      });
+    } else {
+      templateForm.resetFields();
+    }
+    setIsTemplateModalVisible(true);
+  };
+
+  const handleTemplateOk = async () => {
+    try {
+      const values = await templateForm.validateFields();
+      if (editingTemplate) {
+        await api.put(`/api/folder-templates/${editingTemplate.template_id}`, values);
+        message.success('แก้ไข Template สำเร็จ');
+      } else {
+        await api.post('/api/folder-templates', values);
+        message.success('สร้าง Template สำเร็จ');
+      }
+      setIsTemplateModalVisible(false);
+      fetchTemplates();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'ไม่สามารถบันทึก Template ได้');
+    }
+  };
+
+  const handleTemplateDelete = (templateId) => {
+    Modal.confirm({
+      title: 'ยืนยันการลบ Template',
+      content: 'การลบ Template จะลบโครงสร้างโฟลเดอร์ทั้งหมดภายใต้ Template นี้ด้วย ยืนยันหรือไม่?',
+      okText: 'ลบ',
+      okType: 'danger',
+      cancelText: 'ยกเลิก',
+      onOk: async () => {
+        try {
+          await api.delete(`/api/folder-templates/${templateId}`);
+          message.success('ลบ Template สำเร็จ');
+          if (selectedTemplate === templateId) {
+            setSelectedTemplate(null);
+            setTemplateItems([]);
+          }
+          fetchTemplates();
+        } catch (error) {
+          message.error(error.response?.data?.message || 'ไม่สามารถลบ Template ได้');
+        }
+      },
+    });
+  };
+
+  const showItemModal = (item = null, parentId = null) => {
+    setEditingItem(item);
+    setParentItemForNew(parentId);
+    if (item) {
+      itemForm.setFieldsValue({ folder_name: item.folder_name });
+    } else {
+      itemForm.resetFields();
+    }
+    setIsItemModalVisible(true);
+  };
+
+  const handleItemOk = async () => {
+    try {
+      const values = await itemForm.validateFields();
+      const data = {
+        template_id: selectedTemplate,
+        folder_name: values.folder_name,
+        parent_item_id: parentItemForNew || null,
+      };
+
+      if (editingItem) {
+        await api.put(`/api/folder-template-items/${editingItem.item_id}`, { folder_name: values.folder_name });
+        message.success('แก้ไขโฟลเดอร์สำเร็จ');
+      } else {
+        await api.post('/api/folder-template-items', data);
+        message.success('เพิ่มโฟลเดอร์สำเร็จ');
+      }
+      setIsItemModalVisible(false);
+      fetchTemplateItems(selectedTemplate);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้');
+    }
+  };
+
+  const handleItemDelete = (itemId) => {
+    Modal.confirm({
+      title: 'ยืนยันการลบโฟลเดอร์',
+      content: 'โฟลเดอร์ย่อยทั้งหมดจะถูกลบไปด้วย ยืนยันหรือไม่?',
+      okText: 'ลบ',
+      okType: 'danger',
+      cancelText: 'ยกเลิก',
+      onOk: async () => {
+        try {
+          await api.delete(`/api/folder-template-items/${itemId}`);
+          message.success('ลบโฟลเดอร์สำเร็จ');
+          fetchTemplateItems(selectedTemplate);
+        } catch (error) {
+          message.error(error.response?.data?.message || 'ไม่สามารถลบโฟลเดอร์ได้');
+        }
+      },
+    });
+  };
+
+  const getTemplateTreeData = (itemsList) => {
+    const buildTree = (parentId = null) => {
+      return itemsList
+        .filter(item => item.parent_item_id === parentId)
+        .map(item => {
+          const children = buildTree(item.item_id);
+          return {
+            title: (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FolderOutlined />
+                  <span>{item.folder_name}</span>
+                </span>
+                <Space size="small">
+                  <Tooltip title="เพิ่มโฟลเดอร์ย่อย">
+                    <Button
+                      icon={<PlusOutlined />}
+                      size="small"
+                      type="primary"
+                      ghost
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        showItemModal(null, item.item_id);
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="แก้ไข">
+                    <Button
+                      icon={<EditOutlined />}
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        showItemModal(item);
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="ลบ">
+                    <Button
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      danger
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleItemDelete(item.item_id);
+                      }}
+                    />
+                  </Tooltip>
+                </Space>
+              </div>
+            ),
+            key: item.item_id.toString(),
+            children: children,
+          };
+        });
+    };
+    return buildTree();
+  };
+
   useEffect(() => {
     fetchProjects();
+    fetchTemplates();
   }, []);
 
   useEffect(() => {
@@ -493,6 +709,12 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
       fetchFoldersData(selectedProject);
     }
   }, [selectedProject]);
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      fetchTemplateItems(selectedTemplate);
+    }
+  }, [selectedTemplate]);
 
   useEffect(() => {
     if (selectedFolder && projectUsers.length > 0) {
@@ -508,322 +730,368 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
   }, [selectedFolder, projectUsers]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: theme === 'dark' ? '#1f2937' : '#f0f2f5' }}>
+    <div className="permission-folder-container" style={{ minHeight: '100vh', backgroundColor: theme === 'dark' ? '#1f2937' : '#f0f2f5', fontFamily: 'Kanit, sans-serif' }}>
       <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
-      <div className="flex flex-col lg:flex-row gap-6 max-w-[1800px] mx-auto">
-        {/* Project List */}
-        <div className="w-full lg:w-[320px]">
-          <Card
-            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
-            style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
-          >
-            <Title level={4} style={{ marginBottom: '16px', color: theme === 'dark' ? '#f3f4f6' : undefined }}>
-              โครงการทั้งหมด
-            </Title>
-            {projects.length > 0 ? (
-              <Tree
-                showLine
-                blockNode
-                treeData={getProjectTreeData()}
-                className={theme === 'dark' ? 'dark-tree' : ''}
-                onSelect={(keys) => {
-                  if (keys.length && !keys[0].startsWith('year-')) {
-                    setSelectedProject(keys[0]);
-                    setSelectedFolder(null);
-                    selectedFolderRef.current = null;
-                    setPendingPermissions({});
-                  }
-                }}
-                selectedKeys={selectedProject ? [selectedProject.toString()] : []}
-              />
-            ) : (
-              <Empty description="ไม่มีโครงการ" />
-            )}
-          </Card>
-        </div>
-
-        {/* Folder Management */}
-        <div className="flex-1">
-          <Card
-            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
-            style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <Title level={4} style={{ margin: 0, color: theme === 'dark' ? '#f3f4f6' : undefined }}>
-                จัดการโฟลเดอร์
-              </Title>
-            </div>
-
-            <Breadcrumb
-              items={getBreadcrumb()}
-              style={{ marginBottom: '20px' }}
-              className={theme === 'dark' ? 'dark-breadcrumb' : ''}
-            />
-
-            {selectedProject ? (
-              <>
-                <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-                  <Input
-                    placeholder="ค้นหาโฟลเดอร์..."
-                    value={searchText}
-                    onChange={(e) => handleFolderSearch(e.target.value)}
-                    style={{ maxWidth: '400px' }}
-                    prefix={<SearchOutlined />}
-                    allowClear
-                    size="large"
-                  />
-                  <Space>
-                    <Button
-                      icon={<CopyOutlined />}
-                      onClick={handleOpenCopyModal}
-                      size="large"
-                      style={{ borderRadius: '8px' }}
+      
+      <div className="max-w-[1800px] mx-auto px-4 py-6">
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          className={theme === 'dark' ? 'dark-tabs' : ''}
+          items={[
+            {
+              key: 'projects',
+              label: (
+                <span className="flex items-center gap-2 px-4 py-2">
+                  <ProjectOutlined />
+                  สิทธิ์โฟลเดอร์โครงการ
+                </span>
+              ),
+              children: (
+                <div className="flex flex-col lg:flex-row gap-6 mt-4">
+                  {/* Project List */}
+                  <div className="w-full lg:w-[320px]">
+                    <Card
+                      className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
+                      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
                     >
-                      คัดลอกโครงสร้าง
-                    </Button>
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => showFolderModal()}
-                      size="large"
-                      style={{ borderRadius: '8px' }}
+                      <Title level={4} style={{ marginBottom: '16px', color: theme === 'dark' ? '#f3f4f6' : undefined }}>
+                        โครงการทั้งหมด
+                      </Title>
+                      {projects.length > 0 ? (
+                        <Tree
+                          showLine
+                          blockNode
+                          treeData={getProjectTreeData()}
+                          className={theme === 'dark' ? 'dark-tree' : ''}
+                          onSelect={(keys) => {
+                            if (keys.length && !keys[0].startsWith('year-')) {
+                              setSelectedProject(keys[0]);
+                              setSelectedFolder(null);
+                              selectedFolderRef.current = null;
+                              setPendingPermissions({});
+                            }
+                          }}
+                          selectedKeys={selectedProject ? [selectedProject.toString()] : []}
+                        />
+                      ) : (
+                        <Empty description="ไม่มีโครงการ" />
+                      )}
+                    </Card>
+                  </div>
+
+                  {/* Folder Management */}
+                  <div className="flex-1">
+                    <Card
+                      className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
+                      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
                     >
-                      เพิ่มโฟลเดอร์หลัก
-                    </Button>
-                  </Space>
-                </div>
+                      <div className="flex justify-between items-center mb-4">
+                        <Title level={4} style={{ margin: 0, color: theme === 'dark' ? '#f3f4f6' : undefined }}>
+                          จัดการโฟลเดอร์
+                        </Title>
+                      </div>
 
-                <Divider style={{ margin: '16px 0' }} />
+                      <Breadcrumb
+                        items={getBreadcrumb()}
+                        style={{ marginBottom: '20px' }}
+                        className={theme === 'dark' ? 'dark-breadcrumb' : ''}
+                      />
 
-                {isFetchingFolders ? (
-                  <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                    <Text style={{ color: theme === 'dark' ? '#9ca3af' : undefined }}>กำลังโหลดโฟลเดอร์...</Text>
-                  </div>
-                ) : filteredFolders.length === 0 ? (
-                  <Empty
-                    description="ไม่มีโฟลเดอร์ในโครงการนี้"
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  >
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => showFolderModal()}
-                    >
-                      เพิ่มโฟลเดอร์แรก
-                    </Button>
-                  </Empty>
-                ) : (
-                  <div className={theme === 'dark' ? 'dark-tree-container' : ''}>
-                    <Tree
-                      showLine
-                      blockNode
-                      treeData={getFolderTreeData(filteredFolders)}
-                      onSelect={(keys) => {
-                        if (keys.length) {
-                          const folder = folders.find(f => f.folder_id.toString() === keys[0]);
-                          if (folder) {
-                            setSelectedFolder(folder);
-                            selectedFolderRef.current = folder;
-                          }
-                        }
-                      }}
-                      selectedKeys={selectedFolder ? [selectedFolder.folder_id.toString()] : []}
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <Empty
-                description="เลือกโครงการเพื่อเริ่มจัดการโฟลเดอร์"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ padding: '60px 0' }}
-              />
-            )}
-          </Card>
-        </div>
-
-        {/* Permission Management */}
-        {selectedFolder && (
-          <div className="w-full lg:w-[420px]">
-            <Card
-              className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
-              style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <Title level={5} style={{ margin: 0, color: theme === 'dark' ? '#f3f4f6' : undefined }}>
-                    สิทธิ์การเข้าถึง
-                  </Title>
-                  <div className="flex items-center gap-2 mt-1">
-                    <FolderOutlined style={{ color: '#8b5cf6' }} />
-                    <Text strong style={{ fontSize: '14px', color: theme === 'dark' ? '#a78bfa' : '#7c3aed' }}>
-                      {selectedFolder.folder_name}
-                    </Text>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="primary"
-                    icon={<SaveOutlined />}
-                    onClick={handleSaveAllPermissions}
-                    disabled={!hasPermissionChanges || savingPermissions}
-                    loading={savingPermissions}
-                    style={{ borderRadius: '8px' }}
-                  >
-                    บันทึกทั้งหมด
-                  </Button>
-                  <Checkbox
-                    checked={applyToSubfolders}
-                    onChange={(e) => setApplyToSubfolders(e.target.checked)}
-                    className={theme === 'dark' ? 'text-gray-300' : ''}
-                    style={{ fontSize: '11px' }}
-                  >
-                    นำไปใช้กับโฟลเดอร์ย่อย
-                  </Checkbox>
-                </div>
-              </div>
-
-              <Divider style={{ margin: '12px 0' }} />
-
-              {/* Global Selection Tools */}
-              {projectUsers.length > 0 && (
-                <div
-                  className="mb-4 p-4 rounded-xl border-2"
-                  style={{
-                    backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : '#f0f7ff',
-                    borderColor: theme === 'dark' ? '#4f46e5' : '#bae7ff',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                  }}
-                >
-                  <div className="flex justify-between items-center mb-3">
-                    <Text strong style={{ fontSize: '13px', color: theme === 'dark' ? '#818cf8' : '#096dd9' }}>
-                      <TeamOutlined className="mr-2" />
-                      ตั้งค่าสิทธิ์กลุ่ม
-                    </Text>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    <Tooltip title="ให้สิทธิ์ 'อ่าน' ทุกคน">
-                      <Button
-                        type="primary"
-                        ghost
-                        size="small"
-                        onClick={() => handleGlobalSelectAll('read')}
-                        className="text-[13px] h-9 font-medium"
-                        style={{ borderRadius: '6px' }}
-                      >
-                        อ่าน
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="ให้สิทธิ์ 'เขียน' ทุกคน">
-                      <Button
-                        type="primary"
-                        ghost
-                        size="small"
-                        onClick={() => handleGlobalSelectAll('write')}
-                        className="text-[13px] h-9 font-medium"
-                        style={{ borderRadius: '6px' }}
-                      >
-                        เขียน
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="ให้สิทธิ์ 'ผู้ดูแล' ทุกคน">
-                      <Button
-                        type="primary"
-                        ghost
-                        size="small"
-                        onClick={() => handleGlobalSelectAll('admin')}
-                        className="text-[13px] h-9 font-medium"
-                        style={{ borderRadius: '6px' }}
-                      >
-                        ผู้ดูแล
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="ล้างสิทธิ์ทุกคน">
-                      <Button
-                        danger
-                        ghost
-                        size="small"
-                        onClick={() => handleGlobalSelectAll('none')}
-                        className="text-[13px] h-9 font-medium"
-                        style={{ borderRadius: '6px' }}
-                      >
-                        ล้าง
-                      </Button>
-                    </Tooltip>
-                  </div>
-                  <div className="mt-3 text-center">
-                    <Text italic style={{ fontSize: '12px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>
-                      * คลิกเพื่อกำหนดสิทธิ์เริ่มต้นให้ทุกคนพร้อมกัน
-                    </Text>
-                  </div>
-                </div>
-              )}
-
-              {projectUsers.length > 0 ? (
-                <List
-                  dataSource={projectUsers}
-                  renderItem={(user) => (
-                    <List.Item
-                      style={{ display: 'block', padding: '16px 0', borderBottom: theme === 'dark' ? '1px solid #374151' : '1px solid #f0f0f0' }}
-                    >
-                      <div className="w-full">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <Text strong style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>{user.username}</Text>
-                            <div style={{ fontSize: '12px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>
-                              {user.first_name} {user.last_name}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap justify-end gap-1">
-                            {selectedFolder.permissions
-                              ?.filter(p => p && p.user_id === user.user_id)
-                              ?.map(permission => (
-                                <Tag
-                                  key={permission.permission_type}
-                                  color={getPermissionColor(permission.permission_type)}
-                                  className="text-[10px] m-0"
-                                >
-                                  {permission.permission_type === 'read' ? 'อ่าน' :
-                                    permission.permission_type === 'write' ? 'เขียน' : 'ผู้ดูแล'}
-                                </Tag>
-                              ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                          <div className="flex justify-between items-center mb-2">
-                            <Text size="small" type="secondary" className="text-[11px] uppercase tracking-wider">กำหนดสิทธิ์</Text>
-                            <Space size={4}>
-                              <Button size="small" type="link" className="text-[11px] p-0" onClick={() => handleSelectAllPermissions(user.user_id, 'all')}>เลือกทั้งหมด</Button>
-                              <Divider type="vertical" />
-                              <Button size="small" type="link" danger className="text-[11px] p-0" onClick={() => handleSelectAllPermissions(user.user_id, 'none')}>ล้าง</Button>
+                      {selectedProject ? (
+                        <>
+                          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+                            <Input
+                              placeholder="ค้นหาโฟลเดอร์..."
+                              value={searchText}
+                              onChange={(e) => handleFolderSearch(e.target.value)}
+                              style={{ maxWidth: '400px' }}
+                              prefix={<SearchOutlined />}
+                              allowClear
+                              size="large"
+                            />
+                            <Space>
+                              <Button
+                                icon={<CopyOutlined />}
+                                onClick={handleOpenCopyModal}
+                                size="large"
+                                style={{ borderRadius: '8px' }}
+                              >
+                                คัดลอกโครงสร้าง
+                              </Button>
+                              <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => showFolderModal()}
+                                size="large"
+                                style={{ borderRadius: '8px' }}
+                              >
+                                เพิ่มโฟลเดอร์หลัก
+                              </Button>
                             </Space>
                           </div>
-                          <Checkbox.Group
-                            value={pendingPermissions[user.user_id] || []}
-                            onChange={(values) => handlePermissionChange(user.user_id, values)}
-                            className="w-full"
-                          >
-                            <div className="grid grid-cols-3 gap-2">
-                              <Checkbox value={`${user.user_id}-read`} className={theme === 'dark' ? 'text-gray-300' : ''}>อ่าน</Checkbox>
-                              <Checkbox value={`${user.user_id}-write`} className={theme === 'dark' ? 'text-gray-300' : ''}>เขียน</Checkbox>
-                              <Checkbox value={`${user.user_id}-admin`} className={theme === 'dark' ? 'text-gray-300' : ''}>ผู้ดูแล</Checkbox>
+
+                          <Divider style={{ margin: '16px 0' }} />
+
+                          {isFetchingFolders ? (
+                            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                              <Text style={{ color: theme === 'dark' ? '#9ca3af' : undefined }}>กำลังโหลดโฟลเดอร์...</Text>
                             </div>
-                          </Checkbox.Group>
+                          ) : filteredFolders.length === 0 ? (
+                            <Empty
+                              description="ไม่มีโฟลเดอร์ในโครงการนี้"
+                              image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            >
+                              <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => showFolderModal()}
+                              >
+                                เพิ่มโฟลเดอร์แรก
+                              </Button>
+                            </Empty>
+                          ) : (
+                            <div className={theme === 'dark' ? 'dark-tree-container' : ''}>
+                              <Tree
+                                showLine
+                                blockNode
+                                treeData={getFolderTreeData(filteredFolders)}
+                                onSelect={(keys) => {
+                                  if (keys.length) {
+                                    const folder = folders.find(f => f.folder_id.toString() === keys[0]);
+                                    if (folder) {
+                                      setSelectedFolder(folder);
+                                      selectedFolderRef.current = folder;
+                                    }
+                                  }
+                                }}
+                                selectedKeys={selectedFolder ? [selectedFolder.folder_id.toString()] : []}
+                              />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <Empty
+                          description="เลือกโครงการเพื่อเริ่มจัดการโฟลเดอร์"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          style={{ padding: '60px 0' }}
+                        />
+                      )}
+                    </Card>
+                  </div>
+
+                  {/* Permission Management */}
+                  {selectedFolder && (
+                    <div className="w-full lg:w-[420px]">
+                      <Card
+                        className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
+                        style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
+                      >
+                        {/* [Existing Permission UI - Keep same] */}
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <Title level={5} style={{ margin: 0, color: theme === 'dark' ? '#f3f4f6' : undefined }}>
+                              สิทธิ์การเข้าถึง
+                            </Title>
+                            <div className="flex items-center gap-2 mt-1">
+                              <FolderOutlined style={{ color: '#8b5cf6' }} />
+                              <Text strong style={{ fontSize: '14px', color: theme === 'dark' ? '#a78bfa' : '#7c3aed' }}>
+                                {selectedFolder.folder_name}
+                              </Text>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              type="primary"
+                              icon={<SaveOutlined />}
+                              onClick={handleSaveAllPermissions}
+                              disabled={!hasPermissionChanges || savingPermissions}
+                              loading={savingPermissions}
+                              style={{ borderRadius: '8px' }}
+                            >
+                              บันทึกทั้งหมด
+                            </Button>
+                            <Checkbox
+                              checked={applyToSubfolders}
+                              onChange={(e) => setApplyToSubfolders(e.target.checked)}
+                              className={theme === 'dark' ? 'text-gray-300' : ''}
+                              style={{ fontSize: '11px' }}
+                            >
+                              นำไปใช้กับโฟลเดอร์ย่อย
+                            </Checkbox>
+                          </div>
                         </div>
-                      </div>
-                    </List.Item>
+
+                        <Divider style={{ margin: '12px 0' }} />
+
+                        {projectUsers.length > 0 && (
+                          <div
+                            className="mb-4 p-4 rounded-xl border-2"
+                            style={{
+                              backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : '#f0f7ff',
+                              borderColor: theme === 'dark' ? '#4f46e5' : '#bae7ff',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                            }}
+                          >
+                            <div className="flex justify-between items-center mb-3">
+                              <Text strong style={{ fontSize: '13px', color: theme === 'dark' ? '#818cf8' : '#096dd9' }}>
+                                <TeamOutlined className="mr-2" />
+                                ตั้งค่าสิทธิ์กลุ่ม
+                              </Text>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                              <Button type="primary" ghost size="small" onClick={() => handleGlobalSelectAll('read')}>อ่าน</Button>
+                              <Button type="primary" ghost size="small" onClick={() => handleGlobalSelectAll('write')}>เขียน</Button>
+                              <Button type="primary" ghost size="small" onClick={() => handleGlobalSelectAll('admin')}>ผู้ดูแล</Button>
+                              <Button danger ghost size="small" onClick={() => handleGlobalSelectAll('none')}>ล้าง</Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {projectUsers.length > 0 ? (
+                          <List
+                            dataSource={projectUsers}
+                            renderItem={(user) => (
+                              <List.Item style={{ display: 'block', padding: '16px 0', borderBottom: theme === 'dark' ? '1px solid #374151' : '1px solid #f0f0f0' }}>
+                                <div className="w-full">
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                      <Text strong style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>{user.username}</Text>
+                                      <div style={{ fontSize: '12px', color: theme === 'dark' ? '#9ca3af' : '#64748b' }}>{user.first_name} {user.last_name}</div>
+                                    </div>
+                                    <div className="flex flex-wrap justify-end gap-1">
+                                      {selectedFolder.permissions?.filter(p => p && p.user_id === user.user_id).map(p => (
+                                        <Tag key={p.permission_type} color={getPermissionColor(p.permission_type)} className="text-[10px] m-0">
+                                          {p.permission_type === 'read' ? 'อ่าน' : p.permission_type === 'write' ? 'เขียน' : 'ผู้ดูแล'}
+                                        </Tag>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <Text size="small" type="secondary" className="text-[11px] uppercase tracking-wider">กำหนดสิทธิ์</Text>
+                                      <Space size={4}>
+                                        <Button size="small" type="link" className="text-[11px] p-0" onClick={() => handleSelectAllPermissions(user.user_id, 'all')}>เลือกทั้งหมด</Button>
+                                        <Divider type="vertical" />
+                                        <Button size="small" type="link" danger className="text-[11px] p-0" onClick={() => handleSelectAllPermissions(user.user_id, 'none')}>ล้าง</Button>
+                                      </Space>
+                                    </div>
+                                    <Checkbox.Group
+                                      value={pendingPermissions[user.user_id] || []}
+                                      onChange={(values) => handlePermissionChange(user.user_id, values)}
+                                      className="w-full"
+                                    >
+                                      <div className="grid grid-cols-3 gap-2">
+                                        <Checkbox value={`${user.user_id}-read`} className={theme === 'dark' ? 'text-gray-300' : ''}>อ่าน</Checkbox>
+                                        <Checkbox value={`${user.user_id}-write`} className={theme === 'dark' ? 'text-gray-300' : ''}>เขียน</Checkbox>
+                                        <Checkbox value={`${user.user_id}-admin`} className={theme === 'dark' ? 'text-gray-300' : ''}>ผู้ดูแล</Checkbox>
+                                      </div>
+                                    </Checkbox.Group>
+                                  </div>
+                                </div>
+                              </List.Item>
+                            )}
+                          />
+                        ) : <Empty description="ไม่มีผู้ใช้" />}
+                      </Card>
+                    </div>
                   )}
-                />
-              ) : (
-                <Empty
-                  description="ไม่มีผู้ใช้ในโครงการนี้"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )}
-            </Card>
-          </div>
-        )}
+                </div>
+              ),
+            },
+            {
+              key: 'templates',
+              label: (
+                <span className="flex items-center gap-2 px-4 py-2">
+                  <AppstoreOutlined />
+                  Master Folder (Templates)
+                </span>
+              ),
+              children: (
+                <div className="flex flex-col lg:flex-row gap-6 mt-4">
+                  {/* Template List */}
+                  <div className="w-full lg:w-[350px]">
+                    <Card
+                      className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
+                      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
+                      title={<Text style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>Template ทั้งหมด</Text>}
+                      extra={
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => showTemplateModal()}>
+                          สร้าง Template
+                        </Button>
+                      }
+                    >
+                      <List
+                        loading={isFetchingTemplates}
+                        dataSource={templates}
+                        renderItem={(item) => (
+                          <List.Item
+                            className={`cursor-pointer transition-all p-4 rounded-lg mb-2 ${selectedTemplate === item.template_id ? (theme === 'dark' ? 'bg-indigo-900/40 border-l-4 border-indigo-500' : 'bg-indigo-50 border-l-4 border-indigo-500') : (theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50')}`}
+                            onClick={() => setSelectedTemplate(item.template_id)}
+                            actions={[
+                              <Button key="edit" type="text" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); showTemplateModal(item); }} />,
+                              <Button key="delete" type="text" danger icon={<DeleteOutlined />} onClick={(e) => { e.stopPropagation(); handleTemplateDelete(item.template_id); }} />
+                            ]}
+                          >
+                            <List.Item.Meta
+                              avatar={<AppstoreOutlined style={{ fontSize: '20px', color: '#6366f1' }} />}
+                              title={<Text strong style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>{item.template_name}</Text>}
+                              description={<Text type="secondary" className="text-[12px] truncate block max-w-[150px]">{item.description || 'ไม่มีคำอธิบาย'}</Text>}
+                            />
+                          </List.Item>
+                        )}
+                        locale={{ emptyText: <Empty description="ยังไม่มี Template" /> }}
+                      />
+                    </Card>
+                  </div>
+
+                  {/* Template Structure */}
+                  <div className="flex-1">
+                    <Card
+                      className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
+                      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '12px' }}
+                      title={
+                        <Space>
+                          <FolderOutlined style={{ color: '#6366f1' }} />
+                          <Text style={{ color: theme === 'dark' ? '#f3f4f6' : undefined }}>โครงสร้างโฟลเดอร์ใน Template</Text>
+                        </Space>
+                      }
+                      extra={
+                        selectedTemplate && (
+                          <Button type="primary" icon={<PlusOutlined />} onClick={() => showItemModal()}>
+                            เพิ่มโฟลเดอร์หลัก
+                          </Button>
+                        )
+                      }
+                    >
+                      {!selectedTemplate ? (
+                        <Empty description="เลือก Template เพื่อจัดการโครงสร้าง" style={{ padding: '60px 0' }} />
+                      ) : isFetchingItems ? (
+                        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                          <Spin tip="กำลังโหลด..." />
+                        </div>
+                      ) : templateItems.length === 0 ? (
+                        <Empty description="ยังไม่มีโฟลเดอร์ใน Template นี้">
+                          <Button type="primary" onClick={() => showItemModal()}>เพิ่มโฟลเดอร์แรก</Button>
+                        </Empty>
+                      ) : (
+                        <div className={theme === 'dark' ? 'dark-tree-container' : ''}>
+                          <Tree
+                            showLine
+                            blockNode
+                            defaultExpandAll
+                            treeData={getTemplateTreeData(templateItems)}
+                            selectable={false}
+                          />
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                </div>
+              ),
+            }
+          ]}
+        />
       </div>
 
       {/* Modal */}
@@ -899,7 +1167,67 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
         </Form>
       </Modal>
 
+      {/* Template Modal */}
+      <Modal
+        title={editingTemplate ? 'แก้ไข Template' : 'สร้าง Template ใหม่'}
+        open={isTemplateModalVisible}
+        onOk={handleTemplateOk}
+        onCancel={() => setIsTemplateModalVisible(false)}
+        okText="บันทึก"
+        cancelText="ยกเลิก"
+        className={theme === 'dark' ? 'dark-modal' : ''}
+      >
+        <Form form={templateForm} layout="vertical" className="mt-4">
+          <Form.Item
+            name="template_name"
+            label={<Text style={{ color: theme === 'dark' ? '#d1d5db' : undefined }}>ชื่อ Template</Text>}
+            rules={[{ required: true, message: 'กรุณากรอกชื่อ Template' }]}
+          >
+            <Input size="large" placeholder="เช่น ก่อสร้างอาคารมาตรฐาน" className={theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : ''} />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label={<Text style={{ color: theme === 'dark' ? '#d1d5db' : undefined }}>คำอธิบาย (ทางเลือก)</Text>}
+          >
+            <Input.TextArea rows={3} placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับ Template นี้" className={theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : ''} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Template Item Modal */}
+      <Modal
+        title={editingItem ? 'แก้ไขชื่อโฟลเดอร์' : (parentItemForNew ? 'เพิ่มโฟลเดอร์ย่อย' : 'เพิ่มโฟลเดอร์หลัก')}
+        open={isItemModalVisible}
+        onOk={handleItemOk}
+        onCancel={() => setIsItemModalVisible(false)}
+        okText="บันทึก"
+        cancelText="ยกเลิก"
+        className={theme === 'dark' ? 'dark-modal' : ''}
+      >
+        <Form form={itemForm} layout="vertical" className="mt-4">
+          <Form.Item
+            name="folder_name"
+            label={<Text style={{ color: theme === 'dark' ? '#d1d5db' : undefined }}>ชื่อโฟลเดอร์</Text>}
+            rules={[{ required: true, message: 'กรุณากรอกชื่อโฟลเดอร์' }]}
+          >
+            <Input size="large" prefix={<FolderOutlined />} placeholder="ระบุชื่อโฟลเดอร์" className={theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : ''} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
       <style>{`
+        .dark-tabs .ant-tabs-nav::before {
+          border-bottom-color: #374151 !important;
+        }
+        .dark-tabs .ant-tabs-tab {
+          color: #9ca3af !important;
+        }
+        .dark-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+          color: #6366f1 !important;
+        }
+        .dark-tabs .ant-tabs-ink-bar {
+          background: #6366f1 !important;
+        }
         .dark-tree .ant-tree-node-content-wrapper:hover {
           background-color: #374151 !important;
         }
@@ -1045,6 +1373,60 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
           )}
         </div>
       </Modal>
+
+      <style jsx="true">{`
+        /* บังคับฟอนต์ Kanit สำหรับส่วนประกอบหลักแบบละมุนขึ้น */
+        .permission-folder-container,
+        .ant-btn, .ant-input, .ant-select, .ant-tree, .ant-tabs, 
+        .ant-breadcrumb, .ant-typographyControls, .ant-modal, .ant-message, .ant-tag {
+          font-family: 'Kanit', sans-serif !important;
+        }
+
+        /* แก้ไขสไตล์ปุ่มหลักเวลา Hover ให้เนื้อหาและสีพื้นหลังแสดงผลถูกต้อง */
+        .ant-btn-primary {
+          background-color: #4f46e5 !important;
+          border-color: #4f46e5 !important;
+        }
+        .ant-btn-primary:hover,
+        .ant-btn-primary:focus {
+          background-color: #4338ca !important;
+          border-color: #4338ca !important;
+          color: #ffffff !important;
+          opacity: 1 !important;
+        }
+
+        /* แก้ไขปัญหาข้อความ/ไอคอนหายเวลา Hover ใน Tree */
+        .ant-tree-node-content-wrapper:hover {
+          background-color: rgba(0, 0, 0, 0.04) !important;
+        }
+        
+        .ant-tree-node-selected {
+          background-color: rgba(24, 144, 255, 0.1) !important;
+        }
+
+        /* สไตล์พิเศษสำหรับ Dark Mode */
+        .dark-tree-container .ant-tree {
+          background: transparent !important;
+        }
+        .dark-tree-container .ant-tree-title {
+          color: #d1d5db !important;
+        }
+        .dark-tree-container .ant-tree-node-content-wrapper:hover {
+          background-color: #374151 !important;
+        }
+        .dark-tree-container .ant-tree-node-selected {
+          background-color: #4f46e5 !important;
+        }
+        .dark-tabs .ant-tabs-nav-list .ant-tabs-tab { color: #9ca3af; }
+        .dark-tabs .ant-tabs-nav-list .ant-tabs-tab-active .ant-tabs-tab-btn { color: #6366f1; }
+        .dark-breadcrumb .ant-breadcrumb-link { color: #9ca3af; }
+        .dark-breadcrumb .ant-breadcrumb-separator { color: #6b7280; }
+        .dark-select .ant-select-selector { 
+          background-color: #374151 !important; 
+          color: #fff !important; 
+          border-color: #4b5563 !important; 
+        }
+      `}</style>
     </div>
   );
 };

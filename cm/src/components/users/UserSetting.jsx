@@ -1344,7 +1344,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                                                     style={{ width: 110 }}
                                                     className="modern-select"
                                                     placeholder="บทบาท"
-                                                    popupClassName={theme === 'dark' ? 'ant-select-dropdown-dark' : ''}
+                                                    classNames={{ popup: { root: theme === 'dark' ? 'ant-select-dropdown-dark' : '' } }}
                                                     value={
                                                         selectedUserForRoles.project_roles?.find(
                                                             pr => pr.project_id === project.project_id

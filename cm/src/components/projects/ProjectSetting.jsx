@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Table, Space, Card, Typography, Input, Select, Modal, Form, Empty, DatePicker, Upload, Image, App, Badge, InputNumber, Checkbox, Divider } from 'antd';
+import { Button, Table, Space, Card, Typography, Input, Select, Modal, Form, Empty, DatePicker, Upload, Image, App, Badge, InputNumber, Checkbox, Divider, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, ArrowLeftOutlined, ProjectOutlined, SettingOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -38,6 +38,35 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
   });
   const navigate = useNavigate();
   const { message } = App.useApp();
+
+  const [templates, setTemplates] = useState([]);
+  const [isFetchingTemplates, setIsFetchingTemplates] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
+
+  const fetchTemplates = useCallback(async () => {
+    setIsFetchingTemplates(true);
+    try {
+      const response = await api.get('/api/folder-templates');
+      setTemplates(response.data.templates || []);
+    } catch {
+      message.error('ไม่สามารถดึงข้อมูล Template โฟลเดอร์ได้');
+    } finally {
+      setIsFetchingTemplates(false);
+    }
+  }, [message]);
+
+  const fetchUsers = useCallback(async () => {
+    setIsFetchingUsers(true);
+    try {
+      const response = await api.get('/api/users');
+      setAllUsers(response.data.users || []);
+    } catch {
+      message.error('ไม่สามารถดึงข้อมูลรายชื่อผู้ใช้ได้');
+    } finally {
+      setIsFetchingUsers(false);
+    }
+  }, [message]);
 
   const handleBack = () => {
     navigate('/settings');
@@ -227,6 +256,8 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       if (values.consusltant) formData.append('consusltant', values.consusltant);
       if (values.contractor) formData.append('contractor', values.contractor);
       if (values.address) formData.append('address', values.address);
+      if (values.template_id) formData.append('template_id', values.template_id);
+      if (values.notified_users) formData.append('notified_users', JSON.stringify(values.notified_users));
 
       // Visibility settings
       formData.append('show_design', values.show_design ? '1' : '0');
@@ -440,7 +471,9 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
     }
 
     fetchProjects();
-  }, [user, navigate, fetchProjects]);
+    fetchTemplates();
+    fetchUsers();
+  }, [user, navigate, fetchProjects, fetchTemplates, fetchUsers]);
 
   const columns = [
     {
@@ -848,6 +881,63 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 </Form.Item>
                 <Form.Item name="description" label="คำอธิบายสั้นๆ" className="mb-2 lg:col-span-1">
                   <Input className="font-kanit rounded-xl h-10" placeholder="รายละเอียดเพิ่มเติม..." />
+                </Form.Item>
+                {!editingProject && (
+                  <Form.Item name="template_id" label="โครงสร้างโฟลเดอร์ (Master Folder)" className="mb-2">
+                    <Select 
+                      className="font-kanit h-10 w-full" 
+                      placeholder="เลือกโครงสร้างโฟลเดอร์เริ่มต้น"
+                      loading={isFetchingTemplates}
+                      allowClear
+                    >
+                      {templates.map(tmp => (
+                        <Option key={tmp.template_id} value={tmp.template_id}>
+                          {tmp.template_name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                )}
+
+                <Form.Item name="notified_users" label="แจ้งเตือนผู้ใช้ทางอีเมล (Notify Users)" className="mb-2 lg:col-span-2">
+                  <Select 
+                    mode="multiple"
+                    className="font-kanit" 
+                    placeholder="ค้นหาหรือเลือกชื่อผู้ใช้เพื่อรับการแจ้งเตือนพยักงาน"
+                    loading={isFetchingUsers}
+                    allowClear
+                    optionFilterProp="label"
+                    dropdownStyle={{ zIndex: 11000 }}
+                    tagRender={(props) => {
+                      const { label, closable, onClose } = props;
+                      const onPreventMouseDown = (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      };
+                      return (
+                        <Tag
+                          color="blue"
+                          onMouseDown={onPreventMouseDown}
+                          closable={closable}
+                          onClose={onClose}
+                          style={{ marginRight: 3, display: 'flex', alignItems: 'center', marginTop: 2, marginBottom: 2 }}
+                        >
+                          {label}
+                        </Tag>
+                      );
+                    }}
+                    options={allUsers
+                      .filter(u => u && u.user_id)
+                      .map(u => ({
+                        value: u.user_id,
+                        label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username})`.trim()
+                      }))}
+                    optionRender={(option) => (
+                      <div className="font-kanit" style={{ color: '#1f2937' }}>
+                        {option.label}
+                      </div>
+                    )}
+                  />
                 </Form.Item>
               </div>
 
