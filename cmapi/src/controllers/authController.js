@@ -86,6 +86,35 @@ const login = async (req, res) => {
             [refreshToken, user.user_id]
         );
 
+        // ✅ ดึงรายการบริษัทของ user
+        const isSuperAdmin = userRoles.includes(1) || user.username === 'admin' || user.username === 'adminspk';
+        let companies;
+        if (isSuperAdmin) {
+            // Super Admin เห็นทุกบริษัท
+            [companies] = await connection.execute(`
+                SELECT c.company_id, c.company_name, c.company_logo, c.company_subtitle, c.company_color,
+                       cu.role as user_role,
+                       (SELECT COUNT(*) FROM projects p WHERE p.company_id = c.company_id AND p.active = 1) as project_count
+                FROM companies c
+                LEFT JOIN company_users cu ON c.company_id = cu.company_id AND cu.user_id = ?
+                WHERE c.active = 1
+                ORDER BY c.created_at ASC
+            `, [user.user_id]);
+        } else {
+            [companies] = await connection.execute(`
+                SELECT c.company_id, c.company_name, c.company_logo, c.company_subtitle, c.company_color,
+                       cu.role as user_role,
+                       (SELECT COUNT(*) FROM projects p WHERE p.company_id = c.company_id AND p.active = 1) as project_count
+                FROM companies c
+                INNER JOIN company_users cu ON c.company_id = cu.company_id AND cu.user_id = ? AND cu.active = 1
+                WHERE c.active = 1
+                ORDER BY c.created_at ASC
+            `, [user.user_id]);
+        }
+
+        // ถ้ามีบริษัทเดียว auto-select
+        const activeCompany = companies.length === 1 ? companies[0] : null;
+
         res.json({
             token,
             refreshToken,
@@ -99,7 +128,10 @@ const login = async (req, res) => {
                 roles: userRoles,
                 isAdmin: userRoles.includes(1),
                 is_pm: !!user.is_pm
-            }
+            },
+            companies,
+            activeCompany,
+            requireCompanySelection: companies.length > 1
         });
     } catch (error) {
         res.status(500).json({
@@ -265,7 +297,8 @@ const updateUser = async (req, res) => {
 
         if (isAdmin && is_pm !== undefined) {
             updateQuery += ', is_pm = ?';
-            queryParams.push(is_pm ? 1 : 0);
+            const isPmValue = (is_pm === 'true' || is_pm === true || is_pm === 1 || is_pm === '1') ? 1 : 0;
+            queryParams.push(isPmValue);
         }
 
         if (profileImagePath && profileImagePath !== userRows[0].profile_image) {
@@ -525,9 +558,10 @@ const createUser = async (req, res) => {
         const passwordHash = await bcrypt.hash(password, 10);
         console.error('DEBUG: Password hashed');
 
+        const isPmValue = (is_pm === 'true' || is_pm === true || is_pm === 1 || is_pm === '1') ? 1 : 0;
         const [result] = await connection.execute(
             'INSERT INTO users (username, password_hash, email, first_name, last_name, profile_image, is_pm, created_by, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
-            [username, passwordHash, email, first_name, last_name, profileImagePath, is_pm ? 1 : 0, req.user.user_id]
+            [username, passwordHash, email, first_name, last_name, profileImagePath, isPmValue, req.user.user_id]
         );
         console.error('DEBUG: User inserted', { insertId: result.insertId });
 

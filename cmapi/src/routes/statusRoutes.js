@@ -3,10 +3,12 @@ const express = require('express');
 const router = express.Router();
 const statusController = require('../controllers/statusController');
 const authenticateToken = require('../middleware/authenticateToken');
+const { requireCompany } = require('../middleware/companyContext');
 const { getConnection } = require('../config/db');
 
 // ใช้ authenticateToken สำหรับทุก route
 router.use(authenticateToken);
+router.use(requireCompany);
 
 // =====================================
 // USER PROJECTS ENDPOINT

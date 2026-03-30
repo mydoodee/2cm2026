@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Typography, message, Modal, Space, Breadcrumb } from 'antd';
 import { LeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import api from '../../axiosConfig';
 import Navbar from '../Navbar';
 import DriveUI from './DriveUI';
 import './Design.css';
@@ -64,11 +65,8 @@ const Design = ({ user, setUser, theme, setTheme }) => {
   const fetchFolders = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) { message.error('กรุณาเข้าสู่ระบบ'); navigate('/login'); return; }
       cancelTokenSource.current = axios.CancelToken.source();
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folders`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/api/dashboard/project/${id}/folders`, {
         cancelToken: cancelTokenSource.current.token
       });
       if (!isMounted.current) return;
@@ -106,22 +104,20 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     if (!folderId) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      const getAllSubfolderIds = (fId, isRoot = true) => {
+      const allSubFolders = (fId, isRoot = true) => {
         const subfolders = folders.filter(f => String(f.parent_folder_id) === String(fId));
         const results = [{ id: fId, isRoot }];
-        subfolders.forEach(sub => results.push(...getAllSubfolderIds(sub.folder_id, false)));
+        subfolders.forEach(sub => results.push(...allSubFolders(sub.folder_id, false)));
         return results;
       };
-      const folderIdsInfo = getAllSubfolderIds(folderId, true);
+      const folderIdsInfo = allSubFolders(folderId, true);
       const allFiles = [];
       cancelTokenSource.current = axios.CancelToken.source();
       for (const folderInfo of folderIdsInfo) {
         try {
-          const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${folderInfo.id}/files`,
-            { headers: { Authorization: `Bearer ${token}` }, cancelToken: cancelTokenSource.current.token }
+          const response = await api.get(
+            `/api/dashboard/project/${id}/folder/${folderInfo.id}/files`,
+            { cancelToken: cancelTokenSource.current.token }
           );
           if (!isMounted.current) return;
           const currentFolder = folders.find(f => String(f.folder_id) === String(folderInfo.id));
@@ -148,9 +144,7 @@ const Design = ({ user, setUser, theme, setTheme }) => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/users`, { headers: { Authorization: `Bearer ${token}` } });
+        const response = await api.get(`/api/dashboard/project/${id}/users`);
         if (response.data.data && Array.isArray(response.data.data)) setUsers(response.data.data);
       } catch (err) { if (err.response?.status === 401) navigate('/login'); }
     };
@@ -160,10 +154,9 @@ const Design = ({ user, setUser, theme, setTheme }) => {
   // ─── handleDownload ────────────────────────────────────────────────────────
   const handleDownload = async (file) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${file.file_id}/download`,
-        { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
+      const response = await api.get(
+        `/api/dashboard/project/${id}/file/${file.file_id}/download`,
+        { responseType: 'blob' }
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -184,8 +177,7 @@ const Design = ({ user, setUser, theme, setTheme }) => {
       message.error('คุณไม่มีสิทธิ์ลบไฟล์นี้'); return;
     }
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${fileId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await api.delete(`/api/dashboard/project/${id}/file/${fileId}`);
       message.success('ลบไฟล์สำเร็จ');
       fetchFiles(selectedFolderId);
     } catch (err) {
@@ -215,9 +207,9 @@ const Design = ({ user, setUser, theme, setTheme }) => {
       content: `ลบ ${filesToDelete.length} ไฟล์ที่เลือก?`,
       okText: 'ลบ', okType: 'danger', cancelText: 'ยกเลิก',
       onOk: async () => {
-        const token = localStorage.getItem('token'); let cnt = 0;
+        let cnt = 0;
         for (const file of filesToDelete) {
-          try { await axios.delete(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${file.file_id}`, { headers: { Authorization: `Bearer ${token}` } }); cnt++; } catch {}
+          try { await api.delete(`/api/dashboard/project/${id}/file/${file.file_id}`); cnt++; } catch {}
         }
         if (cnt > 0) message.success(`ลบสำเร็จ ${cnt} ไฟล์`);
         fetchFiles(selectedFolderId);
@@ -233,11 +225,10 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     setCurrentImageIndex(newIndex);
     const nextFile = previewableFiles[newIndex];
     try {
-      const token = localStorage.getItem('token');
       setLoading(true);
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${nextFile.file_id}/download`,
-        { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
+      const response = await api.get(
+        `/api/dashboard/project/${id}/file/${nextFile.file_id}/download`,
+        { responseType: 'blob' }
       );
       if (previewUrl) window.URL.revokeObjectURL(previewUrl);
       setPreviewFile(nextFile);
@@ -263,10 +254,8 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     if (existingFolder) { message.error('มีโฟลเดอร์ชื่อนี้อยู่แล้วในตำแหน่งนี้'); return; }
     setCreateFolderLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder`,
-        { folder_name: newFolderName.trim(), parent_folder_id: parentFolderForNewFolder.id },
-        { headers: { Authorization: `Bearer ${token}` } }
+      await api.post(`/api/dashboard/project/${id}/folder`,
+        { folder_name: newFolderName.trim(), parent_folder_id: parentFolderForNewFolder.id }
       );
       message.success(`สร้างโฟลเดอร์ "${newFolderName}" สำเร็จ`);
       setIsCreateFolderModalOpen(false); setNewFolderName(''); setParentFolderForNewFolder(null);
@@ -301,9 +290,8 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     if (existingFolder) { message.error('มีโฟลเดอร์ชื่อนี้อยู่แล้วในตำแหน่งนี้'); return; }
     setRenameFolderLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${folderToRename.id}/rename`,
-        { new_name: newFolderNameForRename.trim() }, { headers: { Authorization: `Bearer ${token}` } }
+      await api.put(`/api/dashboard/project/${id}/folder/${folderToRename.id}/rename`,
+        { new_name: newFolderNameForRename.trim() }
       );
       message.success(`เปลี่ยนชื่อโฟลเดอร์เป็น "${newFolderNameForRename}" สำเร็จ`);
       setIsRenameFolderModalOpen(false); setFolderToRename(null); setNewFolderNameForRename('');
@@ -331,9 +319,8 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     if (existingFile) { message.error('มีไฟล์ชื่อนี้อยู่แล้วในโฟลเดอร์นี้'); return; }
     setRenameLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${fileToRename.file_id}/rename`,
-        { new_name: newFileName.trim() }, { headers: { Authorization: `Bearer ${token}` } }
+      await api.put(`/api/dashboard/project/${id}/file/${fileToRename.file_id}/rename`,
+        { new_name: newFileName.trim() }
       );
       message.success(`เปลี่ยนชื่อไฟล์เป็น "${newFileName}" สำเร็จ`);
       setIsRenameModalOpen(false); setFileToRename(null); setNewFileName('');
@@ -359,7 +346,7 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     const token = localStorage.getItem('token');
     if (!token) { message.error('กรุณาเข้าสู่ระบบ'); navigate('/login'); return; }
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${folderId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await api.delete(`/api/dashboard/project/${id}/folder/${folderId}`);
       message.success('ลบโฟลเดอร์สำเร็จ'); fetchFolders();
     } catch (err) {
       if (err.response?.data?.needsConfirmation) {
@@ -370,7 +357,7 @@ const Design = ({ user, setUser, theme, setTheme }) => {
           okText: 'ลบทั้งหมด', okType: 'danger', cancelText: 'ยกเลิก',
           onOk: async () => {
             try {
-              await axios.delete(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${folderId}?force=true`, { headers: { Authorization: `Bearer ${token}` } });
+              await api.delete(`/api/dashboard/project/${id}/folder/${folderId}?force=true`);
               message.success(`ลบโฟลเดอร์และไฟล์ ${fileCount} ไฟล์สำเร็จ`); fetchFolders(); fetchFiles(selectedFolderId);
             } catch (forceError) { message.error(forceError.response?.data?.message || 'เกิดข้อผิดพลาดในการลบโฟลเดอร์'); }
           }
@@ -409,14 +396,13 @@ const Design = ({ user, setUser, theme, setTheme }) => {
           const parts = relativePath.split('/');
           if (parts.length > 0 && parts[0] === selectedFolderName) { parts.shift(); relativePath = parts.join('/'); }
           if (!relativePath.includes('/')) relativePath = null;
-          if (relativePath) uploadUrl = `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${selectedFolderId}/upload?relativePath=${encodeURIComponent(relativePath)}`;
-          else uploadUrl = `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${selectedFolderId}/upload`;
+          if (relativePath) uploadUrl = `/api/dashboard/project/${id}/folder/${selectedFolderId}/upload?relativePath=${encodeURIComponent(relativePath)}`;
+          else uploadUrl = `/api/dashboard/project/${id}/folder/${selectedFolderId}/upload`;
         } else {
-          uploadUrl = `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/folder/${selectedFolderId}/upload`;
+          uploadUrl = `/api/dashboard/project/${id}/folder/${selectedFolderId}/upload`;
         }
         try {
-          const response = await axios.post(uploadUrl, formData, {
-            headers: { Authorization: `Bearer ${token}` },
+          const response = await api.post(uploadUrl, formData, {
             onUploadProgress: (progressEvent) => {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               setUploadProgress(Math.round((uploadedCount + (percentCompleted / 100)) / totalFiles * 100));
@@ -428,9 +414,8 @@ const Design = ({ user, setUser, theme, setTheme }) => {
       }
       if (selectedUsers.length > 0 && uploadedCount > 0) {
         try {
-          await axios.post(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/notify`,
-            { folderId: selectedFolderId, users: selectedUsers, fileCount: uploadedCount, folderName: selectedFolderName },
-            { headers: { Authorization: `Bearer ${token}` } }
+          await api.post(`/api/dashboard/project/${id}/notify`,
+            { folderId: selectedFolderId, users: selectedUsers, fileCount: uploadedCount, folderName: selectedFolderName }
           );
         } catch (notifyError) { console.error('ส่งเมล์ล้มเหลว:', notifyError); }
       }
@@ -471,8 +456,7 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     }
     if (ext === 'pdf') {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${file.file_id}/download`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' });
+        const response = await api.get(`/api/dashboard/project/${id}/file/${file.file_id}/download`, { responseType: 'blob' });
         const blob = new Blob([response.data], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(blob);
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -498,8 +482,8 @@ const Design = ({ user, setUser, theme, setTheme }) => {
     const currentIndex = allPreviewableFiles.findIndex(f => f.file_id === file.file_id);
     setPreviewableFiles(allPreviewableFiles); setCurrentImageIndex(currentIndex);
     try {
-      const token = localStorage.getItem('token'); setLoading(true);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}/file/${file.file_id}/download`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' });
+      setLoading(true);
+      const response = await api.get(`/api/dashboard/project/${id}/file/${file.file_id}/download`, { responseType: 'blob' });
       setPreviewFile(file); setPreviewUrl(window.URL.createObjectURL(new Blob([response.data]))); setIsPreviewModalOpen(true);
     } catch (err) {
       if (err.response?.status === 401) { message.error('กรุณาเข้าสู่ระบบ'); navigate('/login'); }

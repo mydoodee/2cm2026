@@ -171,10 +171,11 @@ exports.getRecentFileActivities = async (req, res) => {
 
     // ตรวจสอบโครงการที่ user เข้าถึงได้
     const [userProjects] = await db.query(`
-      SELECT DISTINCT project_id 
-      FROM project_user_roles 
-      WHERE user_id = ?
-    `, [userId]);
+      SELECT DISTINCT pur.project_id 
+      FROM project_user_roles pur
+      JOIN projects p ON pur.project_id = p.project_id
+      WHERE pur.user_id = ? AND p.company_id = ? AND p.active = 1
+    `, [userId, req.companyId]);
 
     const projectIds = userProjects.map(p => p.project_id);
     
@@ -287,10 +288,11 @@ exports.getFileStatistics = async (req, res) => {
     const userId = req.user.user_id;
 
     const [userProjects] = await db.query(`
-      SELECT DISTINCT project_id 
-      FROM project_user_roles 
-      WHERE user_id = ?
-    `, [userId]);
+      SELECT DISTINCT pur.project_id 
+      FROM project_user_roles pur
+      JOIN projects p ON pur.project_id = p.project_id
+      WHERE pur.user_id = ? AND p.company_id = ? AND p.active = 1
+    `, [userId, req.companyId]);
 
     const projectIds = userProjects.map(p => p.project_id);
 
@@ -396,9 +398,10 @@ exports.getFileActivitiesByProject = async (req, res) => {
     const userId = req.user.user_id;
 
     const [access] = await db.query(`
-      SELECT 1 FROM project_user_roles 
-      WHERE user_id = ? AND project_id = ?
-    `, [userId, projectId]);
+      SELECT 1 FROM project_user_roles pur
+      JOIN projects p ON pur.project_id = p.project_id
+      WHERE pur.user_id = ? AND pur.project_id = ? AND p.company_id = ? AND p.active = 1
+    `, [userId, projectId, req.companyId]);
 
     if (access.length === 0) {
       return res.status(403).json({
@@ -550,9 +553,10 @@ exports.getProjectStatistics = async (req, res) => {
     const userId = req.user.user_id;
 
     const [access] = await db.query(`
-      SELECT 1 FROM project_user_roles 
-      WHERE user_id = ? AND project_id = ?
-    `, [userId, projectId]);
+      SELECT 1 FROM project_user_roles pur
+      JOIN projects p ON pur.project_id = p.project_id
+      WHERE pur.user_id = ? AND pur.project_id = ? AND p.company_id = ? AND p.active = 1
+    `, [userId, projectId, req.companyId]);
 
     if (access.length === 0) {
       return res.status(403).json({
@@ -659,10 +663,10 @@ exports.getTopDownloadedFiles = async (req, res) => {
       INNER JOIN folders fo ON f.folder_id = fo.folder_id
       INNER JOIN projects pr ON fo.project_id = pr.project_id
       INNER JOIN project_user_roles pur ON pr.project_id = pur.project_id
-      WHERE f.active = 1 AND pur.user_id = ?
+      WHERE f.active = 1 AND pur.user_id = ? AND pr.company_id = ? AND pr.active = 1
     `;
 
-    const params = [userId];
+    const params = [userId, req.companyId];
 
     if (projectId) {
       query += ` AND pr.project_id = ?`;
@@ -736,10 +740,10 @@ exports.getTopUploaders = async (req, res) => {
       INNER JOIN folders fo ON f.folder_id = fo.folder_id
       INNER JOIN projects pr ON fo.project_id = pr.project_id
       INNER JOIN project_user_roles pur ON pr.project_id = pur.project_id
-      WHERE f.active = 1 AND pur.user_id = ?
+      WHERE f.active = 1 AND pur.user_id = ? AND pr.company_id = ? AND pr.active = 1
     `;
 
-    const params = [userId];
+    const params = [userId, req.companyId];
 
     if (projectId) {
       query += ` AND pr.project_id = ?`;

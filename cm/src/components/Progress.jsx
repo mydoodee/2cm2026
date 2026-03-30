@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Spin, Card, Typography, message } from 'antd';
 import { Progress as AntProgress } from 'antd';
 import axios from 'axios';
+import api from '../axiosConfig';
 // Try one of these import paths based on your file structure:
 import Navbar from './Navbar.jsx'; // If Navbar is in the same components folder
 // import Navbar from '../Navbar.jsx'; // If Navbar is in src root
@@ -21,12 +22,7 @@ const Progress = ({ user, setUser, theme }) => {
     const fetchProgress = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No token found');
-        }
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/project/${id}/progress`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get(`/api/project/${id}/progress`, {
           cancelToken: source.token,
         });
         setProgressData(response.data.data);

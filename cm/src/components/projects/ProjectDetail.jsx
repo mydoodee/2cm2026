@@ -5,6 +5,7 @@ import { Spin, message } from 'antd';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, Title as ChartTitle, Tooltip, Legend, Filler, BarElement } from 'chart.js';
 import moment from 'moment';
 import axios from 'axios';
+import api from '../../axiosConfig';
 
 import Navbar from '../Navbar';
 import ProjectInfoCard from './cards/ProjectInfoCard';
@@ -16,15 +17,17 @@ import StatsCards from './cards/StatsCards';
 import WeatherCard from './cards/WeatherCard';
 import SCurveChart from './cards/SCurveChart';
 import TeamMembersCard from './cards/TeamMembersCard';
+import MoveProjectModal from './MoveProjectModal';
 import './ProjectDetail.css';
 
 moment.locale('th');
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ChartTitle, Tooltip, Legend, Filler, BarElement);
 
-const ProjectDetail = ({ user, setUser }) => {
+const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
   const [theme, setTheme] = useState('light');
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isMoveModalVisible, setIsMoveModalVisible] = useState(false);
   const [imageErrors, setImageErrors] = useState({
     general: false,
     progress_summary: false,
@@ -114,12 +117,8 @@ const ProjectDetail = ({ user, setUser }) => {
     if (!address) return;
     setWeatherLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const weatherResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/weather?address=${encodeURIComponent(address)}&projectId=${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const weatherResponse = await api.get(
+        `/api/weather?address=${encodeURIComponent(address)}&projectId=${id}`
       );
 
       const weatherData = weatherResponse.data;
@@ -173,11 +172,7 @@ const ProjectDetail = ({ user, setUser }) => {
           bidding: true,
         });
 
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
-
-        const projectResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/project/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const projectResponse = await api.get(`/api/project/${id}`, {
           cancelToken: source.token,
         });
 
@@ -191,10 +186,9 @@ const ProjectDetail = ({ user, setUser }) => {
           console.log('📥 Fetching payment data...');
 
           // ดึงข้อมูลการชำระล่าสุด
-          const paymentResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/project/${id}/payment`,
+          const paymentResponse = await api.get(
+            `/api/project/${id}/payment`,
             {
-              headers: { Authorization: `Bearer ${token}` },
               cancelToken: source.token,
             }
           );
@@ -206,10 +200,9 @@ const ProjectDetail = ({ user, setUser }) => {
           try {
             console.log('📥 Fetching detailed payment history...');
 
-            const detailedResponse = await axios.get(
-              `${import.meta.env.VITE_API_URL}/api/project/${id}/payment-detailed`,
+            const detailedResponse = await api.get(
+              `/api/project/${id}/payment-detailed`,
               {
-                headers: { Authorization: `Bearer ${token}` },
                 cancelToken: source.token,
               }
             );
@@ -245,10 +238,9 @@ const ProjectDetail = ({ user, setUser }) => {
 
               // ดึงข้อมูลทุก payment record
               try {
-                const allPaymentsResponse = await axios.get(
-                  `${import.meta.env.VITE_API_URL}/api/project/${id}/payment-history`,
+                const allPaymentsResponse = await api.get(
+                  `/api/project/${id}/payment-history`,
                   {
-                    headers: { Authorization: `Bearer ${token}` },
                     cancelToken: source.token,
                   }
                 );
@@ -327,10 +319,9 @@ const ProjectDetail = ({ user, setUser }) => {
         // ส่วน Progress Data
         let progressData = null;
         try {
-          const progressResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/project/${id}/progress-history`,
+          const progressResponse = await api.get(
+            `/api/project/${id}/progress-history`,
             {
-              headers: { Authorization: `Bearer ${token}` },
               cancelToken: source.token,
             }
           );
@@ -492,6 +483,7 @@ const ProjectDetail = ({ user, setUser }) => {
           } : null,
           payment: paymentData || null,
           team_members: projectResponse.data.project.team_members || [],
+          tender_status: projectResponse.data.project.tender_status || 'tender_in_progress',
         };
 
         console.log('✅ Final Project Data:', {
@@ -549,6 +541,22 @@ const ProjectDetail = ({ user, setUser }) => {
     });
   }, [project?.payment, paymentHistory, selectedPaymentInstallment]);
 
+  const handleTenderStatusChange = async (newStatus) => {
+    try {
+      const response = await api.put(`/api/project/${id}`, {
+        tender_status: newStatus
+      });
+      
+      if (response.status === 200) {
+        setProject(prev => ({ ...prev, tender_status: newStatus }));
+        message.success('อัปเดตสถานะการประมูลเรียบร้อยแล้ว');
+      }
+    } catch (error) {
+      console.error('Update tender status error:', error);
+      message.error('ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่');
+    }
+  };
+
   const handleRetry = (category) => () => {
     setImageErrors(prev => ({ ...prev, [category]: false }));
     setImageLoading(prev => ({ ...prev, [category]: true }));
@@ -598,9 +606,11 @@ const ProjectDetail = ({ user, setUser }) => {
     ? scurveActual 
     : (selectedProgress ? Number(selectedProgress.actual_progress) || 0 : 0);
 
+  const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
+
   return (
     <div className={`h-screen w-full ${theme === 'dark' ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} transition-all duration-300 font-kanit overflow-auto`}>
-      <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
+      <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
       <div className="w-full px-4 py-6">
         {/* Top Cards Grid - Dynamic Layout */}
         <div className={`grid grid-cols-1 gap-6 mb-6 ${
@@ -629,6 +639,9 @@ const ProjectDetail = ({ user, setUser }) => {
             getStatusColor={getStatusColor}
             canViewProgress={canViewProgress}
             user={user}
+            isTenderMode={isTenderMode}
+            onMoveProject={() => setIsMoveModalVisible(true)}
+            onTenderStatusChange={handleTenderStatusChange}
           />
 
           {project.show_progress_summary !== false && (
@@ -712,13 +725,26 @@ const ProjectDetail = ({ user, setUser }) => {
         </div>
 
         {/* Daily Stats and Weather */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <WeatherCard weather={weather} weatherLoading={weatherLoading} address={project.address} />
-          <StatsCards dailyStats={project.dailyStats} />
-        </div>
+        {!isTenderMode && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <WeatherCard weather={weather} weatherLoading={weatherLoading} address={project.address} />
+            <StatsCards dailyStats={project.dailyStats} />
+          </div>
+        )}
 
         {/* Team Members */}
-        <TeamMembersCard teamMembers={project.team_members} />
+        {!isTenderMode && <TeamMembersCard teamMembers={project.team_members} />}
+
+        <MoveProjectModal
+          visible={isMoveModalVisible}
+          onCancel={() => setIsMoveModalVisible(false)}
+          project={project}
+          onSuccess={() => {
+            setIsMoveModalVisible(false);
+            navigate('/select-company');
+          }}
+          theme={theme}
+        />
       </div>
     </div>
   );

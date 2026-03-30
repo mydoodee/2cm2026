@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, DatePicker, Select, Button, message, Card, Typography } from 'antd';
 
 import axios from 'axios';
+import api from '../../axiosConfig';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -16,11 +17,6 @@ const ManpowerAdd = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No token found');
-      }
-
       const payload = {
         project_id: id,
         work_date: values.work_date.format('YYYY-MM-DD'),
@@ -30,9 +26,7 @@ const ManpowerAdd = () => {
         amount: Number(values.amount),
       };
 
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/project/${id}/manpower`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post(`/api/project/${id}/manpower`, payload);
 
       message.success('เพิ่มข้อมูล manpower สำเร็จ');
       navigate(`/project/${id}`); // กลับไปหน้า detail หรือปรับตามต้องการ

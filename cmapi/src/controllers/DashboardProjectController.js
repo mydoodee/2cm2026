@@ -18,9 +18,9 @@ const getOverallStats = async (req, res) => {
       `SELECT p.project_id, p.project_name, p.status, p.progress
        FROM projects p
        JOIN project_user_roles pur ON p.project_id = pur.project_id
-       WHERE pur.user_id = ? AND p.active = 1
+       WHERE pur.user_id = ? AND p.company_id = ? AND p.active = 1
        ORDER BY p.project_name`,
-      [req.user.user_id]
+      [req.user.user_id, req.companyId]
     );
 
     // คำนวณภาพรวม
@@ -147,9 +147,9 @@ const getProjectStats = async (req, res) => {
         p.address
        FROM projects p
        JOIN project_user_roles pur ON p.project_id = pur.project_id
-       WHERE pur.user_id = ? AND p.active = 1
+       WHERE pur.user_id = ? AND p.company_id = ? AND p.active = 1
        ORDER BY p.created_at DESC`,
-      [req.user.user_id]
+      [req.user.user_id, req.companyId]
     );
 
     const projectsWithStats = [];
@@ -259,8 +259,8 @@ const getProjectDetails = async (req, res) => {
       `SELECT p.*, pur.role
        FROM projects p
        JOIN project_user_roles pur ON p.project_id = pur.project_id
-       WHERE p.project_id = ? AND pur.user_id = ? AND p.active = 1`,
-      [projectId, req.user.user_id]
+       WHERE p.project_id = ? AND pur.user_id = ? AND p.company_id = ? AND p.active = 1`,
+      [projectId, req.user.user_id, req.companyId]
     );
 
     if (projectAccess.length === 0) {
@@ -415,10 +415,10 @@ const getFinancialStatsByPeriod = async (req, res) => {
       ) received ON p.project_id = received.project_id
       JOIN projects pr ON p.project_id = pr.project_id
       JOIN project_user_roles pur ON pr.project_id = pur.project_id
-      WHERE pur.user_id = ? AND pr.active = 1
+      WHERE pur.user_id = ? AND pr.company_id = ? AND pr.active = 1
     `;
 
-    const params = [dateFormat, req.user.user_id];
+    const params = [dateFormat, req.user.user_id, req.companyId];
 
     if (projectId && projectId !== 'all') {
       query += ` AND p.project_id = ?`;

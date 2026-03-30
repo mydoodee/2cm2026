@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import 'antd/dist/reset.css';
+import api from '../axiosConfig';
 
 const ConfirmPassword = ({ theme, setTheme }) => {
     const [password, setPassword] = useState('');
@@ -39,27 +40,10 @@ const ConfirmPassword = ({ theme, setTheme }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/confirm-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword: password })
-            });
+            const response = await api.post('/api/confirm-password', { token, newPassword: password });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                console.error('API error:', {
-                    status: response.status,
-                    message: data.message,
-                    error: data.error,
-                    code: data.code,
-                    errno: data.errno
-                });
-                throw new Error(data.message || 'เกิดข้อผิดพลาดในการตั้งรหัสผ่านใหม่');
-            }
-
-            console.log('API success:', data);
-            setMessage(data.message || 'ตั้งรหัสผ่านใหม่สำเร็จ');
+            console.log('API success:', response.data);
+            setMessage(response.data.message || 'ตั้งรหัสผ่านใหม่สำเร็จ');
             Swal.fire({
                 icon: 'success',
                 title: 'สำเร็จ',

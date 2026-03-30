@@ -16,6 +16,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Navbar';
 import axios from 'axios';
+import api from '../../axiosConfig';
 import dayjs from 'dayjs';
 import './Planning.css';
 
@@ -57,11 +58,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
 
   const fetchProject = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/project/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/project/${id}`);
       setProject(response.data.project);
       // ✅ เก็บ job_number
       setJobNumber(response.data.project.job_number || 'PROJECT');
@@ -75,11 +72,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
 
   const fetchTreeData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/planning/tree/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/planning/tree/${id}`);
 
       const formatted = formatTreeData(response.data.data);
       setTreeData(formatted);
@@ -401,10 +394,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
       const token = localStorage.getItem('token');
 
       if (type === 'root') {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/planning/roots/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await api.get(`/api/planning/roots/${id}`);
         const roots = response.data.data;
         if (roots.length === 0) return { code: '1', sortOrder: 1 };
         const lastRoot = roots[roots.length - 1];
@@ -414,10 +404,8 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
 
       } else if (type === 'category') {
         const [rootResponse, categoriesResponse] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/api/planning/roots/${id}`,
-            { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/planning/categories/${parentId}`,
-            { headers: { Authorization: `Bearer ${token}` } })
+          api.get(`/api/planning/roots/${id}`),
+          api.get(`/api/planning/categories/${parentId}`)
         ]);
 
         const root = rootResponse.data.data.find(r => r.root_id === parentId);
@@ -440,10 +428,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
         );
         const categoryCode = category ? category.code : '01.01';
 
-        const typesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/planning/types/${parentId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const typesResponse = await api.get(`/api/planning/types/${parentId}`);
 
         const types = typesResponse.data.data;
         const nextSort = types.length + 1;
@@ -463,10 +448,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
         );
         const typeCode = typeRow ? typeRow.code : '01.01.01';
 
-        const subtypesResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/planning/subtypes/${parentId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const subtypesResponse = await api.get(`/api/planning/subtypes/${parentId}`);
 
         const subtypes = subtypesResponse.data.data;
         const nextSort = subtypes.length + 1;
@@ -596,10 +578,8 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
     message.success('จะลบไฟล์แนบเมื่อบันทึกข้อมูล');
   };
 
-  // ✅ แก้ไข handleSubmit ให้ส่ง job_number ไปด้วย
   const handleSubmit = async (values) => {
     try {
-      const token = localStorage.getItem('token');
 
       const isFileObject = fileList.length > 0 && fileList[0] instanceof File;
       const hasOriginFileObj = fileList.length > 0 && fileList[0].originFileObj instanceof File;
@@ -662,7 +642,6 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
         }
 
         data = formData;
-        config = { headers: { Authorization: `Bearer ${token}` } };
       } else {
         data = {
           ...values,
@@ -686,24 +665,15 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
             endpoint = '/api/planning/subtypes';
           }
         } else {
-          const itemId = selectedItem[`${modalType}_id`];
-          const pluralType = modalType === 'category' ? 'categories' : `${modalType}s`;
           endpoint = `/api/planning/${pluralType}/${itemId}`;
         }
-
-        config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        };
       }
 
       if (modalMode === 'create') {
-        await axios.post(`${import.meta.env.VITE_API_URL}${endpoint}`, data, config);
+        await api.post(endpoint, data);
         message.success('เพิ่มข้อมูลสำเร็จ');
       } else {
-        await axios.put(`${import.meta.env.VITE_API_URL}${endpoint}`, data, config);
+        await api.put(endpoint, data);
         message.success('แก้ไขข้อมูลสำเร็จ');
       }
 
@@ -720,12 +690,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
 
   const updateRootData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/planning/update-root-data/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/api/planning/update-root-data/${id}`, {});
     } catch (error) {
       console.error('Error updating root data:', error);
     }
@@ -733,16 +698,9 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
 
   const handleDelete = async (item, type) => {
     try {
-      const token = localStorage.getItem('token');
       const itemId = item[`${type}_id`];
-
       const pluralType = type === 'category' ? 'categories' : `${type}s`;
-
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/planning/${pluralType}/${itemId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
+      await api.delete(`/api/planning/${pluralType}/${itemId}`);
       message.success('ลบข้อมูลสำเร็จ');
 
       if (type === 'type' || type === 'subtype' || type === 'category') {

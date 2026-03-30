@@ -123,8 +123,8 @@ const getProjectDetails = async (req, res) => {
         connection = await getConnection();
 
         const [projects] = await connection.execute(
-            `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
-            [req.params.id]
+            `SELECT * FROM projects WHERE project_id = ? AND company_id = ? AND active = 1`,
+            [req.params.id, req.companyId]
         );
 
         if (projects.length === 0) {

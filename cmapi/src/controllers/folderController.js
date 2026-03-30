@@ -13,10 +13,23 @@ async function getFolders(req, res) {
   try {
     connection = await getConnection();
     const projectId = req.query.project_id;
+    const companyId = req.companyId;
 
     if (!projectId) {
       return res.status(400).json({
         message: 'Project ID is required'
+      });
+    }
+
+    // Verify project belongs to current company
+    const [projectCheck] = await connection.execute(
+      'SELECT project_id FROM projects WHERE project_id = ? AND company_id = ? AND active = 1',
+      [projectId, companyId]
+    );
+
+    if (projectCheck.length === 0) {
+      return res.status(403).json({
+        message: 'Forbidden: project not in current company'
       });
     }
 
@@ -105,10 +118,23 @@ async function getFoldersWithSubfolders(req, res) {
   try {
     connection = await getConnection();
     const projectId = req.query.project_id;
+    const companyId = req.companyId;
 
     if (!projectId) {
       return res.status(400).json({
         message: 'Project ID is required'
+      });
+    }
+
+    // Verify project belongs to current company
+    const [projectCheck2] = await connection.execute(
+      'SELECT project_id FROM projects WHERE project_id = ? AND company_id = ? AND active = 1',
+      [projectId, companyId]
+    );
+
+    if (projectCheck2.length === 0) {
+      return res.status(403).json({
+        message: 'Forbidden: project not in current company'
       });
     }
 
@@ -225,13 +251,13 @@ const createFolder = async (req, res) => {
 
     connection = await getConnection();
 
-    // ตรวจสอบว่าโครงการมีอยู่จริง
+    // ตรวจสอบว่าโครงการมีอยู่จริงและเป็นของบริษัทที่ระบุ
     const [projectRows] = await connection.execute(
-      'SELECT project_id FROM projects WHERE project_id = ? AND active = 1',
-      [project_id]
+      'SELECT project_id FROM projects WHERE project_id = ? AND company_id = ? AND active = 1',
+      [project_id, req.companyId]
     );
     if (projectRows.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบโครงการ' });
+      return res.status(404).json({ message: 'ไม่พบโครงการในบริษัทนี้' });
     }
 
     // ตรวจสอบสิทธิ์ admin
@@ -310,13 +336,15 @@ const updateFolder = async (req, res) => {
 
     connection = await getConnection();
 
-    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริง
+    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริงและอยู่ในบริษัทที่ถูกต้อง
     const [folderRows] = await connection.execute(
-      'SELECT project_id FROM folders WHERE folder_id = ? AND active = 1',
-      [folderId]
+      `SELECT f.project_id FROM folders f
+       JOIN projects p ON f.project_id = p.project_id
+       WHERE f.folder_id = ? AND f.active = 1 AND p.company_id = ?`,
+      [folderId, req.companyId]
     );
     if (folderRows.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบโฟลเดอร์' });
+      return res.status(404).json({ message: 'ไม่พบโฟลเดอร์ในบริษัทปัจจุบัน' });
     }
 
     // ตรวจสอบสิทธิ์ admin
@@ -389,10 +417,12 @@ const deleteFolder = async (req, res) => {
     const folderId = req.params.id;
     connection = await getConnection();
 
-    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริง
+    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริงและอยู่ในบริษัทที่ถูกต้อง
     const [folderRows] = await connection.execute(
-      'SELECT project_id FROM folders WHERE folder_id = ? AND active = 1',
-      [folderId]
+      `SELECT f.project_id FROM folders f
+       JOIN projects p ON f.project_id = p.project_id
+       WHERE f.folder_id = ? AND f.active = 1 AND p.company_id = ?`,
+      [folderId, req.companyId]
     );
     if (folderRows.length === 0) {
       return res.status(404).json({ message: 'ไม่พบโฟลเดอร์' });
@@ -677,10 +707,12 @@ const uploadFile = async (req, res) => {
 
     connection = await getConnection();
 
-    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริง
+    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริงและอยู่ในบริษัทที่ถูกต้อง
     const [folderRows] = await connection.execute(
-      'SELECT project_id FROM folders WHERE folder_id = ? AND active = 1',
-      [folder_id]
+      `SELECT f.project_id FROM folders f
+       JOIN projects p ON f.project_id = p.project_id
+       WHERE f.folder_id = ? AND f.active = 1 AND p.company_id = ?`,
+      [folder_id, req.companyId]
     );
 
     console.log('🔍 Folder query result:', {

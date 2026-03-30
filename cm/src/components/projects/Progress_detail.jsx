@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, Form, InputNumber, Button, Spin, message, Typography, Space, Progress, Statistic, Divider, Table, DatePicker, Modal, Upload, Input, Select, Tag } from 'antd';
 import { DollarOutlined, FileDoneOutlined, HistoryOutlined, EditOutlined, DeleteOutlined, UploadOutlined, ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, WarningOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import api from '../../axiosConfig';
 import Navbar from '../Navbar';
 import moment from 'moment';
 import 'moment/locale/th';
@@ -64,20 +65,16 @@ const ProgressDetail = ({ user, setUser, theme }) => {
     const fetchProjectDetails = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
 
-        const projectResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/dashboard/project/${id}`,
-          { headers: { Authorization: `Bearer ${token}` }, cancelToken: source.token }
-        );
+        const projectResponse = await api.get(`/api/dashboard/project/${id}`, {
+          cancelToken: source.token
+        });
         setProject(projectResponse.data.data);
 
         try {
-          const progressResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/project/${id}/progress-history`,
-            { headers: { Authorization: `Bearer ${token}` }, cancelToken: source.token }
-          );
+          const progressResponse = await api.get(`/api/project/${id}/progress-history`, {
+            cancelToken: source.token
+          });
           const progressData = progressResponse.data.data || [];
           const sortedProgress = progressData.sort((a, b) => {
             if (b.installment !== a.installment) {
@@ -95,10 +92,9 @@ const ProgressDetail = ({ user, setUser, theme }) => {
         }
 
         try {
-          const paymentResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/project/${id}/payment-history`,
-            { headers: { Authorization: `Bearer ${token}` }, cancelToken: source.token }
-          );
+          const paymentResponse = await api.get(`/api/project/${id}/payment-history`, {
+            cancelToken: source.token
+          });
           const paymentData = paymentResponse.data.data || [];
           setPaymentHistory(paymentData);
         } catch (error) {
@@ -148,14 +144,13 @@ const ProgressDetail = ({ user, setUser, theme }) => {
   const onFinish = async (values) => {
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('token');
 
       if (editingSection === 'progress') {
         const progressUrl = editingRecordId
-          ? `${import.meta.env.VITE_API_URL}/api/project/${id}/progress/${editingRecordId}`
-          : `${import.meta.env.VITE_API_URL}/api/project/${id}/progress`;
+          ? `/api/project/${id}/progress/${editingRecordId}`
+          : `/api/project/${id}/progress`;
 
-        await axios[editingRecordId ? 'put' : 'post'](
+        await api[editingRecordId ? 'put' : 'post'](
           progressUrl,
           {
             installment: values.installment,
@@ -165,16 +160,15 @@ const ProgressDetail = ({ user, setUser, theme }) => {
             progress_behind: values.progress_behind,
             summary_date: values.summary_date ? values.summary_date.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD'),
             notes: values.notes || '',
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
+          }
         );
 
         message.success(editingRecordId ? 'อัปเดตข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ');
 
       } else if (editingSection === 'payment') {
         const paymentUrl = editingRecordId
-          ? `${import.meta.env.VITE_API_URL}/api/project/${id}/payment/${editingRecordId}`
-          : `${import.meta.env.VITE_API_URL}/api/project/${id}/payment`;
+          ? `/api/project/${id}/payment/${editingRecordId}`
+          : `/api/project/${id}/payment`;
 
         const formData = new FormData();
 
@@ -225,14 +219,9 @@ const ProgressDetail = ({ user, setUser, theme }) => {
           });
         }
 
-        await axios[editingRecordId ? 'put' : 'post'](
+        await api[editingRecordId ? 'put' : 'post'](
           paymentUrl,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            }
-          }
+          formData
         );
 
         message.success(editingRecordId ? 'อัปเดตข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ');
@@ -242,20 +231,14 @@ const ProgressDetail = ({ user, setUser, theme }) => {
       setEditingRecordId(null);
 
       // รีเฟรชข้อมูล
-      const progressResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/project/${id}/progress-history`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const progressResponse = await api.get(`/api/project/${id}/progress-history`);
       const sortedProgress = (progressResponse.data.data || []).sort((a, b) => {
         if (b.installment !== a.installment) return b.installment - a.installment;
         return new Date(b.summary_date) - new Date(a.summary_date);
       });
       setProgressHistory(sortedProgress);
 
-      const paymentResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/project/${id}/payment-history`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const paymentResponse = await api.get(`/api/project/${id}/payment-history`);
       setPaymentHistory(paymentResponse.data.data || []);
 
     } catch (error) {
@@ -406,26 +389,20 @@ const ProgressDetail = ({ user, setUser, theme }) => {
         try {
           const token = localStorage.getItem('token');
           const url = section === 'progress'
-            ? `${import.meta.env.VITE_API_URL}/api/project/${id}/progress/${recordId}`
-            : `${import.meta.env.VITE_API_URL}/api/project/${id}/payment/${recordId}`;
+            ? `/api/project/${id}/progress/${recordId}`
+            : `/api/project/${id}/payment/${recordId}`;
 
-          await axios.delete(url, { headers: { Authorization: `Bearer ${token}` } });
+          await api.delete(url);
           message.success('ลบข้อมูลสำเร็จ');
 
-          const progressResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/project/${id}/progress-history`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const progressResponse = await api.get(`/api/project/${id}/progress-history`);
           const sortedProgress = (progressResponse.data.data || []).sort((a, b) => {
             if (b.installment !== a.installment) return b.installment - a.installment;
             return new Date(b.summary_date) - new Date(a.summary_date);
           });
           setProgressHistory(sortedProgress);
 
-          const paymentResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/project/${id}/payment-history`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const paymentResponse = await api.get(`/api/project/${id}/payment-history`);
           setPaymentHistory(paymentResponse.data.data || []);
 
         } catch (error) {

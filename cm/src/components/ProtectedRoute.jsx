@@ -28,7 +28,14 @@ const ProtectedRoute = ({ user }) => {
         return <Navigate to="/login" replace />;
     }
 
-    console.log('🔒 User authenticated - allowing access');
+    // ✅ เช็คว่าเลือกบริษัทหรือยัง (ยกเว้นหน้าเลือกบริษัทเอง)
+    const activeCompanyId = localStorage.getItem('activeCompanyId');
+    if (!activeCompanyId && location.pathname !== '/select-company') {
+        console.log('🏢 No company selected - redirecting to select-company');
+        return <Navigate to="/select-company" replace />;
+    }
+
+    console.log('🔒 User authenticated & Company selected - allowing access');
     return <Outlet />;
 };
 

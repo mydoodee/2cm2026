@@ -16,12 +16,9 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import Navbar from './Navbar';
-import axios from 'axios';
+import api from '../axiosConfig';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-const API_URL = `${API_BASE_URL}/api`;
-
-const Dashboard = ({ user, setUser, theme, setTheme }) => {
+const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCompany }) => {
   const [selectedProject, setSelectedProject] = useState('all');
   const [selectedYear, setSelectedYear] = useState('all');
   const [overallStats, setOverallStats] = useState(null);
@@ -29,30 +26,7 @@ const Dashboard = ({ user, setUser, theme, setTheme }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Refresh Access Token
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        throw new Error('ไม่มี refresh token ใน localStorage');
-      }
 
-      const response = await axios.post(
-        `${API_BASE_URL}/refresh-token`,
-        { refreshToken },
-        { timeout: 10000 }
-      );
-
-      const newToken = response.data.token;
-      localStorage.setItem('token', newToken);
-      return newToken;
-    } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      throw new Error('Token refresh failed');
-    }
-  }, [setUser]);
 
   // Fetch Dashboard Data
   const fetchDashboardData = useCallback(async () => {
@@ -60,57 +34,22 @@ const Dashboard = ({ user, setUser, theme, setTheme }) => {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('กรุณาเข้าสู่ระบบ');
-        setLoading(false);
-        return;
-      }
-
-      const config = { 
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000
-      };
-
       const [statsResponse, projectsResponse] = await Promise.all([
-        axios.get(`${API_URL}/dashboard/overall-stats`, config),
-        axios.get(`${API_URL}/dashboard/project-stats`, config)
+        api.get('/api/dashboard/overall-stats'),
+        api.get('/api/dashboard/project-stats')
       ]);
 
       setOverallStats(statsResponse.data.overall || {});
       setProjects(projectsResponse.data.projects || []);
 
     } catch (error) {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        try {
-          const newToken = await refreshAccessToken();
-          const config = { 
-            headers: { Authorization: `Bearer ${newToken}` },
-            timeout: 15000
-          };
-
-          const [statsResponse, projectsResponse] = await Promise.all([
-            axios.get(`${API_URL}/dashboard/overall-stats`, config),
-            axios.get(`${API_URL}/dashboard/project-stats`, config)
-          ]);
-
-          setOverallStats(statsResponse.data.overall || {});
-          setProjects(projectsResponse.data.projects || []);
-        } catch (refreshError) {
-          console.error('Error after token refresh:', refreshError);
-          setError('เซสชันของคุณหมดอายุ กรุณาล็อกอินใหม่');
-        }
-      } else {
-        console.error('Error fetching dashboard data:', error);
-        const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           'ไม่สามารถโหลดข้อมูลได้';
-        setError(errorMessage);
-      }
+      console.error('Error fetching dashboard data:', error);
+      const errorMessage = error.message || 'ไม่สามารถโหลดข้อมูลได้';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [refreshAccessToken]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -323,11 +262,34 @@ const Dashboard = ({ user, setUser, theme, setTheme }) => {
     );
   }
 
+  const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
+
   return (
     <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 overflow-auto pb-12`}>
-      <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
+      <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
       
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+        {/* Tender Mode Banner */}
+        {isTenderMode && (
+          <div className="mb-8 p-6 rounded-[2.5rem] bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 shadow-xl shadow-amber-500/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+              <ThunderboltOutlined className="text-8xl text-amber-500" />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="px-3 py-1 rounded-full bg-amber-500 text-[10px] font-black text-white uppercase tracking-[0.2em]">🚧 Tender Mode Active</span>
+              </div>
+              <h2 className={`text-2xl font-black mb-2 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`}>
+                โหมดเตรียมการประมูลงาน
+              </h2>
+              <p className={`max-w-2xl font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                คุณกำลังอยู่ในการจัดการข้อมูลสำหรับการเสนอราคางาน (Tender) ในโหมดนี้คุณสามารถเตรียมเอกสารและแบบแปลนได้ล่วงหน้า 
+                และเมื่อประมูลชนะ สามารถกดย้ายเข้าสู่ระบบบริหารงานจริงได้ทันทีที่เมนูโครงการ
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header Section */}
         <div className="mb-12 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-8">
           <div>
@@ -337,10 +299,10 @@ const Dashboard = ({ user, setUser, theme, setTheme }) => {
               </div>
               <div>
                 <h1 className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-3xl sm:text-4xl font-extrabold tracking-tight`}>
-                  Dashboard
+                  Dashboard {isTenderMode ? 'ประมูลงาน' : ''}
                 </h1>
                 <p className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-lg mt-1`}>
-                  ติดตามและวิเคราะห์ความคืบหน้าโครงการแบบเรียลไทม์
+                  {isTenderMode ? 'วิเคราะห์ข้อมูลการเสนอราคาและสถิติโฟลเดอร์ประมูล' : 'ติดตามและวิเคราะห์ความคืบหน้าโครงการแบบเรียลไทม์'}
                 </p>
               </div>
             </div>

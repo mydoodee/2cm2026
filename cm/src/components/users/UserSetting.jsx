@@ -7,7 +7,7 @@ import {
 import { Switch } from 'antd';
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import api from '../../axiosConfig';
 import Navbar from '../Navbar';
 
 const { Option } = Select;
@@ -40,56 +40,14 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     const [editingRole, setEditingRole] = useState(null);
 
     // Refresh access token
-  const refreshAccessToken = async () => {
-    try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-            throw new Error('ไม่มี refresh token ใน localStorage');
-        }
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/refresh-token`, {
-            refreshToken,
-        });
-        const newToken = response.data.token;
-        localStorage.setItem('token', newToken);
-        return newToken;
-    } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        setUser(null);
-        setLoading(false);
-        Swal.fire({
-            icon: 'error',
-            title: 'เซสชันหมดอายุ',
-            text: 'กรุณาล็อกอินใหม่',
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'ตกลง',
-            timer: 3000,
-            timerProgressBar: true,
-        }).then(() => navigate('/login'));
-        throw new Error('Failed to refresh token');
-    }
-};
+
 
     // Fetch users
     const fetchUsers = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ข้อผิดพลาด',
-                    text: 'กรุณาเข้าสู่ระบบ',
-                    confirmButtonColor: '#ef4444',
-                    confirmButtonText: 'ตกลง',
-                    timer: 3000,
-                    timerProgressBar: true,
-                }).then(() => navigate('/login'));
-                setLoading(false);
-                return;
-            }
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/users`, {
-                headers: { Authorization: `Bearer ${token}` },
-                params: { includeInactive: true } // ดึงมาทั้งคู่เลยเพื่อแยก Tab
+            setLoading(true);
+            const response = await api.get('/api/users', {
+                params: { includeInactive: true }
             });
             const userData = response.data.users.map(user => ({
                 ...user,
@@ -98,101 +56,36 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             if (!Array.isArray(userData)) {
                 setUsers([]);
                 setFilteredUsers([]);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ข้อผิดพลาด',
-                    text: 'ข้อมูลผู้ใช้ไม่ถูกต้อง',
-                    confirmButtonColor: '#ef4444',
-                    confirmButtonText: 'ตกลง',
-                    timer: 3000,
-                    timerProgressBar: true,
-                });
-                setLoading(false);
                 return;
             }
             setUsers(userData);
             setFilteredUsers(userData);
-            setLoading(false);
         } catch (error) {
-            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                try {
-                    const newToken = await refreshAccessToken();
-                    const retryResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/users`, {
-                        headers: { Authorization: `Bearer ${newToken}` },
-                        params: { includeInactive: true }
-                    });
-                    const userData = retryResponse.data.users.map(user => ({
-                        ...user,
-                        user_id: Number(user.user_id),
-                    }));
-                    if (!Array.isArray(userData)) {
-                        setUsers([]);
-                        setFilteredUsers([]);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'ข้อผิดพลาด',
-                            text: 'ข้อมูลผู้ใช้ไม่ถูกต้อง',
-                            confirmButtonColor: '#ef4444',
-                            confirmButtonText: 'ตกลง',
-                            timer: 3000,
-                            timerProgressBar: true,
-                        });
-                        setLoading(false);
-                        return;
-                    }
-                    setUsers(userData);
-                    setFilteredUsers(userData);
-                    setLoading(false);
-                } catch {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'ข้อผิดพลาด',
-                        text: 'ไม่สามารถรีเฟรช token ได้ กรุณาล็อกอินใหม่',
-                        confirmButtonColor: '#ef4444',
-                        confirmButtonText: 'ตกลง',
-                        timer: 3000,
-                        timerProgressBar: true,
-                    }).then(() => navigate('/login'));
-                    setUsers([]);
-                    setFilteredUsers([]);
-                    setLoading(false);
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('refreshToken');
-                    setUser(null);
-                }
-            } else {
-                const errorMessage = error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ข้อผิดพลาด',
-                    text: errorMessage,
-                    confirmButtonColor: '#ef4444',
-                    confirmButtonText: 'ตกลง',
-                    timer: 3000,
-                    timerProgressBar: true,
-                });
-                setUsers([]);
-                setFilteredUsers([]);
-                setLoading(false);
-            }
+            console.error('fetchUsers error:', error);
+            const errorMessage = error.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้';
+            Swal.fire({
+                icon: 'error',
+                title: 'ข้อผิดพลาด',
+                text: errorMessage,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'ตกลง',
+                timer: 3000,
+                timerProgressBar: true,
+            });
+            setUsers([]);
+            setFilteredUsers([]);
+        } finally {
+            setLoading(false);
         }
-    }, [setUser, navigate]);
+    }, []);
 
     // Fetch roles and projects
     const fetchRolesAndProjects = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                return;
-            }
             
             const [rolesResponse, projectsResponse] = await Promise.all([
-                axios.get(`${import.meta.env.VITE_API_URL}/api/roles`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                }),
-                axios.get(`${import.meta.env.VITE_API_URL}/api/projects`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                }),
+                api.get('/api/roles'),
+                api.get('/api/projects'),
             ]);
             
             const rolesData = rolesResponse.data.roles || [];
@@ -263,16 +156,11 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     const handleSaveRole = async (values) => {
         setRoleLoading(true);
         try {
-            const token = localStorage.getItem('token');
             if (editingRole) {
-                await axios.put(`${import.meta.env.VITE_API_URL}/api/role/${editingRole.role_id}`, values, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.put(`/api/role/${editingRole.role_id}`, values);
                 Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'อัปเดตบทบาทเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
             } else {
-                await axios.post(`${import.meta.env.VITE_API_URL}/api/role`, values, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.post('/api/role', values);
                 Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'สร้างบทบาทใหม่เรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
             }
             roleForm.resetFields();
@@ -299,10 +187,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
 
         if (result.isConfirmed) {
             try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`${import.meta.env.VITE_API_URL}/api/role/${roleId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/api/role/${roleId}`);
                 Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'ลบบทบาทเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
                 fetchRolesAndProjects();
             } catch (error) {
@@ -402,22 +287,11 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             }
 
             setLoading(true);
-            const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error('No token found in localStorage');
-            }
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            };
-
             let response;
             if (editMode && selectedUser) {
-                response = await axios.put(
-                    `${import.meta.env.VITE_API_URL}/api/user/${selectedUser.user_id}`,
-                    formData,
-                    config
+                response = await api.put(
+                    `/api/user/${selectedUser.user_id}`,
+                    formData
                 );
                 Swal.fire({
                     icon: 'success',
@@ -432,10 +306,9 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                     },
                 });
             } else {
-                response = await axios.post(
-                    `${import.meta.env.VITE_API_URL}/api/user`,
-                    formData,
-                    config
+                response = await api.post(
+                    '/api/user',
+                    formData
                 );
                 Swal.fire({
                     icon: 'success',
@@ -493,10 +366,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         if (result.isConfirmed) {
             try {
                 setLoading(true);
-                const token = localStorage.getItem('token');
-                await axios.delete(`${import.meta.env.VITE_API_URL}/api/user/${userId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/api/user/${userId}`);
                 Swal.fire({
                     icon: 'success',
                     title: 'สำเร็จ',
@@ -550,10 +420,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         if (result.isConfirmed) {
             try {
                 setLoading(true);
-                const token = localStorage.getItem('token');
-                await axios.put(`${import.meta.env.VITE_API_URL}/api/user/restore/${userId}`, {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.put(`/api/user/restore/${userId}`, {});
                 Swal.fire({
                     icon: 'success',
                     title: 'สำเร็จ',
@@ -606,10 +473,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         if (result.isConfirmed) {
             try {
                 setLoading(true);
-                const token = localStorage.getItem('token');
-                await axios.delete(`${import.meta.env.VITE_API_URL}/api/user/permanent/${userId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/api/user/permanent/${userId}`);
                 Swal.fire({
                     icon: 'success',
                     title: 'สำเร็จ',
@@ -688,9 +552,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             formData.append('last_name', userToUpdate.last_name || '');
             formData.append('is_pm', checked);
 
-            const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/user/${userId}`, formData, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const response = await api.put(`/api/user/${userId}`, formData);
 
             if (response.data) {
                 message.success('อัปเดตสิทธิ์การจัดการโครงการเรียบร้อย');
@@ -800,14 +662,13 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             setLoading(true);
             const token = localStorage.getItem('token');
             
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/project-user-roles`,
+            const response = await api.post(
+                '/api/project-user-roles',
                 { 
                     project_id: projectId, 
                     user_id: selectedUserForRoles.user_id, 
                     role_id: roleIdNum 
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
+                }
             );
             
             Swal.fire({
@@ -911,10 +772,9 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             setLoading(true);
             const token = localStorage.getItem('token');
             
-            const response = await axios.delete(
-                `${import.meta.env.VITE_API_URL}/api/project-user-roles`,
+            const response = await api.delete(
+                '/api/project-user-roles',
                 {
-                    headers: { Authorization: `Bearer ${token}` },
                     params: {
                         project_id: projectId,
                         user_id: selectedUserForRoles.user_id
@@ -1010,13 +870,12 @@ function UserSetting({ user, setUser, theme, setTheme }) {
         try {
             setIsCopying(true);
             const token = localStorage.getItem('token');
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/users/copy-permissions`,
+            const response = await api.post(
+                '/api/users/copy-permissions',
                 {
                     sourceUserId: sourceUserId,
                     targetUserId: selectedUserForRoles.user_id
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
+                }
             );
 
             Swal.fire({

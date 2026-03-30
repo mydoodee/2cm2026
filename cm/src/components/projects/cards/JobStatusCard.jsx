@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Progress, Typography, Spin } from 'antd';
+import api from '../../../axiosConfig';
 import {
   InfoCircleOutlined, RightOutlined, LinkOutlined
 } from '@ant-design/icons';
@@ -22,13 +23,9 @@ const JobStatusCard = ({
     const fetchDetails = async () => {
       try {
         setLoadingDetails(true);
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project/${project.project_id}/job-status-details`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const result = await response.json();
-        if (result.success) {
-          setDetails(result.data || []);
+        const response = await api.get(`/api/project/${project.project_id}/job-status-details`);
+        if (response.data.success) {
+          setDetails(response.data.data || []);
         }
       } catch (error) {
         console.error('Error fetching job status details:', error);

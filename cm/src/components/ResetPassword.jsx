@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import { FiMail, FiArrowLeft } from 'react-icons/fi';
 import clsx from 'clsx';
+import api from '../axiosConfig';
 
 const ResetPassword = ({ theme }) => {
     const [email, setEmail] = useState('');
@@ -38,33 +39,13 @@ const ResetPassword = ({ theme }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/reset-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email }),
-            });
+            const response = await api.post('/api/reset-password', { email });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                console.error('API error:', {
-                    status: response.status,
-                    message: data.message,
-                    error: data.error,
-                    code: data.code,
-                    errno: data.errno,
-                });
-                throw new Error(data.message || 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน');
-            }
-
-            console.log('API success:', data);
-            setMessage(data.message || 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว');
+            console.log('API success:', response.data);
+            setMessage(response.data.message || 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว');
         } catch (err) {
-            console.error('Reset password error:', {
-                message: err.message,
-                stack: err.stack,
-            });
-            setError(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+            console.error('Reset password error:', err);
+            setError(err.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
             setIsLoading(false);
         }

@@ -22,6 +22,8 @@ const dashboardProjectRoutes = require('./routes/DashboardProjectRoutes');
 const planningRoutes = require('./routes/PlanningRoutes');
 const actualRoutes = require('./routes/actualRoutes');
 const scurveRoutes = require('./routes/scurveRoutes');
+const companyRoutes = require('./routes/companyRoutes');
+const { companyContext } = require('./middleware/companyContext');
 
 const app = express();
 const httpServer = createServer(app); // ⭐ เปลี่ยนจาก app.listen เป็น createServer
@@ -169,7 +171,7 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id'],
   credentials: true,
 }));
 
@@ -212,6 +214,10 @@ app.use('/api', progressRoutes);
 app.use('/api', planningRoutes);
 app.use('/api', actualRoutes);
 app.use('/api', scurveRoutes);
+app.use('/api', companyRoutes);
+
+// Company context middleware (optional, ดึง X-Company-Id header)
+app.use(companyContext);
 
 app.get('/api/health', (req, res) => {
   res.json({

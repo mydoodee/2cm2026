@@ -13,6 +13,7 @@ const getProjects = async (req, res) => {
 
     connection = await getConnection();
     let projects;
+    const companyId = req.headers['x-company-id'] || req.companyId;
     const [globalRoles] = await connection.execute(
       'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
       [req.user.user_id]
@@ -23,6 +24,13 @@ const getProjects = async (req, res) => {
     );
     const isAdmin = globalRoles.length > 0 || projectRoles.length > 0 || req.user.username === 'adminspk' || req.user.username === 'admin';
 
+    // สร้าง company filter - บังคับให้ต้องมี companyId เสมอ
+    if (!companyId) {
+      return res.status(400).json({ message: 'กรุณาระบุ Company ID ใน Header (X-Company-Id)' });
+    }
+    const companyFilter = 'AND p.company_id = ?';
+    const companyParam = [companyId];
+
     if (isAdmin) {
       [projects] = await connection.execute(`
         SELECT project_id, job_number, project_name, description, 
@@ -32,11 +40,12 @@ const getProjects = async (req, res) => {
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status,
+               p.company_id
         FROM projects p
-        WHERE active = 1
+        WHERE active = 1 ${companyFilter}
         ORDER BY p.job_number DESC
-      `);
+      `, companyParam);
     } else {
       [projects] = await connection.execute(`
         SELECT p.project_id, p.job_number, p.project_name, p.description, 
@@ -46,12 +55,13 @@ const getProjects = async (req, res) => {
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status,
+               p.company_id
         FROM projects p
         JOIN project_user_roles pur ON p.project_id = pur.project_id
-        WHERE pur.user_id = ? AND p.active = 1
+        WHERE pur.user_id = ? AND p.active = 1 ${companyFilter}
         ORDER BY p.job_number DESC
-      `, [req.user.user_id]);
+      `, [req.user.user_id, ...companyParam]);
     }
 
     const projectsWithMembers = await Promise.all(projects.map(async (project) => {
@@ -75,6 +85,7 @@ const getProjects = async (req, res) => {
         show_progress_summary: project.show_progress_summary !== undefined ? !!project.show_progress_summary : true,
         show_payment: project.show_payment !== undefined ? !!project.show_payment : true,
         show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
+        tender_status: project.tender_status || 'tender_in_progress',
       };
     }));
 
@@ -112,10 +123,10 @@ const getProjectById = async (req, res) => {
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status
          FROM projects p
-         WHERE project_id = ? AND active = 1`,
-        [req.params.id]
+         WHERE p.project_id = ? AND p.company_id = ? AND p.active = 1`,
+        [req.params.id, req.companyId]
       );
     } else {
       [projectRows] = await connection.execute(
@@ -126,13 +137,13 @@ const getProjectById = async (req, res) => {
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status
          FROM projects p
-         WHERE p.project_id = ? AND active = 1 AND EXISTS (
+         WHERE p.project_id = ? AND p.company_id = ? AND p.active = 1 AND EXISTS (
              SELECT 1 FROM project_user_roles pur 
              WHERE pur.project_id = p.project_id AND pur.user_id = ?
          )`,
-        [req.params.id, req.user.user_id]
+        [req.params.id, req.companyId, req.user.user_id]
       );
     }
 
@@ -173,6 +184,7 @@ const getProjectById = async (req, res) => {
       show_progress_summary: project.show_progress_summary !== undefined ? !!project.show_progress_summary : true,
       show_payment: project.show_payment !== undefined ? !!project.show_payment : true,
       show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
+      tender_status: project.tender_status || 'tender_in_progress',
     };
 
     res.json({ project: projectWithMembers });
@@ -196,8 +208,8 @@ const getProjectUsers = async (req, res) => {
     connection = await getConnection();
 
     const [projectRows] = await connection.execute(
-      'SELECT project_id FROM projects WHERE project_id = ? AND active = 1',
-      [projectId]
+      'SELECT project_id FROM projects WHERE project_id = ? AND active = 1 AND company_id = ?',
+      [projectId, req.companyId]
     );
     if (projectRows.length === 0) {
       return res.status(404).json({ message: 'ไม่พบโครงการ' });
@@ -270,10 +282,11 @@ const createProject = async (req, res) => {
 
     const {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
-      show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1, show_bidding = 1, show_progress_summary = 1, show_payment = 1, show_job_status = 1,
-      bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0, job_status_progress = 0
+      show_bidding = 1, show_progress_summary = 1, show_payment = 1, show_job_status = 1,
+      bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0, job_status_progress = 0, tender_status = 'tender_in_progress'
     } = req.body;
     const files = req.files || {};
+    const companyId = req.headers['x-company-id'] || req.companyId || req.body.company_id;
 
     if (!job_number || !project_name || !start_date || !end_date || !owner || !consusltant || !contractor || !address) {
       return res.status(400).json({
@@ -309,8 +322,9 @@ const createProject = async (req, res) => {
         owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, 
         pre_construction_image, construction_image, cm_image, precast_image, bidding_image, job_status_image,
         show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
-        bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
+        company_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         projectId,
         job_number,
@@ -350,7 +364,9 @@ const createProject = async (req, res) => {
         Number(construction_progress) || 0,
         Number(precast_progress) || 0,
         Number(cm_progress) || 0,
-        Number(job_status_progress) || 0
+        Number(job_status_progress) || 0,
+        tender_status,
+        companyId
       ]
     );
 
@@ -411,7 +427,14 @@ const createProject = async (req, res) => {
 
     res.json({ message: 'สร้างโครงการสำเร็จ', project_id: projectId, job_number });
   } catch (error) {
-    res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
+    console.error('❌ Create Project Database/File Error:', error);
+    res.status(500).json({ 
+      message: 'เกิดข้อผิดพลาดในการสร้างโครงการ (Server Error)', 
+      error: error.message,
+      detail: error.code || 'No error code',
+      sqlState: error.sqlState,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   } finally {
     if (connection) {
       await connection.release();
@@ -429,8 +452,8 @@ const updateProject = async (req, res) => {
     const project_id = req.params.id || req.body.project_id;
     const {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
-      show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
-      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress
+      show_bidding, show_progress_summary, show_payment, show_job_status,
+      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status
     } = req.body;
     const files = req.files || {};
 
@@ -440,12 +463,13 @@ const updateProject = async (req, res) => {
 
     connection = await getConnection();
 
+    // Verify company isolation
     const [projectRows] = await connection.execute(
-      `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
-      [project_id]
+      `SELECT * FROM projects WHERE project_id = ? AND active = 1 AND company_id = ?`,
+      [project_id, req.companyId]
     );
     if (projectRows.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบโครงการหรือถูกลบแล้ว' });
+      return res.status(404).json({ message: 'ไม่พบโครงการในบริษัทปัจจุบันหรือถูกลบแล้ว' });
     }
 
     const final_project_name = project_name !== undefined ? project_name : projectRows[0].project_name;
@@ -556,6 +580,7 @@ const updateProject = async (req, res) => {
     if (precast_progress !== undefined) addField('precast_progress', Number(precast_progress) || 0);
     if (cm_progress !== undefined) addField('cm_progress', Number(cm_progress) || 0);
     if (job_status_progress !== undefined) addField('job_status_progress', Number(job_status_progress) || 0);
+    if (tender_status !== undefined) addField('tender_status', tender_status);
 
     for (const key of Object.keys(imagePaths)) {
       addField(key, imagePaths[key]);
@@ -602,8 +627,8 @@ const uploadProjectImage = async (req, res) => {
 
     connection = await getConnection();
     const [projectRows] = await connection.execute(
-      `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
-      [project_id]
+      `SELECT * FROM projects WHERE project_id = ? AND active = 1 AND company_id = ?`,
+      [project_id, req.companyId]
     );
     if (projectRows.length === 0) {
       return res.status(404).json({ message: 'ไม่พบโครงการหรือถูกลบแล้ว' });
@@ -671,8 +696,8 @@ const deleteProject = async (req, res) => {
     const isAdmin = userRoles.length > 0;
 
     const [projectRows] = await connection.execute(
-      `SELECT * FROM projects WHERE project_id = ? AND active = 1`,
-      [id]
+      `SELECT * FROM projects WHERE project_id = ? AND active = 1 AND company_id = ?`,
+      [id, req.companyId]
     );
     if (projectRows.length === 0) {
       return res.status(404).json({ message: 'ไม่พบโครงการหรือถูกลบแล้ว' });
@@ -806,6 +831,100 @@ const deleteRole = async (req, res) => {
   }
 };
 
+/**
+ * ย้ายโปรเจ็กต์จาก Tender เป็นงานจริง (Win Tender)
+ * 1. อัปเดต company_id และ job_number
+ * 2. ย้ายโฟลเดอร์ Root เดิมไปที่ [00] Bidding Documents
+ * 3. สร้างโครงสร้างโฟลเดอร์มาตรฐานใหม่
+ */
+const moveProject = async (req, res) => {
+  const { id } = req.params;
+  const { new_company_id, new_job_number } = req.body;
+  let connection;
+
+  try {
+    if (!new_company_id || !new_job_number) {
+      return res.status(400).json({ message: 'กรุณาระบุบริษัทปลายทางและรหัส Job Number ใหม่' });
+    }
+
+    connection = await getConnection();
+    await connection.beginTransaction();
+
+    // 1. ตรวจสอบว่าโปรเจ็กต์มีจริงไหม
+    const [projectRows] = await connection.execute(
+      'SELECT project_id, project_name FROM projects WHERE project_id = ? AND active = 1',
+      [id]
+    );
+
+    if (projectRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'ไม่พบโครงการ' });
+    }
+
+    // 2. อัปเดตข้อมูลโครงการ
+    await connection.execute(
+      'UPDATE projects SET company_id = ?, job_number = ?, updated_at = NOW() WHERE project_id = ?',
+      [new_company_id, new_job_number, id]
+    );
+
+    // 3. จัดการโครงสร้างโฟลเดอร์
+    // 3.1 ค้นหา Root Folders เดิม (ที่ parent_folder_id เป็น NULL หรือ 0)
+    const [rootFolders] = await connection.execute(
+      'SELECT folder_id FROM folders WHERE project_id = ? AND (parent_folder_id IS NULL OR parent_folder_id = 0 OR parent_folder_id = "0") AND active = 1',
+      [id]
+    );
+
+    let biddingFolderId = null;
+    if (rootFolders.length > 0) {
+      // 3.2 สร้างโฟลเดอร์รวมงานประมูล [00] Bidding Documents
+      biddingFolderId = uuidv4();
+      await connection.execute(
+        'INSERT INTO folders (folder_id, folder_name, parent_folder_id, project_id, created_at, updated_at) VALUES (?, ?, NULL, ?, NOW(), NOW())',
+        [biddingFolderId, '[00] Bidding Documents', id]
+      );
+
+      // 3.3 ย้าย Root Folders ทั้งหมดเข้าไปอยู่ใต้โฟลเดอร์ประมูล
+      for (const folder of rootFolders) {
+        await connection.execute(
+          'UPDATE folders SET parent_folder_id = ? WHERE folder_id = ?',
+          [biddingFolderId, folder.folder_id]
+        );
+      }
+    }
+
+    // 4. สร้างโครงสร้างโฟลเดอร์ทำงานจริงมาตรฐาน (Template)
+    const standardFolders = [
+      'P-100 Payment / งวดงาน',
+      'P-200 Drawing / แบบก่อสร้าง',
+      'P-300 Schedule / แผนงาน',
+      'P-400 Progress / ความคืบหน้า',
+      'P-500 Variation / งานเพิ่ม-ลด',
+      'P-600 Material / วัสดุอุปกรณ์',
+      'P-700 Manpower / แรงงาน',
+      'P-800 Site Photos / รูปภาพหน้างาน',
+      'P-900 Safety / ความปลอดภัย'
+    ];
+
+    for (const folderName of standardFolders) {
+      const folderId = uuidv4();
+      await connection.execute(
+        'INSERT INTO folders (folder_id, folder_name, parent_folder_id, project_id, created_at, updated_at) VALUES (?, ?, NULL, ?, NOW(), NOW())',
+        [folderId, folderName, id]
+      );
+    }
+
+    await connection.commit();
+    res.json({ message: 'ย้ายโครงการและเตรียมโครงสร้างโฟลเดอร์ใหม่เรียบร้อยแล้ว', project_id: id });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('❌ Move Project Error:', error);
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการย้ายโครงการ', error: error.message });
+  } finally {
+    if (connection) await connection.release();
+  }
+};
+
 module.exports = {
   getProjects,
   getProjectById,
@@ -818,4 +937,5 @@ module.exports = {
   createRole,
   updateRole,
   deleteRole,
+  moveProject,
 };

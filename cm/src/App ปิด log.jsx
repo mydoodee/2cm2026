@@ -29,7 +29,7 @@ import Unauthorized from './components/Unauthorized';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './axiosConfig';
 import 'antd/dist/reset.css';
 
 // ========================================
@@ -118,36 +118,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // ========================================
-  // Refresh Token
-  // ========================================
-  const refreshAccessToken = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) throw new Error('ไม่มี refresh token');
 
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/refresh-token`, { refreshToken });
-      const newToken = response.data.token;
-      localStorage.setItem('token', newToken);
-      return newToken;
-    } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      setLoading(false);
-      Swal.fire({
-        icon: 'error',
-        title: 'เซสชันหมดอายุ',
-        text: 'กรุณาล็อกอินใหม่',
-        confirmButtonColor: '#4f46e5',
-        confirmButtonText: 'ตกลง',
-        timer: 3000,
-        timerProgressBar: true,
-      });
-      navigate('/login', { replace: true });
-      return Promise.reject();
-    }
-  };
 
   // ========================================
   // Fetch User on Mount
@@ -161,44 +132,16 @@ function App() {
       }
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get('/api/user');
         setUser({
           ...response.data.user,
           user_id: Number(response.data.user.user_id),
         });
         setLoading(false);
       } catch (error) {
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          try {
-            const newToken = await refreshAccessToken();
-            const retryResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/user`, {
-              headers: { Authorization: `Bearer ${newToken}` },
-            });
-            setUser({
-              ...retryResponse.data.user,
-              user_id: Number(retryResponse.data.user.user_id),
-            });
-            setLoading(false);
-          } catch {
-            setUser(null);
-            setLoading(false);
-            navigate('/login', { replace: true });
-          }
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'เกิดข้อผิดพลาด',
-            text: error.response?.data?.message || 'ไม่สามารถดึงข้อมูลผู้ใช้ได้',
-            confirmButtonColor: '#4f46e5',
-            confirmButtonText: 'ตกลง',
-            timer: 3000,
-            timerProgressBar: true,
-          });
-          setUser(null);
-          setLoading(false);
-        }
+        console.error('Fetch user error:', error);
+        setUser(null);
+        setLoading(false);
       }
     };
 

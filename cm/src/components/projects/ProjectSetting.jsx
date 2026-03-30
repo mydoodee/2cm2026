@@ -4,7 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, ArrowLeftOu
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Navbar from '../Navbar';
-import axios from 'axios';
+import api from '../../axiosConfig';
 import Swal from 'sweetalert2';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
@@ -43,94 +43,35 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
     navigate('/settings');
   };
 
-  const refreshAccessToken = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        throw new Error('ไม่พบ refresh token');
-      }
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/refresh-token`, {
-        refreshToken,
-      });
-      const newToken = response.data.token;
-      localStorage.setItem('token', newToken);
-      return newToken;
-    } catch (error) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      throw error;
-    }
-  };
+
 
   const fetchProjects = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        message.error('กรุณาเข้าสู่ระบบ');
-        setLoading(false);
-        navigate('/login');
-        return;
-      }
-
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/projects`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      setLoading(true);
+      const response = await api.get('/api/projects');
 
       const projectData = response.data.projects;
       if (!Array.isArray(projectData)) {
         setProjects([]);
         setFilteredProjects([]);
         setYearStats({});
-        setLoading(false);
         return;
       }
 
       setProjects(projectData);
       setFilteredProjects(projectData);
       setYearStats(calculateYearStats(projectData));
-      setLoading(false);
     } catch (error) {
       console.error('ข้อผิดพลาดใน fetchProjects:', error);
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        try {
-          const newToken = await refreshAccessToken();
-          const retryResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/projects`, {
-            headers: { Authorization: `Bearer ${newToken}` },
-          });
-          const projectData = retryResponse.data.projects;
-          if (!Array.isArray(projectData)) {
-            setProjects([]);
-            setFilteredProjects([]);
-            setYearStats({});
-            setLoading(false);
-            return;
-          }
-          setProjects(projectData);
-          setFilteredProjects(projectData);
-          setYearStats(calculateYearStats(projectData));
-          setLoading(false);
-        } catch {
-          message.error('ไม่สามารถรีเฟรช token ได้ กรุณาเข้าสู่ระบบใหม่');
-          setProjects([]);
-          setFilteredProjects([]);
-          setYearStats({});
-          setLoading(false);
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          setUser(null);
-          navigate('/login');
-        }
-      } else {
-        const errorMessage = error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลโครงการได้';
-        message.error(errorMessage);
-        setProjects([]);
-        setFilteredProjects([]);
-        setYearStats({});
-        setLoading(false);
-      }
+      const errorMessage = error.message || 'ไม่สามารถโหลดข้อมูลโครงการได้';
+      message.error(errorMessage);
+      setProjects([]);
+      setFilteredProjects([]);
+      setYearStats({});
+    } finally {
+      setLoading(false);
     }
-  }, [setUser, navigate, message]);
+  }, [message]);
 
   const calculateYearStats = (projects) => {
     return projects.reduce((acc, project) => {
@@ -339,10 +280,9 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
 
       let response;
       if (editingProject) {
-        response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/project/${editingProject.project_id}`,
-          formData,
-          { headers: { Authorization: `Bearer ${token}` } } // Omit Content-Type: multipart/form-data
+        response = await api.put(
+          `/api/project/${editingProject.project_id}`,
+          formData
         );
         Swal.fire({
           icon: 'success',
@@ -352,9 +292,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
           confirmButtonText: 'ตกลง',
         });
       } else {
-        response = await axios.post(`${import.meta.env.VITE_API_URL}/api/project`, formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        response = await api.post('/api/project', formData);
         Swal.fire({
           icon: 'success',
           title: 'สำเร็จ',
@@ -436,10 +374,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
     if (result.isConfirmed) {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        await axios.delete(`${import.meta.env.VITE_API_URL}/api/project/${projectId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.delete(`/api/project/${projectId}`);
         Swal.fire({
           icon: 'success',
           title: 'สำเร็จ',

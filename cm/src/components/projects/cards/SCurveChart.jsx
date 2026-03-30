@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import api from '../../../axiosConfig';
 import { Card, Spin, Empty, Row, Col, message, List, Collapse, Modal, Tag, Image, Divider, Space, Timeline, Button } from 'antd';
 import { BarChartOutlined, DownOutlined, RightOutlined, HistoryOutlined, UserOutlined, MessageOutlined, CameraOutlined, LinkOutlined, CalendarOutlined } from '@ant-design/icons';
 import { Line } from 'react-chartjs-2';
@@ -121,36 +122,16 @@ const SCurveChart = ({ projectId, onActualProgressChange }) => {
 
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
 
         // 1. Fetch project info
-        const projectResponse = await fetch(`${API_URL}/api/project/${projectId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (projectResponse.ok) {
-          const projectData = await projectResponse.json();
-          // ✅ API returns { project: {...}, success: true } — extract the project object
-          setProjectInfo(projectData.project || projectData);
-        }
+        const projectResponse = await api.get(`/api/project/${projectId}`);
+        // ✅ API returns { project: {...}, success: true } — extract the project object
+        setProjectInfo(projectResponse.data.project || projectResponse.data);
 
         // 2. Fetch all S-Curve chart data (including roots, categories, types, and history)
-        const response = await fetch(`${API_URL}/api/project/${projectId}/scurve/chart-data`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await api.get(`/api/project/${projectId}/scurve/chart-data`);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
+        const result = response.data;
         const roots = result.data || [];
         const history = result.history || [];
 

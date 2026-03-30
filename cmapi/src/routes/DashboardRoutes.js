@@ -4,7 +4,10 @@ const router = express.Router();
 const DashboardController = require('../controllers/DashboardController');
 const { sendEmailNotification } = require('../controllers/sendemail_noti');
 const authenticateToken = require('../middleware/authenticateToken');
+const { requireCompany } = require('../middleware/companyContext');
 const upload = require('../middleware/multerConfig');
+
+router.use(requireCompany);
 
 // ===================================
 // Project Details
