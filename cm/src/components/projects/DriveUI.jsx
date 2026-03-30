@@ -777,9 +777,12 @@ const DriveUI = ({
         footer={[
           <Button key="cancel" onClick={onUploadClose}>ยกเลิก</Button>,
           <Button
-            key="submit" type="primary" loading={uploading}
+            key="submit" 
+            type="primary" 
+            loading={uploading}
             onClick={() => onUploadSubmit(folderToUpload)}
             disabled={folderToUpload.length === 0}
+            className={`font-kanit ${folderToUpload.length === 0 ? '!bg-gray-200 !text-gray-400 !border-gray-200' : '!bg-[#1a73e8] hover:!bg-[#1557b0] !border-transparent !text-white'}`}
           >
             อัพโหลด ({folderToUpload.length} ไฟล์)
           </Button>
@@ -871,7 +874,7 @@ const DriveUI = ({
           <Form layout="vertical" style={{ marginTop: 16, fontFamily: 'Kanit, sans-serif' }}>
             <Form.Item label={<span style={{ fontFamily: 'Kanit' }}>ส่งการแจ้งเตือนไปยัง</span>}>
               <div style={{ marginBottom: 8, display: 'flex', gap: 8 }}>
-                <Button type="primary" size="small" style={{ fontFamily: 'Kanit' }}
+                <Button type="primary" size="small" style={{ fontFamily: 'Kanit' }} className="!bg-[#1a73e8] hover:!bg-[#1557b0] !border-transparent !text-white"
                   onClick={() => onSetSelectedUsers(users.map(u => u.username))}>เลือกทั้งหมด</Button>
                 <Button size="small" style={{ fontFamily: 'Kanit' }}
                   onClick={() => onSetSelectedUsers([])}>ยกเลิกทั้งหมด</Button>

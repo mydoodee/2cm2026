@@ -43,12 +43,12 @@ const JobStatusCard = ({
   }, [project.project_id]);
 
   return (
-    <Card 
+    <Card
       className="bg-white shadow-md rounded-lg relative overflow-hidden h-fit min-h-[360px]"
-      style={{ 
+      style={{
         borderRadius: '12px',
-        backgroundImage: project.job_status_image && !imageErrors.job_status 
-          ? `url(${project.job_status_image})` 
+        backgroundImage: project.job_status_image && !imageErrors.job_status
+          ? `url(${project.job_status_image})`
           : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -57,8 +57,8 @@ const JobStatusCard = ({
       bodyStyle={{ padding: '16px' }}
     >
       {/* Overlay for readability */}
-      <div className="absolute inset-0 bg-white/90 z-0" style={{ backdropFilter: 'blur(3px)' }} />
-      
+      <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-white/50 z-0" style={{ backdropFilter: 'blur(2px)' }} />
+
       <div className="relative z-10 flex flex-col h-full">
         {project.job_status_image && !imageErrors.job_status && (
           <img
@@ -91,17 +91,23 @@ const JobStatusCard = ({
             </div>
           ) : details.length > 0 ? (
             <div className="space-y-0.5">
-              {/* Ultra-compact Header */}
-              <div className="flex items-center px-4 py-1 text-[8px] font-black text-teal-600/50 uppercase tracking-[0.2em]">
-                <div className="w-5/12">CATEGORIES</div>
+              {/* Beautiful Header */}
+              <div className="flex items-center px-4 py-2 mb-1">
+                <div className="w-5/12">
+                  <span className="text-[10px] font-extrabold text-slate-400 tracking-[0.15em] uppercase">Categories</span>
+                </div>
                 <div className="w-7/12 grid grid-cols-4 gap-4 text-center">
-                  <span>S1</span><span>S2</span><span>S3</span><span>S4</span>
+                  <div className="flex justify-center md:justify-start"><span className="text-[9px] font-black tracking-wider text-[#2196f3] bg-[#2196f3]/10 px-3 py-1 rounded-full border border-[#2196f3]/20">S1</span></div>
+                  <div className="flex justify-center md:justify-start"><span className="text-[9px] font-black tracking-wider text-[#4caf50] bg-[#4caf50]/10 px-3 py-1 rounded-full border border-[#4caf50]/20">S2</span></div>
+                  <div className="flex justify-center md:justify-start"><span className="text-[9px] font-black tracking-wider text-[#ff9800] bg-[#ff9800]/10 px-3 py-1 rounded-full border border-[#ff9800]/20">S3</span></div>
+                  <div className="flex justify-center md:justify-start"><span className="text-[9px] font-black tracking-wider text-[#9c27b0] bg-[#9c27b0]/10 px-3 py-1 rounded-full border border-[#9c27b0]/20">S4</span></div>
                 </div>
               </div>
+              <div className="h-[1px] bg-gradient-to-r from-slate-200/0 via-slate-200 to-slate-200/0 mx-4 mb-1"></div>
 
-            {details.map((row, idx) => (
-                <div 
-                  key={idx} 
+              {details.map((row, idx) => (
+                <div
+                  key={idx}
                   className="flex items-center px-4 py-3 hover:bg-teal-50/30 rounded-xl transition-all duration-300 group"
                 >
                   {/* Category Name */}
@@ -110,12 +116,12 @@ const JobStatusCard = ({
                       {row.category_name || '-'}
                     </Text>
                   </div>
-                  
+
                   {/* Systems Progress - Separate Colors for each system */}
                   <div className="w-7/12 grid grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map(num => {
                       const val = Number(row[`system_${num}`]) || 0;
-                      
+
                       // Assign a unique color for each system to "separate colors"
                       const systemColors = {
                         1: '#2196f3', // Blue
@@ -123,16 +129,16 @@ const JobStatusCard = ({
                         3: '#ff9800', // Orange
                         4: '#9c27b0'  // Purple
                       };
-                      
+
                       const color = val > 0 ? systemColors[num] : '#f0f0f0';
-                      
+
                       const link = row[`system_${num}_link`];
-                      
+
                       return (
-                        <div key={num} className="flex items-center space-x-1.5 min-w-0">
-                          <div className="flex-1 flex items-center space-x-1.5 min-w-0">
-                            <Progress 
-                              percent={val} 
+                        <div key={num} className="flex items-center space-x-1.5 w-full min-w-0">
+                          <div className="flex-1 hidden md:flex items-center min-w-0">
+                            <Progress
+                              percent={val}
                               strokeWidth={8}
                               showInfo={false}
                               strokeColor={color}
@@ -140,23 +146,29 @@ const JobStatusCard = ({
                               className="flex-1 m-0"
                               strokeLinecap="round"
                             />
-                            {link && (
-                              <a 
-                                href={link.startsWith('http') ? link : `https://${link}`} 
-                                target="_blank" 
+                          </div>
+                          <div className="flex-shrink-0 flex items-center justify-center w-full md:w-auto">
+                            {link ? (
+                              <a
+                                href={link.startsWith('http') ? link : `https://${link}`}
+                                target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex-shrink-0 hover:scale-110 transition-transform"
+                                className="text-[10px] font-bold tabular-nums transition-transform hover:scale-110 cursor-pointer underline decoration-1 underline-offset-[2px]"
+                                style={{ color: val > 0 ? systemColors[num] : '#cbd5e1' }}
                                 onClick={(e) => e.stopPropagation()}
+                                title="เปิดลิงก์โฟลเดอร์"
                               >
-                                <LinkOutlined 
-                                  style={{ color: systemColors[num], fontSize: '10px' }} 
-                                />
+                                {Math.round(val)}%
                               </a>
+                            ) : (
+                              <span
+                                className="text-[10px] font-bold tabular-nums transition-colors"
+                                style={{ color: val > 0 ? systemColors[num] : '#cbd5e1' }}
+                              >
+                                {Math.round(val)}%
+                              </span>
                             )}
                           </div>
-                          <span className={`text-[10px] font-bold tabular-nums min-w-[42px] transition-colors`} style={{ color: val > 0 ? systemColors[num] : '#cbd5e1' }}>
-                            {val.toFixed(2)}%
-                          </span>
                         </div>
                       );
                     })}
@@ -166,29 +178,29 @@ const JobStatusCard = ({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12">
-               <div className="relative mb-6">
-                 <Progress
-                    type="circle"
-                    percent={progressValue}
-                    width={140}
-                    strokeColor={{ '0%': '#13c2c2', '100%': '#52c41a' }}
-                    strokeWidth={10}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center -z-10 bg-teal-50/30 rounded-full blur-xl scale-125" />
-               </div>
-               <div className="text-center">
-                 <Text className="text-gray-400 text-sm italic font-kanit">
-                   กรุณาเพิ่มรายละเอียดสถานะงานที่ปุ่ม
-                 </Text>
-                 <br />
-                 <Text strong className="text-teal-600 font-kanit">"สถานะงาน"</Text>
-                 <Text className="text-gray-400 text-sm italic font-kanit"> ด้านบนครับ</Text>
-               </div>
+              <div className="relative mb-6">
+                <Progress
+                  type="circle"
+                  percent={progressValue}
+                  width={140}
+                  strokeColor={{ '0%': '#13c2c2', '100%': '#52c41a' }}
+                  strokeWidth={10}
+                />
+                <div className="absolute inset-0 flex items-center justify-center -z-10 bg-teal-50/30 rounded-full blur-xl scale-125" />
+              </div>
+              <div className="text-center">
+                <Text className="text-gray-400 text-sm italic font-kanit">
+                  กรุณาเพิ่มรายละเอียดสถานะงานที่ปุ่ม
+                </Text>
+                <br />
+                <Text strong className="text-teal-600 font-kanit">"สถานะงาน"</Text>
+                <Text className="text-gray-400 text-sm italic font-kanit"> ด้านบนครับ</Text>
+              </div>
             </div>
           )}
         </div>
       </div>
-      
+
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 2px;

@@ -128,6 +128,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                     <InputNumber
                         min={0}
                         max={100}
+                        precision={0}
                         value={text}
                         onChange={(val) => handleInputChange(val, record.key, 'system_1')}
                         className="flex-1"
@@ -170,6 +171,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                     <InputNumber
                         min={0}
                         max={100}
+                        precision={0}
                         value={text}
                         onChange={(val) => handleInputChange(val, record.key, 'system_2')}
                         className="flex-1"
@@ -212,6 +214,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                     <InputNumber
                         min={0}
                         max={100}
+                        precision={0}
                         value={text}
                         onChange={(val) => handleInputChange(val, record.key, 'system_3')}
                         className="flex-1"
@@ -254,6 +257,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                     <InputNumber
                         min={0}
                         max={100}
+                        precision={0}
                         value={text}
                         onChange={(val) => handleInputChange(val, record.key, 'system_4')}
                         className="flex-1"
@@ -333,20 +337,18 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                         </Space>
                         <Space>
                             <Button 
-                                type="primary" 
                                 ghost
                                 icon={<PlusOutlined />} 
                                 onClick={handleAddRow}
-                                className="border-white text-white hover:bg-white/10"
+                                className="!border-white !text-white hover:!text-white hover:!bg-white/20"
                             >
                                 เพิ่มรายการ
                             </Button>
                             <Button 
-                                type="primary" 
                                 icon={<SaveOutlined />} 
                                 loading={saving} 
                                 onClick={handleSave}
-                                className="bg-white text-teal-600 border-white hover:bg-teal-50"
+                                className="!bg-white !text-teal-600 !border-white hover:!bg-teal-50 hover:!text-teal-700"
                             >
                                 บันทึกข้อมูล
                             </Button>

@@ -1,4 +1,4 @@
-﻿// src/components/projects/Bidding.jsx
+// src/components/projects/Bidding.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Typography, message, Modal, Space, Breadcrumb } from 'antd';
@@ -520,11 +520,17 @@ const Bidding = ({ user, setUser, theme, setTheme }) => {
             <div className="absolute inset-0 bg-black bg-opacity-40" />
             <div className="relative z-10 p-4 md:p-6">
               <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                <Breadcrumb items={[{ title: 'Folder' }, { title: 'Bidding' }]} />
-                <Title level={2} className={`text-shadow-lg ${theme === 'dark' ? 'text-white' : 'text-white'}`}>
+                <Breadcrumb 
+                  items={[
+                    { title: <span className="!text-white/80">Folder</span> }, 
+                    { title: <span className="!text-white font-bold">Bidding</span> }
+                  ]} 
+                  separator={<span className="!text-white/60">/</span>}
+                />
+                <Title level={2} className="!text-white drop-shadow-md !mb-0">
                   Phase: Bidding
                 </Title>
-                <Text className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-200'}`}>
+                <Text className="!text-gray-200">
                   จัดการไฟล์ bidding และเอกสารโครงการ
                 </Text>
                 <Button type="primary" icon={<LeftOutlined />} onClick={() => navigate(`/project/${id}`)}

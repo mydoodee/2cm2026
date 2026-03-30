@@ -59,7 +59,7 @@ const ProjectDetail = ({ user, setUser }) => {
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) {
-      return '/images/fallback.jpg';
+      return null;
     }
     const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'https://app.spkconstruction.co.th/cm-api';
     const path = imagePath.startsWith('Uploads/') ? imagePath : `Uploads/${imagePath}`;
