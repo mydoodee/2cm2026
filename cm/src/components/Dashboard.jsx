@@ -81,10 +81,10 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
 
   const StatCard = ({ title, value, subtitle, color, IconComponent }) => {
     return (
-      <div className={`group relative rounded-[2rem] p-6 transition-all duration-300 border-0 ${
+      <div className={`group relative rounded-lg p-6 transition-all duration-300 border ${
         theme === 'dark' 
-          ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' 
-          : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          ? 'bg-[#141414] border-slate-800 shadow-sm' 
+          : 'bg-white border-slate-100 shadow-sm'
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -119,10 +119,10 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
     const pendingInstallments = project.scurve_data?.filter(d => d.payment_status === 'pending').length || 0;
 
     return (
-      <div className={`group relative rounded-[2.5rem] p-7 transition-all duration-500 border-0 ${
+      <div className={`group relative rounded-lg p-7 transition-all duration-300 border ${
         theme === 'dark' 
-          ? 'bg-slate-800/40 hover:bg-slate-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' 
-          : 'bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          ? 'bg-[#141414] border-slate-800 shadow-sm' 
+          : 'bg-white border-slate-100 shadow-sm'
       } cursor-pointer`}
       onClick={() => (window.location.href = `/cm/projects/${project.project_id}`)}>
         <div className="flex items-start justify-between mb-6">
@@ -238,8 +238,8 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
       <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'}`}>
         <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-          <div className={`max-w-md w-full rounded-[2.5rem] p-10 transition-all duration-300 ${
-            theme === 'dark' ? 'bg-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
+          <div className={`max-w-md w-full rounded-lg p-10 transition-all duration-300 border ${
+            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
           }`}>
             <h3 className={`text-2xl font-black mb-4 flex items-center gap-3 ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>
               <WarningOutlined /> เกิดข้อผิดพลาด
@@ -265,7 +265,7 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
   const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
 
   return (
-    <div className={`min-h-screen w-full font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 overflow-auto pb-12`}>
+    <div className={`page-wrapper w-full font-kanit transition-all duration-300 overflow-auto pb-12`}>
       <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
       
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
@@ -386,8 +386,8 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
         {/* Content Section: Charts */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
           {/* Main Chart Card */}
-          <div className={`rounded-[2.5rem] p-8 transition-all duration-300 ${
-            theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          <div className={`rounded-lg p-6 transition-all duration-300 border ${
+            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
           }`}>
             <div className="flex items-center justify-between mb-8">
               <h2 className={`text-xl font-bold flex items-center gap-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
@@ -436,8 +436,8 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
           </div>
 
           {/* S-Curve/Secondary Chart */}
-          <div className={`rounded-[2.5rem] p-8 transition-all duration-300 ${
-            theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_30px_rgba(0,0,0,0.03)]'
+          <div className={`rounded-lg p-6 transition-all duration-300 border ${
+            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
           }`}>
              {selectedProject !== 'all' && yearFilteredProjects[0]?.scurve_data?.length > 0 ? (
                <>
@@ -513,8 +513,8 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
           </div>
           
           {yearFilteredProjects.length === 0 && (
-            <div className={`p-20 rounded-[3rem] text-center border-2 border-dashed ${
-              theme === 'dark' ? 'bg-slate-800/20 border-slate-800 text-slate-700' : 'bg-slate-50/50 border-slate-200 text-slate-300'
+            <div className={`p-20 rounded-lg text-center border-2 border-dashed ${
+              theme === 'dark' ? 'bg-[#141414] border-slate-800 text-slate-700' : 'bg-slate-50/50 border-slate-100 text-slate-400'
             }`}>
               <BarChartOutlined className="text-8xl mb-6 opacity-20" />
               <h3 className="text-xl font-bold uppercase tracking-widest opacity-40">ไม่พบโครงการที่ตรงตามเงื่อนไข</h3>

@@ -11,38 +11,27 @@
     font-family: 'Kanit', Arial, sans-serif !important;
   }
 
-  /* Override Ant Design components */
-  .ant-layout-sider,
-  .ant-menu,
-  .ant-menu-item,
-  .ant-menu-title-content,
-  .ant-btn,
-  .ant-btn > span,
-  .ant-avatar,
-  .ant-dropdown-trigger,
-  .ant-dropdown-menu,
-  .ant-dropdown-menu-item,
-  .ant-dropdown-menu-item > span,
-  .ant-form-item-label > label,
-  .ant-descriptions-item-label,
-  .ant-descriptions-item-content,
-  .ant-table,
-  .ant-table-cell,
-  .ant-table-thead > tr > th,
-  .ant-table-tbody > tr > td {
-    font-family: 'Kanit', Arial, sans-serif !important;
+  /* Global Font Override (Protects Ant Design Icons) */
+  *:not([class*="anticon"]) {
+    font-family: 'Kanit', sans-serif !important;
   }
 
-  /* Dark theme table styles */
+  /* Light theme table styles (Backgrounds) */
+  .ant-table-thead > tr > th {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    font-weight: 600 !important;
+  }
+
+  /* Dark theme table styles (Backgrounds) */
   .ant-table-dark .ant-table-thead > tr > th,
   .ant-table-dark .ant-table-tbody > tr > td {
-    font-family: 'Kanit', Arial, sans-serif !important;
-    background: #4b5e6a;
-    color: white;
+    background: #1e293b !important;
+    color: white !important;
   }
 
   .ant-table-dark .ant-table-tbody > tr:hover > td {
-    background: #5a6e7a;
+    background: #334155 !important;
   }
 
   /* Modal styles */
@@ -82,4 +71,58 @@
     border-color: var(--primary-hover) !important;
     color: #ffffff !important;
   }
+/* Global Ant Design Dropdown Fix */
+.ant-select-dropdown {
+  z-index: 10001 !important;
+}
+
+.ant-select-item-option-content {
+  color: #1e293b !important;
+}
+
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+.ant-select-item-option-selected .ant-select-item-option-content {
+  color: #6366f1 !important;
+  font-weight: 600 !important;
+}
+
+.ant-select-item-option-active {
+  background-color: #f1f5f9 !important;
+}
+
+/* Dark Mode Overrides */
+.dark .ant-select-dropdown {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+
+.dark .ant-select-item-option-content {
+  color: #cbd5e1 !important;
+}
+
+.dark .ant-select-item-option-active {
+  background-color: #334155 !important;
+}
+
+/* Global Button Hover Fix */
+.ant-btn {
+  transition: all 0.3s ease !important;
+}
+
+/* Ensure text color is visible on hover for buttons with custom backgrounds */
+.ant-btn-primary:hover {
+  opacity: 0.9 !important;
+  color: white !important;
+}
+
+.ant-btn-default:hover {
+  color: #1e293b !important;
+}
+
+.dark .ant-btn-default:hover {
+  color: white !important;
+}
 }

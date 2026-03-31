@@ -417,6 +417,50 @@ const getAvailableUsers = async (req, res) => {
     }
 };
 
+/**
+ * ลบบริษัท (Admin/Owner เท่านั้น)
+ */
+const deleteCompany = async (req, res) => {
+    let connection;
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+        }
+
+        const { id } = req.params;
+        connection = await getConnection();
+
+        // ตรวจสอบสิทธิ์
+        const [companyUser] = await connection.execute(
+            'SELECT role FROM company_users WHERE company_id = ? AND user_id = ? AND active = 1',
+            [id, req.user.user_id]
+        );
+        const [globalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
+            [req.user.user_id]
+        );
+        const isSuperAdmin = globalRoles.length > 0 || req.user.username === 'admin' || req.user.username === 'adminspk';
+        const isCompanyOwner = companyUser.length > 0 && companyUser[0].role === 'owner';
+
+        if (!isSuperAdmin && !isCompanyOwner) {
+            return res.status(403).json({ message: 'จำกัดเฉพาะเจ้าของบริษัทหรือผู้ดูแลระบบ' });
+        }
+
+        // Logical Delete
+        await connection.execute(
+            'UPDATE companies SET active = 0, updated_at = NOW() WHERE company_id = ?',
+            [id]
+        );
+
+        res.json({ message: 'ลบบริษัทสำเร็จ' });
+    } catch (error) {
+        console.error('Error in deleteCompany:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
+    } finally {
+        if (connection) await connection.release();
+    }
+};
+
 module.exports = {
     getUserCompanies,
     getCompanyById,
@@ -424,5 +468,6 @@ module.exports = {
     updateCompany,
     addUserToCompany,
     removeUserFromCompany,
-    getAvailableUsers
+    getAvailableUsers,
+    deleteCompany
 };

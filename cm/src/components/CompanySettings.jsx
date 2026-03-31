@@ -118,6 +118,16 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
         }
     };
 
+    const handleDeleteCompany = async (companyId) => {
+        try {
+            await api.delete(`/api/companies/${companyId}`);
+            message.success('ลบบริษัทเรียบร้อยแล้ว');
+            fetchCompanies();
+        } catch (error) {
+            message.error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบบริษัท');
+        }
+    };
+
     // Handle Members
     const handleManageMembers = async (companyId) => {
         setSelectedCompanyId(companyId);
@@ -163,7 +173,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
             fetchMembers(selectedCompanyId);
             fetchCompanies(); // update member count
         } catch (error) {
-            message.error(error.response?.data?.message || 'ไม่สามารถลบเจ้าของบริษัทได้');
+            message.error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบสมาชิก');
         }
     };
 
@@ -236,6 +246,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         type="default" 
                         icon={<TeamOutlined />} 
                         onClick={() => handleManageMembers(record.company_id)}
+                        className="hover:!text-indigo-600 hover:!border-indigo-600 border-slate-200"
                     >
                         สมาชิก
                     </Button>
@@ -243,8 +254,19 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         type="primary" 
                         icon={<EditOutlined />} 
                         onClick={() => handleEditCompany(record)}
-                        className="bg-amber-500 hover:bg-amber-600 border-0"
+                        className="bg-indigo-600 hover:!bg-indigo-500 border-0 !text-white"
                     />
+                    <Popconfirm
+                        title="ยืนยันการลบบริษัท?"
+                        description={<div className="max-w-[250px]">คุณต้องการลบบริษัท <b>{record.company_name}</b> ใช่หรือไม่? ข้อมูลโครงการทั้งหมดในบริษัทจะถูกซ่อน</div>}
+                        onConfirm={() => handleDeleteCompany(record.company_id)}
+                        okText="ลบเลย"
+                        cancelText="ยกเลิก"
+                        okButtonProps={{ danger: true, size: 'small' }}
+                        cancelButtonProps={{ size: 'small' }}
+                    >
+                        <Button type="primary" danger icon={<DeleteOutlined />} className="hover:!bg-red-500" />
+                    </Popconfirm>
                 </Space>
             )
         }
@@ -283,9 +305,10 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                     onConfirm={() => handleRemoveMember(record.user_id)}
                     okText="ลบเลย"
                     cancelText="ยกเลิก"
-                    okButtonProps={{ danger: true }}
+                    okButtonProps={{ danger: true, size: 'small' }}
+                    cancelButtonProps={{ size: 'small' }}
                 >
-                    <Button type="text" danger icon={<DeleteOutlined />} disabled={record.role === 'owner'} />
+                    <Button type="text" danger icon={<DeleteOutlined />} disabled={record.role === 'owner'} className="hover:!bg-red-50" />
                 </Popconfirm>
             )
         }
@@ -328,7 +351,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                             size="large"
                             icon={<PlusOutlined />} 
                             onClick={handleAddCompany}
-                            className="bg-indigo-600 rounded-xl"
+                            className="bg-indigo-600 hover:!bg-indigo-500 hover:!text-white border-transparent rounded-xl !text-white"
                         >
                             เพิ่มบริษัทใหม่
                         </Button>
@@ -402,7 +425,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         <Button onClick={() => setIsModalVisible(false)} size="large" className="rounded-lg">
                             ยกเลิก
                         </Button>
-                        <Button type="primary" htmlType="submit" size="large" className="bg-indigo-600 rounded-lg">
+                        <Button type="primary" htmlType="submit" size="large" className="bg-indigo-600 hover:!bg-indigo-500 hover:!text-white border-transparent rounded-lg">
                             {editingCompany ? 'บันทึกการแก้ไข' : 'สร้างบริษัท'}
                         </Button>
                     </div>
@@ -450,7 +473,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                                             <Option value="admin">ผู้ดูแล (Admin)</Option>
                                         </Select>
                                     </Form.Item>
-                                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />} className="bg-indigo-600 h-8">
+                                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />} className="bg-indigo-600 hover:!bg-indigo-500 hover:!text-white border-transparent h-8">
                                         เพิ่ม
                                     </Button>
                                 </div>

@@ -92,13 +92,9 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
       as="nav"
       className={clsx(
         theme === 'dark'
-          ? isTenderMode 
-            ? 'bg-[#0f172a] shadow-[0_4px_40px_rgba(212,175,55,0.2)] border-b border-[#d4af37]/20'
-            : 'bg-[#020617] shadow-[0_4px_40px_rgba(0,0,0,0.6)] border-b border-white/5'
-          : isTenderMode
-            ? 'bg-amber-50 shadow-[0_4px_30px_rgba(212,175,55,0.1)] border-b border-amber-200/50'
-            : 'bg-slate-100 shadow-[0_4px_30px_rgba(0,0,0,0.05)] border-b border-slate-200/70',
-        'sticky top-0 z-50 transition-all duration-500'
+          ? 'bg-[#141414] border-b border-slate-800'
+          : 'bg-white border-b border-slate-100 shadow-sm',
+        'sticky top-0 z-50 transition-all duration-300'
       )}
     >
       {({ open }) => (
@@ -153,7 +149,10 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
         {companyName}
       </span>
       {isTenderMode && (
-        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-[10px] font-black text-white animate-pulse shadow-sm shadow-amber-500/50 uppercase tracking-widest leading-tight">
+        <span 
+          className="px-2 py-0.5 rounded-full text-[10px] font-black text-white animate-pulse uppercase tracking-widest leading-tight"
+          style={{ backgroundColor: companyColor, boxShadow: `0 2px 10px ${companyColor}50` }}
+        >
           Tender Mode
         </span>
       )}
@@ -162,7 +161,7 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
       className={clsx(
         'text-xs font-bold tracking-wider'
       )}
-      style={{ color: isTenderMode ? '#b4941f' : companyColor }}
+      style={{ color: companyColor, opacity: 0.8 }}
     >
       {companySubtitle}
     </span>
@@ -227,9 +226,10 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
                         <Avatar
                           size={32}
                           style={{
-                            backgroundColor: theme === 'dark' ? '#6366f1' : '#4f46e5',
+                            backgroundColor: companyColor,
                             fontSize: '14px',
                             fontWeight: 'bold',
+                            boxShadow: `0 4px 10px ${companyColor}30`
                           }}
                           icon={<UserOutlined />}
                         >
@@ -242,7 +242,7 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
                         {user?.first_name || user?.username || 'ผู้ใช้'}
                       </span>
                       {user?.isAdmin && (
-                        <span className="text-xs text-indigo-500 flex items-center gap-1">
+                        <span className="text-xs flex items-center gap-1" style={{ color: companyColor }}>
                           <SafetyOutlined /> Admin
                         </span>
                       )}
@@ -406,7 +406,7 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
                       {user?.first_name || user?.username || 'ผู้ใช้'}
                     </div>
                     <div className={clsx(theme === 'dark' ? 'text-gray-400' : 'text-gray-500', 'text-xs flex items-center gap-1')}>
-                      <Badge status="success" />
+                      <Badge color={companyColor} status="processing" />
                       ออนไลน์
                     </div>
                   </div>
