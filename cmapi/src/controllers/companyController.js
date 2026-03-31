@@ -68,6 +68,7 @@ const getUserCompanies = async (req, res) => {
 const getCompanyById = async (req, res) => {
     let connection;
     try {
+        console.log(`🔍 Fetching company members for ID: ${req.params.id}`);
         connection = await getConnection();
         const [rows] = await connection.execute(`
             SELECT c.*,
@@ -78,6 +79,7 @@ const getCompanyById = async (req, res) => {
         `, [req.params.id]);
 
         if (rows.length === 0) {
+            console.log(`⚠️ Company not found or inactive: ${req.params.id}`);
             return res.status(404).json({ message: 'ไม่พบบริษัท' });
         }
 
@@ -90,6 +92,8 @@ const getCompanyById = async (req, res) => {
             WHERE cu.company_id = ? AND cu.active = 1 AND u.active = 1
             ORDER BY cu.role ASC, u.first_name ASC
         `, [req.params.id]);
+
+        console.log(`✅ Found ${members.length} members for company ${req.params.id}`);
 
         res.json({ company: rows[0], members });
     } catch (error) {
@@ -343,6 +347,7 @@ const removeUserFromCompany = async (req, res) => {
     let connection;
     try {
         const { id, userId } = req.params; // company_id, user_id
+        console.log(`🗑️ Request to remove user ${userId} from company ${id}`);
 
         connection = await getConnection();
 
