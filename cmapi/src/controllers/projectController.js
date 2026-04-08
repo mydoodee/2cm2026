@@ -85,6 +85,72 @@ const sendNewTenderEmails = async (projectData, userIds, creatorName) => {
   }
 };
 
+const sendJobCreatedEmails = async (projectData, userIds, creatorName) => {
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) return;
+
+  let connection;
+  try {
+    connection = await getConnection();
+    const placeholders = userIds.map(() => '?').join(',');
+    const [users] = await connection.execute(
+      `SELECT email, first_name FROM users WHERE user_id IN (${placeholders}) AND active = 1`,
+      userIds
+    );
+
+    const validEmails = users.map(u => u.email).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+    if (validEmails.length === 0) return;
+
+    const projectLink = `${process.env.FRONTEND_URL || 'https://app.spkconstruction.co.th/cm'}/project/${projectData.project_id}`;
+    
+    const mailOptions = {
+      from: `"SPK Construction" <${process.env.SMTP_USER || 'spkbkk@gmail.com'}>`,
+      to: validEmails,
+      subject: `🎉 Job Created (Win Tender): ${projectData.job_number} - ${projectData.project_name}`,
+      html: `
+        <div style="font-family: 'sans-serif'; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+          <div style="background-color: #10b981; color: white; padding: 20px; text-align: center;">
+            <h2 style="margin: 0;">โครงการประมูลเข้าสู่ระยะก่อสร้างจริง</h2>
+          </div>
+          <div style="padding: 24px; color: #1e293b;">
+            <p>สวัสดีทีมงาน,</p>
+            <p>มีการย้าย Tender เข้าสู่ช่วงงานจริงโดยคุณ <strong>${creatorName}</strong> รายละเอียดเบื้องต้นมีดังนี้:</p>
+            <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">เลขที่งาน (Job #):</td>
+                  <td style="padding: 8px 0; font-weight: bold; color: #10b981;">${projectData.job_number}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">จาก Tender:</td>
+                  <td style="padding: 8px 0;">${projectData.old_job_number}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">ชื่อโครงการ:</td>
+                  <td style="padding: 8px 0; font-weight: bold;">${projectData.project_name}</td>
+                </tr>
+              </table>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${projectLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">ดูรายละเอียดโครงการ</a>
+            </div>
+          </div>
+          <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8;">
+            © 2026 SPK Construction - Project Management System
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Job Created email sent to ${validEmails.length} users for project ${projectData.job_number}`);
+
+  } catch (error) {
+    console.error('❌ Send Job Created Email Error:', error);
+  } finally {
+    if (connection) await connection.release();
+  }
+};
+
 const getProjects = async (req, res) => {
   let connection;
   try {
@@ -121,7 +187,7 @@ const getProjects = async (req, res) => {
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
                p.company_id
         FROM projects p
         WHERE active = 1 ${companyFilter}
@@ -136,7 +202,7 @@ const getProjects = async (req, res) => {
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
                p.company_id
         FROM projects p
         JOIN project_user_roles pur ON p.project_id = pur.project_id
@@ -167,6 +233,7 @@ const getProjects = async (req, res) => {
         show_payment: project.show_payment !== undefined ? !!project.show_payment : true,
         show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
         tender_status: project.tender_status || 'tender_in_progress',
+        is_job_created: project.is_job_created || 0,
       };
     }));
 
@@ -204,7 +271,8 @@ const getProjectById = async (req, res) => {
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
+                p.company_id
          FROM projects p
          WHERE p.project_id = ? AND p.company_id = ? AND p.active = 1`,
         [req.params.id, req.companyId]
@@ -218,7 +286,8 @@ const getProjectById = async (req, res) => {
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
+                p.company_id
          FROM projects p
          WHERE p.project_id = ? AND p.company_id = ? AND p.active = 1 AND EXISTS (
              SELECT 1 FROM project_user_roles pur 
@@ -266,6 +335,7 @@ const getProjectById = async (req, res) => {
       show_payment: project.show_payment !== undefined ? !!project.show_payment : true,
       show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
       tender_status: project.tender_status || 'tender_in_progress',
+      is_job_created: project.is_job_created || 0,
     };
 
     res.json({ project: projectWithMembers });
@@ -1020,7 +1090,7 @@ const deleteRole = async (req, res) => {
  */
 const moveProject = async (req, res) => {
   const { id } = req.params;
-  const { new_company_id, new_job_number, template_id } = req.body;
+  const { new_company_id, new_job_number, template_id, notified_users } = req.body;
   let connection;
 
   try {
@@ -1075,9 +1145,9 @@ const moveProject = async (req, res) => {
       [newProjectId, id]
     );
 
-    // 4. อัปเดตสถานะโครงการเดิมในหน้า Tender ให้เป็น 'ได้งาน (Win)'
+    // 4. อัปเดตสถานะโครงการเดิมในหน้า Tender ให้เป็น 'ได้งาน (Win)' และ ล็อคไม่ให้เปลี่ยนสถานะอีก
     await connection.execute(
-      "UPDATE projects SET tender_status = 'tender_win', updated_at = NOW() WHERE project_id = ?",
+      "UPDATE projects SET tender_status = 'tender_win', is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
       [id]
     );
 
@@ -1110,6 +1180,25 @@ const moveProject = async (req, res) => {
     }
 
     await connection.commit();
+
+    // Trigger email notifications
+    if (notified_users) {
+      try {
+        const userIds = typeof notified_users === 'string' ? JSON.parse(notified_users) : notified_users;
+        const [userRows] = await connection.execute('SELECT first_name FROM users WHERE user_id = ?', [req.user.user_id]);
+        const creatorName = userRows.length > 0 ? userRows[0].first_name : req.user.username;
+        
+        sendJobCreatedEmails({
+          project_id: newProjectId,
+          job_number: new_job_number,
+          old_job_number: oldProject.job_number,
+          project_name: oldProject.project_name
+        }, userIds, creatorName);
+      } catch (err) {
+        console.error('❌ Error parsing notified_users or sending emails:', err);
+      }
+    }
+
     res.json({ message: 'คัดลอกโครงการสู่ช่วงงานจริงเรียบร้อยแล้ว ( Tender เดิมยังคงอยู่ )', original_project_id: id, new_project_id: newProjectId });
 
   } catch (error) {

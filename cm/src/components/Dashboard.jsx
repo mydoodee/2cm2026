@@ -271,15 +271,20 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Tender Mode Banner */}
         {isTenderMode && (
-          <div className="mb-8 p-6 rounded-[2.5rem] bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 shadow-xl shadow-amber-500/5 relative overflow-hidden group">
+          <div className="mb-8 p-6 rounded-[2.5rem] bg-gradient-to-r from-sky-500/10 via-sky-500/5 to-transparent border border-sky-500/20 shadow-xl shadow-sky-500/5 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-              <ThunderboltOutlined className="text-8xl text-amber-500" />
+              <ThunderboltOutlined className="text-8xl text-sky-500" />
             </div>
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-2">
-                <span className="px-3 py-1 rounded-full bg-amber-500 text-[10px] font-black text-white uppercase tracking-[0.2em]">🚧 Tender Mode Active</span>
+                <span 
+                  className="px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] shadow-md"
+                  style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', boxShadow: '0 4px 12px #0284c750' }}
+                >
+                  🚀 Tender Mode Active
+                </span>
               </div>
-              <h2 className={`text-2xl font-black mb-2 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`}>
+              <h2 className={`text-2xl font-black mb-2 ${theme === 'dark' ? 'text-sky-400' : 'text-sky-600'}`}>
                 โหมดเตรียมการประมูลงาน
               </h2>
               <p className={`max-w-2xl font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -294,8 +299,12 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
         <div className="mb-12 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-8">
           <div>
             <div className="flex items-center mb-4">
-              <div className={`p-4 rounded-[1.5rem] mr-5 ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
-                <BarChartOutlined className={`text-4xl ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+              <div className={`p-4 rounded-[1.5rem] mr-5 ${theme === 'dark' 
+                ? (isTenderMode ? 'bg-sky-500/10' : 'bg-indigo-500/10') 
+                : (isTenderMode ? 'bg-sky-50' : 'bg-indigo-50')}`}>
+                <BarChartOutlined className={`text-4xl ${theme === 'dark' 
+                  ? (isTenderMode ? 'text-sky-400' : 'text-indigo-400') 
+                  : (isTenderMode ? 'text-sky-600' : 'text-indigo-600')}`} />
               </div>
               <div>
                 <h1 className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-3xl sm:text-4xl font-extrabold tracking-tight`}>
@@ -343,7 +352,9 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
             <button
               onClick={handleRefresh}
               className={`p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-all duration-300 hover:scale-105 border-0 ${
-                theme === 'dark' ? 'bg-indigo-600 text-white shadow-indigo-500/20' : 'bg-white text-indigo-600'
+                theme === 'dark' 
+                  ? (isTenderMode ? 'bg-sky-600 text-white shadow-sky-500/20' : 'bg-indigo-600 text-white shadow-indigo-500/20') 
+                  : (isTenderMode ? 'bg-white text-sky-600' : 'bg-white text-indigo-600')
               }`}
             >
               <ReloadOutlined spin={loading} className="text-xl" />
@@ -391,7 +402,7 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
           }`}>
             <div className="flex items-center justify-between mb-8">
               <h2 className={`text-xl font-bold flex items-center gap-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                <div className="w-2 h-8 bg-indigo-500 rounded-full"></div>
+                <div className={`w-2 h-8 rounded-full ${isTenderMode ? 'bg-sky-500' : 'bg-indigo-500'}`}></div>
                 เปรียบเทียบร่ายได้โครงการ
               </h2>
             </div>
@@ -428,7 +439,7 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
                     formatter={(value) => [formatCurrency(value), '']}
                   />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                  <Bar dataKey="total_revenue" fill="#6366f1" name="มูลค่าสัญญา" radius={[6, 6, 0, 0]} barSize={35} />
+                  <Bar dataKey="total_revenue" fill={isTenderMode ? '#0ea5e9' : '#6366f1'} name="มูลค่าสัญญา" radius={[6, 6, 0, 0]} barSize={35} />
                   <Bar dataKey="received_revenue" fill="#10b981" name="รับชำระแล้ว" radius={[6, 6, 0, 0]} barSize={35} />
                 </RechartsBarChart>
               </ResponsiveContainer>
@@ -446,7 +457,9 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
                     <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
                     S-Curve Progress
                   </h2>
-                  <div className={`px-4 py-2 rounded-2xl text-xs font-bold ${theme === 'dark' ? 'bg-slate-900/50 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                  <div className={`px-4 py-2 rounded-2xl text-xs font-bold ${theme === 'dark' 
+                    ? (isTenderMode ? 'bg-slate-900/50 text-sky-400' : 'bg-slate-900/50 text-indigo-400') 
+                    : (isTenderMode ? 'bg-sky-50 text-sky-600' : 'bg-indigo-50 text-indigo-600')}`}>
                     ทั้งหมด {yearFilteredProjects[0]?.payment_info?.total_installments || 0} งวด
                   </div>
                 </div>
@@ -486,7 +499,7 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
                           padding: '15px'
                         }}
                       />
-                      <Area type="monotone" dataKey="plan" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorPlan)" name="แผนงาน" />
+                      <Area type="monotone" dataKey="plan" stroke={isTenderMode ? '#0ea5e9' : '#6366f1'} strokeWidth={3} fillOpacity={1} fill="url(#colorPlan)" name="แผนงาน" />
                       <Area type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorActual)" name="ผลงานจริง" />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -504,7 +517,7 @@ const Dashboard = ({ user, setUser, theme, setTheme, activeCompany, setActiveCom
         {/* Projects Grid Section */}
         <div className="mb-12">
           <h2 className={`text-2xl font-black mb-8 flex items-center gap-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-            <FolderOutlined className="text-indigo-500" /> สถานะโครงการรายบุคคล
+            <FolderOutlined className={isTenderMode ? 'text-sky-500' : 'text-indigo-500'} /> สถานะโครงการรายบุคคล
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
             {yearFilteredProjects.map((project) => (

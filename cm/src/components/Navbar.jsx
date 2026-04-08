@@ -40,7 +40,9 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
   const companyName = localCompany?.company_name || 'SPK Construction';
   const companySubtitle = localCompany?.company_subtitle || 'บริหารโครงการก่อสร้าง';
   const companyLogo = localCompany?.company_logo;
-  const companyColor = localCompany?.company_color || '#dc2626';
+  const isTenderMode = companyName?.toLowerCase().includes('tender');
+  const TENDER_COLOR = '#0ea5e9'; // Premium Sky Blue Theme
+  const companyColor = isTenderMode ? TENDER_COLOR : (localCompany?.company_color || '#dc2626');
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3050';
 
   const handleLogout = () => {
@@ -66,7 +68,7 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  const isTenderMode = companyName?.toLowerCase().includes('tender');
+
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeOutlined className="text-lg" />, color: 'text-blue-500' },
@@ -118,8 +120,8 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
         : 'bg-opacity-10 border border-opacity-20 shadow-[0_4px_12px_rgba(220,38,38,0.1)]'
     )}
     style={{
-      backgroundColor: isTenderMode ? '#d4af3720' : companyColor + '15',
-      borderColor: isTenderMode ? '#d4af3750' : companyColor + '50'
+      backgroundColor: companyColor + '15',
+      borderColor: companyColor + '50'
     }}
   >
     <div className="relative w-9 h-9 flex items-center justify-center">
@@ -131,7 +133,7 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
       <div className={clsx(
         'w-full h-full items-center justify-center text-lg font-bold rounded',
         companyLogo ? 'hidden' : 'flex'
-      )} style={{ color: isTenderMode ? '#d4af37' : companyColor }}>
+      )} style={{ color: companyColor }}>
         {companyName?.charAt(0) || 'C'}
       </div>
     </div>
@@ -150,10 +152,15 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
       </span>
       {isTenderMode && (
         <span 
-          className="px-2 py-0.5 rounded-full text-[10px] font-black text-white animate-pulse uppercase tracking-widest leading-tight"
-          style={{ backgroundColor: companyColor, boxShadow: `0 2px 10px ${companyColor}50` }}
+          className="px-2.5 py-0.5 rounded-full text-[10px] font-black text-white uppercase tracking-widest leading-tight shadow-md"
+          style={{ 
+            background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', 
+            boxShadow: `0 4px 12px #0284c760`,
+            border: '1px solid #7dd3fc',
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+          }}
         >
-          Tender Mode
+          TENDER MODE
         </span>
       )}
     </div>

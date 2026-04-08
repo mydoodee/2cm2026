@@ -23,6 +23,10 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
     const [saving, setSaving] = useState(false);
     const [data, setData] = useState([]);
     const [projectName, setProjectName] = useState('');
+    
+    // Check if tender mode based on active company
+    const activeCompany = JSON.parse(localStorage.getItem('activeCompany') || 'null');
+    const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
 
     useEffect(() => {
         fetchData();
@@ -315,7 +319,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                     <Breadcrumb.Item>
                         <a onClick={() => navigate(`/project/${id}`)}>{projectName}</a>
                     </Breadcrumb.Item>
-                    <Breadcrumb.Item>รายละเอียดสถานะงาน</Breadcrumb.Item>
+                    <Breadcrumb.Item>รายละเอียดสถานะ{isTenderMode ? ' Tender' : 'งาน'}</Breadcrumb.Item>
                 </Breadcrumb>
 
                 <Card className="shadow-lg border-0 rounded-xl overflow-hidden">
@@ -326,7 +330,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
                                 icon={<ArrowLeftOutlined />} 
                                 onClick={() => navigate(`/project/${id}`)}
                             />
-                            <Title level={4} className="m-0 text-white font-kanit">รายละเอียดสถานะงาน (Job Status Details)</Title>
+                            <Title level={4} className="m-0 text-white font-kanit">รายละเอียดสถานะ{isTenderMode ? ' Tender' : 'งาน'} ({isTenderMode ? 'Tender' : 'Job'} Status Details)</Title>
                         </Space>
                         <Space>
                             <Button 
@@ -372,7 +376,7 @@ const JobStatusDetail = ({ user, setUser, theme, setTheme }) => {
 
                         {data.length === 0 && (
                             <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg mt-4">
-                                <Text className="text-gray-400">ยังไม่มีข้อมูลสถานะงาน กรุณากดปุ่ม "เพิ่มรายการ" เพื่อเริ่มบันทึก</Text>
+                                <Text className="text-gray-400">ยังไม่มีข้อมูลสถานะ{isTenderMode ? ' Tender' : 'งาน'} กรุณากดปุ่ม "เพิ่มรายการ" เพื่อเริ่มบันทึก</Text>
                             </div>
                         )}
                     </div>

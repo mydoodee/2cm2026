@@ -484,6 +484,7 @@ const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
           payment: paymentData || null,
           team_members: projectResponse.data.project.team_members || [],
           tender_status: projectResponse.data.project.tender_status || 'tender_in_progress',
+          is_job_created: projectResponse.data.project.is_job_created || 0,
         };
 
         console.log('✅ Final Project Data:', {
@@ -684,6 +685,7 @@ const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
               imageErrors={imageErrors}
               setImageLoading={setImageLoading}
               setImageErrors={setImageErrors}
+              isTenderMode={isTenderMode}
             />
           )}
         </div>

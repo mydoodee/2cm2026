@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Table, Button, Modal, Form, Input, Card, Space, Tag, Popconfirm, 
-    Upload, message, Typography, ColorPicker, Drawer, Select, Spin
+    Upload, message, Typography, ColorPicker, Drawer, Select, Spin,
+    Empty, Avatar, List, Badge
 } from 'antd';
 import { 
     PlusOutlined, EditOutlined, DeleteOutlined, 
-    UploadOutlined, TeamOutlined, BankOutlined, ArrowLeftOutlined, ProjectOutlined
+    UploadOutlined, TeamOutlined, BankOutlined, ArrowLeftOutlined, ProjectOutlined,
+    UserOutlined, SearchOutlined
 } from '@ant-design/icons';
 import api from '../axiosConfig';
 import Navbar from './Navbar';
@@ -32,9 +34,11 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
     const [form] = Form.useForm();
     const [fileList, setFileList] = useState([]);
     const [companyMembers, setCompanyMembers] = useState([]);
+    const [filteredMembers, setFilteredMembers] = useState([]);
     const [availableUsers, setAvailableUsers] = useState([]);
     const [membersLoading, setMembersLoading] = useState(false);
     const [memberForm] = Form.useForm();
+    const [memberSearchText, setMemberSearchText] = useState('');
 
     const fetchCompanies = async () => {
         try {
@@ -137,14 +141,21 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
 
     const fetchMembers = async (companyId) => {
         try {
+            console.log('Fetching members for company:', companyId);
             setMembersLoading(true);
             const [memRes, availRes] = await Promise.all([
                 api.get(`/api/companies/${companyId}`),
                 api.get(`/api/companies/${companyId}/available-users`)
             ]);
-            setCompanyMembers(memRes.data.members || []);
+            
+            const members = memRes.data.members || [];
+            console.log('Members received:', members.length);
+            
+            setCompanyMembers(members);
+            setFilteredMembers(members);
             setAvailableUsers(availRes.data.users || []);
         } catch (error) {
+            console.error('Error fetching members:', error);
             message.error('ไม่สามารถโหลดข้อมูลสมาชิกได้');
         } finally {
             setMembersLoading(false);
@@ -243,12 +254,13 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
             render: (_, record) => (
                 <Space>
                     <Button 
-                        type="default" 
+                        type="primary"
+                        ghost
                         icon={<TeamOutlined />} 
                         onClick={() => handleManageMembers(record.company_id)}
-                        className="hover:!text-indigo-600 hover:!border-indigo-600 border-slate-200"
+                        className="hover:!bg-indigo-600 hover:!text-white border-indigo-600 text-indigo-600 rounded-lg flex items-center gap-1"
                     >
-                        สมาชิก
+                        จัดการสมาชิก
                     </Button>
                     <Button 
                         type="primary" 
@@ -295,20 +307,31 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
             )
         },
         {
-            title: '',
+            title: 'จัดการ',
             key: 'action',
             align: 'right',
+            width: 120,
             render: (_, record) => (
                 <Popconfirm
                     title="ลบออกจากบริษัท?"
-                    description="ผู้ใช้นี้จะไม่สามารถเข้าถึงโครงการของบริษัทนี้ได้อีก"
+                    description={`ต้องการลบ ${record.first_name || record.username} ${record.last_name || ''} ออกจากบริษัทนี้ใช่หรือไม่? ผู้ใช้จะไม่สามารถเข้าถึงโครงการในบริษัทนี้ได้`}
                     onConfirm={() => handleRemoveMember(record.user_id)}
-                    okText="ลบเลย"
+                    okText="ลบออก"
                     cancelText="ยกเลิก"
                     okButtonProps={{ danger: true, size: 'small' }}
                     cancelButtonProps={{ size: 'small' }}
                 >
-                    <Button type="text" danger icon={<DeleteOutlined />} disabled={record.role === 'owner'} className="hover:!bg-red-50" />
+                    <Button 
+                        type="primary" 
+                        danger 
+                        ghost
+                        size="small"
+                        icon={<DeleteOutlined />} 
+                        disabled={record.role === 'owner'} 
+                        className="rounded-lg hover:!bg-red-500 hover:!text-white transition-all flex items-center gap-1"
+                    >
+                        ลบออก
+                    </Button>
                 </Popconfirm>
             )
         }
@@ -480,16 +503,98 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                             </Form>
                         </Card>
 
-                        {/* Members List */}
-                        <div className="flex-1 overflow-auto">
-                            <h3 className="font-bold mb-3">รายชื่อสมาชิกปัจจุบัน ({companyMembers.length})</h3>
+                        {/* Members List Section */}
+                        <div className="mt-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-lg m-0">
+                                    <TeamOutlined className="mr-2 text-indigo-500" />
+                                    รายชื่อสมาชิก ({companyMembers.length})
+                                </h3>
+                                <Tag color="blue" className="m-0 rounded-full border-0 px-2">Active</Tag>
+                            </div>
+
+                            <Input 
+                                prefix={<SearchOutlined className="text-slate-400" />}
+                                placeholder="ค้นหาสมาชิก..."
+                                className="mb-4 rounded-xl h-10 border-slate-200"
+                                onChange={(e) => {
+                                    const val = e.target.value.toLowerCase();
+                                    setMemberSearchText(val);
+                                    setFilteredMembers(companyMembers.filter(m => 
+                                        m.username?.toLowerCase().includes(val) || 
+                                        m.first_name?.toLowerCase().includes(val) || 
+                                        m.last_name?.toLowerCase().includes(val)
+                                    ));
+                                }}
+                            />
+
                             <Table 
-                                dataSource={companyMembers}
-                                columns={memberColumns}
+                                dataSource={filteredMembers}
+                                loading={membersLoading}
                                 rowKey="user_id"
                                 pagination={false}
-                                size="small"
-                                className="border rounded-lg overflow-hidden"
+                                size="middle"
+                                className="member-table-custom"
+                                columns={[
+                                    {
+                                        title: 'พนักงาน',
+                                        key: 'user',
+                                        render: (_, record) => (
+                                            <div className="flex items-center gap-3 py-1">
+                                                <Avatar 
+                                                    src={record.profile_image ? `${API_BASE}/${record.profile_image}` : null}
+                                                    icon={<UserOutlined />}
+                                                    className="bg-slate-100 text-slate-400"
+                                                />
+                                                <div className="flex flex-col">
+                                                    <Text strong className="text-slate-800 leading-tight">
+                                                        {record.first_name} {record.last_name}
+                                                    </Text>
+                                                    <Text type="secondary" className="text-[10px]">@{record.username}</Text>
+                                                </div>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        title: 'บทบาท',
+                                        dataIndex: 'role',
+                                        key: 'role',
+                                        width: 100,
+                                        render: (role) => (
+                                            <Tag color={role === 'owner' ? 'gold' : role === 'admin' ? 'blue' : 'default'} className="m-0 text-[10px] rounded px-1.5 border-0 font-bold">
+                                                {role === 'owner' ? 'OWNER' : role === 'admin' ? 'ADMIN' : 'STAFF'}
+                                            </Tag>
+                                        )
+                                    },
+                                    {
+                                        title: '',
+                                        key: 'action',
+                                        align: 'right',
+                                        width: 100,
+                                        render: (_, record) => (
+                                            <Popconfirm
+                                                title="ลบสมาชิกจากบริษัท?"
+                                                description="คุณต้องการให้นำสมาชิกคนนี้ออกจากบริษัทใช่หรือไม่?"
+                                                onConfirm={() => handleRemoveMember(record.user_id)}
+                                                okText="ลบออก"
+                                                cancelText="ยกเลิก"
+                                                okButtonProps={{ danger: true, size: 'small' }}
+                                                cancelButtonProps={{ size: 'small' }}
+                                            >
+                                                <Button 
+                                                    type="primary" 
+                                                    danger 
+                                                    size="small"
+                                                    disabled={record.role === 'owner'}
+                                                    className={`rounded-lg h-8 px-2 font-bold ${record.role === 'owner' ? 'opacity-30' : 'hover:scale-105 active:scale-95'}`}
+                                                    icon={<DeleteOutlined />}
+                                                >
+                                                    ลบออก
+                                                </Button>
+                                            </Popconfirm>
+                                        )
+                                    }
+                                ]}
                             />
                         </div>
                     </div>

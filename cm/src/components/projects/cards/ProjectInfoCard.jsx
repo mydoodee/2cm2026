@@ -190,13 +190,13 @@ const ProjectInfoCard = ({
                   </Button>
                 </Link>
 
-                <Link to={`/project/${project.project_id}/job-status`} title="Job Status Detail" className="col-span-1">
+                <Link to={`/project/${project.project_id}/job-status`} title={isTenderMode ? "Tender Status Detail" : "Job Status Detail"} className="col-span-1">
                   <Button
                     type="default"
                     size="small"
                     className="w-full h-7 font-kanit text-xs border-teal-200 text-teal-600 hover:border-teal-400 hover:text-teal-700 bg-teal-50"
                   >
-                    สถานะงาน
+                    {isTenderMode ? 'สถานะ Tender' : 'สถานะงาน'}
                   </Button>
                 </Link>
 
@@ -207,6 +207,7 @@ const ProjectInfoCard = ({
                          size="small"
                          value={project.tender_status || 'tender_in_progress'}
                          onChange={(val) => onTenderStatusChange(val)}
+                         disabled={project.is_job_created === 1}
                          className="flex-[1.5] font-kanit text-xs"
                          style={{ fontFamily: 'Kanit, sans-serif' }}
                          classNames={{ popup: { root: 'tender-status-select font-kanit font-medium' } }}
@@ -219,19 +220,19 @@ const ProjectInfoCard = ({
                            { value: 'tender_announcement_cancelled', label: '⚫ ยกเลิกประกาศ' },
                          ]}
                       />
-                      <Button
+                       <Button
                          type="primary"
                          size="small"
                          icon={<TrophyOutlined className="text-[10px]" />}
                          onClick={onMoveProject}
-                         disabled={project.tender_status !== 'tender_win'}
+                         disabled={project.tender_status !== 'tender_win' || project.is_job_created === 1}
                          className={`flex-1 h-full font-kanit text-[10px] sm:text-[11px] font-bold shadow-sm rounded-lg flex items-center justify-center transition-all ${
-                           project.tender_status === 'tender_win' 
-                             ? '!bg-amber-500 !text-white !border-amber-500 hover:!bg-amber-600 hover:!border-amber-600 shadow-amber-200 hover:scale-[1.02] active:scale-95' 
+                           project.tender_status === 'tender_win' && project.is_job_created !== 1
+                             ? '!bg-sky-500 !text-white !border-sky-500 hover:!bg-sky-600 hover:!border-sky-600 shadow-sky-200 hover:scale-[1.02] active:scale-95' 
                              : 'opacity-50 grayscale cursor-not-allowed !bg-slate-200 !text-slate-400 !border-slate-300'
                          }`}
                        >
-                         Win Tender
+                         {project.is_job_created === 1 ? 'สร้าง Job แล้ว' : 'สร้าง Job'}
                        </Button>
                     </div>
                  )}

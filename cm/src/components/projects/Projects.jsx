@@ -16,7 +16,8 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
-  const primaryColor = activeCompany?.company_color || '#4f46e5';
+  const TENDER_COLOR = '#0ea5e9'; // Elegant Sky Blue theme for Tender
+  const primaryColor = isTenderMode ? TENDER_COLOR : (activeCompany?.company_color || '#4f46e5');
   const primaryLightColor = `${primaryColor}15`; 
   const [viewMode, setViewMode] = useState(isTenderMode ? 'table' : 'card');
   const [searchTerm, setSearchTerm] = useState('');
@@ -216,7 +217,7 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                     <button
                       key={year}
                       onClick={() => handleYearChange(year)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-300 ${
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 transform hover:scale-105 ${
                         selectedYear === year
                           ? 'text-white'
                           : theme === 'dark'
@@ -224,14 +225,19 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                             : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-slate-300 hover:text-slate-900'
                       }`}
                       style={{ 
-                        backgroundColor: selectedYear === year ? primaryColor : undefined,
-                        boxShadow: selectedYear === year ? `0 10px 20px ${primaryColor}30` : undefined
+                        background: selectedYear === year 
+                           ? (isTenderMode ? 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)' : primaryColor) 
+                           : undefined,
+                        boxShadow: selectedYear === year 
+                           ? `0 6px 16px ${isTenderMode ? '#0284c750' : primaryColor + '40'}` 
+                           : undefined,
+                        border: selectedYear === year ? 'none' : undefined
                       }}
                     >
                       {year}
-                      <span className={`ml-1.5 text-[9px] px-1 py-0.5 rounded-full ${
+                      <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full ${
                         selectedYear === year 
-                          ? 'bg-white/20 text-white' 
+                          ? 'bg-white/25 text-white shadow-inner font-extrabold' 
                           : theme === 'dark' ? 'bg-slate-700 text-slate-500' : 'bg-slate-100 text-slate-400'
                       }`}>
                         {projects[year]?.length || 0}

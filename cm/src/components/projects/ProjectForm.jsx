@@ -46,7 +46,9 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
     try {
       const [templatesRes, usersRes] = await Promise.all([
         api.get('/api/folder-templates').catch(() => ({ data: { templates: [] } })),
-        api.get('/api/users').catch(() => ({ data: { users: [] } }))
+        activeCompany?.company_id 
+          ? api.get(`/api/companies/${activeCompany.company_id}`).then(res => ({ data: { users: res.data.members } }))
+          : api.get('/api/users').catch(() => ({ data: { users: [] } }))
       ]);
       setTemplates(templatesRes.data.templates || []);
       setAllUsers(usersRes.data.users || []);
@@ -382,7 +384,10 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                             placeholder="เลือกรายชื่อผู้ใช้..."
                             loading={isFetchingUsers}
                             maxTagCount="responsive"
-                            options={allUsers.map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name} (@${u.username})` }))}
+                            options={allUsers.map(u => ({ 
+                              value: u.user_id, 
+                              label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username})`.trim()
+                            }))}
                           />
                         </Form.Item>
                       </Card>
@@ -401,21 +406,28 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                           { id: "const", label: "Construction", show: "show_construction", prog: "construction_progress" },
                           { id: "precast", label: "Precast", show: "show_precast", prog: "precast_progress" },
                           { id: "cm", label: "Management", show: "show_cm", prog: "cm_progress" },
-                          { id: "job", label: "Job Status", show: "show_job_status", prog: "job_status_progress" },
+                          { id: "job", label: "Tender Status", show: "show_job_status", prog: "job_status_progress" },
                           { id: "summ", label: "Summary", show: "show_progress_summary", prog: null },
                           { id: "pay", label: "Payment", show: "show_payment", prog: null }
-                        ].map(phase => (
-                          <div key={phase.id} className="flex items-center justify-between gap-4 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-600">
-                            <Form.Item name={phase.show} valuePropName="checked" className="mb-0">
-                              <Checkbox><span className="font-bold text-slate-600 dark:text-slate-300">{phase.label}</span></Checkbox>
-                            </Form.Item>
-                            {phase.prog && (
-                              <Form.Item name={phase.prog} className="mb-0 w-24">
-                                <InputNumber min={0} max={100} size="small" suffix="%" className="w-full rounded-lg" />
+                        ].map(phase => {
+                          const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
+                          const label = phase.id === 'job' 
+                            ? (isTenderMode ? 'Tender Status' : 'Job Status') 
+                            : phase.label;
+                            
+                          return (
+                            <div key={phase.id} className="flex items-center justify-between gap-4 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-600">
+                              <Form.Item name={phase.show} valuePropName="checked" className="mb-0">
+                                <Checkbox><span className="font-bold text-slate-600 dark:text-slate-300">{label}</span></Checkbox>
                               </Form.Item>
-                            )}
-                          </div>
-                        ))}
+                              {phase.prog && (
+                                <Form.Item name={phase.prog} className="mb-0 w-24">
+                                  <InputNumber min={0} max={100} size="small" suffix="%" className="w-full rounded-lg" />
+                                </Form.Item>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </Card>
                   </Col>
