@@ -471,6 +471,8 @@ const createProject = async (req, res) => {
       return res.status(400).json({ message: 'ความคืบหน้าต้องเป็นตัวเลขระหว่าง 0-100' });
     }
 
+    const parseBool = (val) => (val === true || val === "true" || val === 1 || val === "1") ? 1 : 0;
+
     connection = await getConnection();
     await connection.beginTransaction();
 
@@ -495,7 +497,7 @@ const createProject = async (req, res) => {
         projectId, job_number, project_name, description || null, start_date, end_date, progressValue, status || 'Planning', 1,
         owner || null, consusltant || null, contractor || null, address || null,
         null, null, null, null, null, null, null, null, null, null,
-        show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
+        parseBool(show_design), parseBool(show_pre_construction), parseBool(show_construction), parseBool(show_precast), parseBool(show_cm), parseBool(show_bidding), parseBool(show_progress_summary), parseBool(show_payment), parseBool(show_job_status),
         Number(bidding_progress) || 0, Number(design_progress) || 0, Number(pre_construction_progress) || 0, Number(construction_progress) || 0, Number(precast_progress) || 0, Number(cm_progress) || 0, Number(job_status_progress) || 0, tender_status,
         companyId, tender_doc_date || null, tender_project_number || null, tender_announcement_number || null, tender_organization || null, tender_item_description || null, tender_winner_company || null
       ]
