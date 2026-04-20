@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Table, Button, Modal, Form, Input, Card, Space, Tag, Popconfirm, 
-    Upload, message, Typography, ColorPicker, Drawer, Select, Spin
+    Upload, message, Typography, ColorPicker, Drawer, Select, Spin,
+    Empty, Avatar, List, Badge
 } from 'antd';
 import { 
     PlusOutlined, EditOutlined, DeleteOutlined, 
-    UploadOutlined, TeamOutlined, BankOutlined, ArrowLeftOutlined, ProjectOutlined
+    UploadOutlined, TeamOutlined, BankOutlined, ArrowLeftOutlined, ProjectOutlined,
+    UserOutlined, SearchOutlined
 } from '@ant-design/icons';
 import api from '../axiosConfig';
 import Navbar from './Navbar';
@@ -32,9 +34,11 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
     const [form] = Form.useForm();
     const [fileList, setFileList] = useState([]);
     const [companyMembers, setCompanyMembers] = useState([]);
+    const [filteredMembers, setFilteredMembers] = useState([]);
     const [availableUsers, setAvailableUsers] = useState([]);
     const [membersLoading, setMembersLoading] = useState(false);
     const [memberForm] = Form.useForm();
+    const [memberSearchText, setMemberSearchText] = useState('');
 
     const fetchCompanies = async () => {
         try {
@@ -118,6 +122,16 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
         }
     };
 
+    const handleDeleteCompany = async (companyId) => {
+        try {
+            await api.delete(`/api/companies/${companyId}`);
+            message.success('ลบบริษัทเรียบร้อยแล้ว');
+            fetchCompanies();
+        } catch (error) {
+            message.error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบบริษัท');
+        }
+    };
+
     // Handle Members
     const handleManageMembers = async (companyId) => {
         setSelectedCompanyId(companyId);
@@ -127,14 +141,21 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
 
     const fetchMembers = async (companyId) => {
         try {
+            console.log('Fetching members for company:', companyId);
             setMembersLoading(true);
             const [memRes, availRes] = await Promise.all([
                 api.get(`/api/companies/${companyId}`),
                 api.get(`/api/companies/${companyId}/available-users`)
             ]);
-            setCompanyMembers(memRes.data.members || []);
+            
+            const members = memRes.data.members || [];
+            console.log('Members received:', members.length);
+            
+            setCompanyMembers(members);
+            setFilteredMembers(members);
             setAvailableUsers(availRes.data.users || []);
         } catch (error) {
+            console.error('Error fetching members:', error);
             message.error('ไม่สามารถโหลดข้อมูลสมาชิกได้');
         } finally {
             setMembersLoading(false);
@@ -163,88 +184,120 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
             fetchMembers(selectedCompanyId);
             fetchCompanies(); // update member count
         } catch (error) {
-            message.error(error.response?.data?.message || 'ไม่สามารถลบเจ้าของบริษัทได้');
+            message.error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบสมาชิก');
         }
     };
 
     // Columns
     const columns = [
         {
-            title: 'โลโก้',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">โลโก้</span>,
             dataIndex: 'company_logo',
             key: 'logo',
-            width: 80,
+            width: 72,
             render: (logo, record) => (
                 <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center border"
-                    style={{ borderColor: record.company_color + '40', backgroundColor: record.company_color + '10' }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shadow-sm"
+                    style={{ borderColor: record.company_color || '#dc2626', backgroundColor: (record.company_color || '#dc2626') + '18' }}
                 >
                     {logo ? (
-                        <img src={`${API_BASE}/${logo}`} alt="logo" className="max-w-full max-h-full p-1" 
+                        <img src={`${API_BASE}/${logo}`} alt="logo" className="max-w-full max-h-full p-1 object-contain" 
                              onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
                     ) : null}
-                    <div className={clsx("font-bold", logo ? "hidden" : "flex")} style={{ color: record.company_color }}>
-                        {record.company_name?.charAt(0) || 'C'}
+                    <div className={clsx("font-black text-base", logo ? "hidden" : "flex")} style={{ color: record.company_color || '#dc2626' }}>
+                        {record.company_name?.charAt(0)?.toUpperCase() || 'C'}
                     </div>
                 </div>
             )
         },
         {
-            title: 'ชื่อบริษัท',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">ชื่อบริษัท</span>,
             dataIndex: 'company_name',
             key: 'company_name',
             render: (text, record) => (
                 <div>
-                    <div className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{text}</div>
-                    <div className="text-xs text-gray-500">{record.company_subtitle}</div>
+                    <div className={`font-semibold text-[15px] ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{text}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{record.company_subtitle || '—'}</div>
                 </div>
             )
         },
         {
-            title: 'สี',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">สี</span>,
             dataIndex: 'company_color',
             key: 'company_color',
-            width: 80,
+            width: 70,
+            align: 'center',
             render: (color) => (
-                <div className="w-6 h-6 rounded-full shadow-sm" style={{ backgroundColor: color || '#dc2626' }} />
+                <div className="flex items-center justify-center">
+                    <div 
+                        className="w-7 h-7 rounded-full shadow-md border-2 border-white"
+                        style={{ backgroundColor: color || '#dc2626', boxShadow: `0 0 0 2px ${color || '#dc2626'}40` }}
+                    />
+                </div>
             )
         },
         {
-            title: 'สมาชิก',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">สมาชิก</span>,
             dataIndex: 'member_count',
             key: 'member_count',
             align: 'center',
             width: 100,
-            render: (count) => <Tag color="blue"><TeamOutlined /> {count || 0}</Tag>
+            render: (count) => (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs">
+                    <TeamOutlined className="text-blue-500" /> {count || 0}
+                </span>
+            )
         },
         {
-            title: 'โครงการ',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">โครงการ</span>,
             dataIndex: 'project_count',
             key: 'project_count',
             align: 'center',
             width: 100,
-            render: (count) => <Tag color="green"><ProjectOutlined /> {count || 0}</Tag>
+            render: (count) => (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs">
+                    <ProjectOutlined className="text-emerald-500" /> {count || 0}
+                </span>
+            )
         },
         {
-            title: 'จัดการ',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">จัดการ</span>,
             key: 'action',
-            width: 200,
+            width: 220,
             align: 'center',
             render: (_, record) => (
-                <Space>
+                <Space size={6}>
                     <Button 
-                        type="default" 
+                        type="primary"
                         icon={<TeamOutlined />} 
                         onClick={() => handleManageMembers(record.company_id)}
+                        className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !text-white rounded-lg font-semibold shadow-sm"
+                        size="small"
                     >
                         สมาชิก
                     </Button>
                     <Button 
-                        type="primary" 
                         icon={<EditOutlined />} 
                         onClick={() => handleEditCompany(record)}
-                        className="bg-amber-500 hover:bg-amber-600 border-0"
+                        className={`rounded-lg font-semibold shadow-sm border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-white hover:!bg-slate-600' : 'bg-white border-slate-300 text-slate-700 hover:!bg-slate-50 hover:!border-slate-400'}`}
+                        size="small"
                     />
+                    <Popconfirm
+                        title="ยืนยันการลบบริษัท?"
+                        description={<div className="max-w-[250px]">คุณต้องการลบบริษัท <b>{record.company_name}</b> ใช่หรือไม่? ข้อมูลโครงการทั้งหมดในบริษัทจะถูกซ่อน</div>}
+                        onConfirm={() => handleDeleteCompany(record.company_id)}
+                        okText="ลบเลย"
+                        cancelText="ยกเลิก"
+                        okButtonProps={{ danger: true, size: 'small' }}
+                        cancelButtonProps={{ size: 'small' }}
+                    >
+                        <Button 
+                            danger 
+                            icon={<DeleteOutlined />} 
+                            className="rounded-lg font-semibold shadow-sm"
+                            size="small"
+                        />
+                    </Popconfirm>
                 </Space>
             )
         }
@@ -273,19 +326,31 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
             )
         },
         {
-            title: '',
+            title: 'จัดการ',
             key: 'action',
             align: 'right',
+            width: 120,
             render: (_, record) => (
                 <Popconfirm
                     title="ลบออกจากบริษัท?"
-                    description="ผู้ใช้นี้จะไม่สามารถเข้าถึงโครงการของบริษัทนี้ได้อีก"
+                    description={`ต้องการลบ ${record.first_name || record.username} ${record.last_name || ''} ออกจากบริษัทนี้ใช่หรือไม่? ผู้ใช้จะไม่สามารถเข้าถึงโครงการในบริษัทนี้ได้`}
                     onConfirm={() => handleRemoveMember(record.user_id)}
-                    okText="ลบเลย"
+                    okText="ลบออก"
                     cancelText="ยกเลิก"
-                    okButtonProps={{ danger: true }}
+                    okButtonProps={{ danger: true, size: 'small' }}
+                    cancelButtonProps={{ size: 'small' }}
                 >
-                    <Button type="text" danger icon={<DeleteOutlined />} disabled={record.role === 'owner'} />
+                    <Button 
+                        type="primary" 
+                        danger 
+                        ghost
+                        size="small"
+                        icon={<DeleteOutlined />} 
+                        disabled={record.role === 'owner'} 
+                        className="rounded-lg hover:!bg-red-500 hover:!text-white transition-all flex items-center gap-1"
+                    >
+                        ลบออก
+                    </Button>
                 </Popconfirm>
             )
         }
@@ -328,7 +393,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                             size="large"
                             icon={<PlusOutlined />} 
                             onClick={handleAddCompany}
-                            className="bg-indigo-600 rounded-xl"
+                            className="bg-indigo-600 hover:!bg-indigo-500 hover:!text-white border-transparent rounded-xl !text-white"
                         >
                             เพิ่มบริษัทใหม่
                         </Button>
@@ -339,8 +404,13 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         columns={columns} 
                         rowKey="company_id" 
                         loading={loading}
-                        pagination={{ pageSize: 10 }}
-                        className={theme === 'dark' ? 'ant-table-dark' : ''}
+                        pagination={{ pageSize: 10, showSizeChanger: false }}
+                        className={theme === 'dark' ? 'ant-table-dark' : 'company-table-light'}
+                        rowClassName={(_, index) => 
+                            index % 2 === 0 
+                                ? (theme === 'dark' ? 'bg-slate-800/60' : 'bg-white') 
+                                : (theme === 'dark' ? 'bg-slate-800/30' : 'bg-slate-50/60')
+                        }
                     />
                 </Card>
             </div>
@@ -402,7 +472,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         <Button onClick={() => setIsModalVisible(false)} size="large" className="rounded-lg">
                             ยกเลิก
                         </Button>
-                        <Button type="primary" htmlType="submit" size="large" className="bg-indigo-600 rounded-lg">
+                        <Button type="primary" htmlType="submit" size="large" className="bg-indigo-600 hover:!bg-indigo-500 hover:!text-white border-transparent rounded-lg">
                             {editingCompany ? 'บันทึกการแก้ไข' : 'สร้างบริษัท'}
                         </Button>
                     </div>
@@ -450,23 +520,105 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                                             <Option value="admin">ผู้ดูแล (Admin)</Option>
                                         </Select>
                                     </Form.Item>
-                                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />} className="bg-indigo-600 h-8">
+                                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />} className="bg-indigo-600 hover:!bg-indigo-500 hover:!text-white border-transparent h-8">
                                         เพิ่ม
                                     </Button>
                                 </div>
                             </Form>
                         </Card>
 
-                        {/* Members List */}
-                        <div className="flex-1 overflow-auto">
-                            <h3 className="font-bold mb-3">รายชื่อสมาชิกปัจจุบัน ({companyMembers.length})</h3>
+                        {/* Members List Section */}
+                        <div className="mt-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-lg m-0">
+                                    <TeamOutlined className="mr-2 text-indigo-500" />
+                                    รายชื่อสมาชิก ({companyMembers.length})
+                                </h3>
+                                <Tag color="blue" className="m-0 rounded-full border-0 px-2">Active</Tag>
+                            </div>
+
+                            <Input 
+                                prefix={<SearchOutlined className="text-slate-400" />}
+                                placeholder="ค้นหาสมาชิก..."
+                                className="mb-4 rounded-xl h-10 border-slate-200"
+                                onChange={(e) => {
+                                    const val = e.target.value.toLowerCase();
+                                    setMemberSearchText(val);
+                                    setFilteredMembers(companyMembers.filter(m => 
+                                        m.username?.toLowerCase().includes(val) || 
+                                        m.first_name?.toLowerCase().includes(val) || 
+                                        m.last_name?.toLowerCase().includes(val)
+                                    ));
+                                }}
+                            />
+
                             <Table 
-                                dataSource={companyMembers}
-                                columns={memberColumns}
+                                dataSource={filteredMembers}
+                                loading={membersLoading}
                                 rowKey="user_id"
                                 pagination={false}
-                                size="small"
-                                className="border rounded-lg overflow-hidden"
+                                size="middle"
+                                className="member-table-custom"
+                                columns={[
+                                    {
+                                        title: 'พนักงาน',
+                                        key: 'user',
+                                        render: (_, record) => (
+                                            <div className="flex items-center gap-3 py-1">
+                                                <Avatar 
+                                                    src={record.profile_image ? `${API_BASE}/${record.profile_image}` : null}
+                                                    icon={<UserOutlined />}
+                                                    className="bg-slate-100 text-slate-400"
+                                                />
+                                                <div className="flex flex-col">
+                                                    <Text strong className="text-slate-800 leading-tight">
+                                                        {record.first_name} {record.last_name}
+                                                    </Text>
+                                                    <Text type="secondary" className="text-[10px]">@{record.username}</Text>
+                                                </div>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        title: 'บทบาท',
+                                        dataIndex: 'role',
+                                        key: 'role',
+                                        width: 100,
+                                        render: (role) => (
+                                            <Tag color={role === 'owner' ? 'gold' : role === 'admin' ? 'blue' : 'default'} className="m-0 text-[10px] rounded px-1.5 border-0 font-bold">
+                                                {role === 'owner' ? 'OWNER' : role === 'admin' ? 'ADMIN' : 'STAFF'}
+                                            </Tag>
+                                        )
+                                    },
+                                    {
+                                        title: '',
+                                        key: 'action',
+                                        align: 'right',
+                                        width: 100,
+                                        render: (_, record) => (
+                                            <Popconfirm
+                                                title="ลบสมาชิกจากบริษัท?"
+                                                description="คุณต้องการให้นำสมาชิกคนนี้ออกจากบริษัทใช่หรือไม่?"
+                                                onConfirm={() => handleRemoveMember(record.user_id)}
+                                                okText="ลบออก"
+                                                cancelText="ยกเลิก"
+                                                okButtonProps={{ danger: true, size: 'small' }}
+                                                cancelButtonProps={{ size: 'small' }}
+                                            >
+                                                <Button 
+                                                    type="primary" 
+                                                    danger 
+                                                    size="small"
+                                                    disabled={record.role === 'owner'}
+                                                    className={`rounded-lg h-8 px-2 font-bold ${record.role === 'owner' ? 'opacity-30' : 'hover:scale-105 active:scale-95'}`}
+                                                    icon={<DeleteOutlined />}
+                                                >
+                                                    ลบออก
+                                                </Button>
+                                            </Popconfirm>
+                                        )
+                                    }
+                                ]}
                             />
                         </div>
                     </div>

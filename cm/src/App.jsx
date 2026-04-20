@@ -21,6 +21,7 @@ import ProgressDetail from './components/projects/Progress_detail';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
 import ProjectSetting from './components/projects/ProjectSetting';
+import ProjectForm from './components/projects/ProjectForm';
 import PermissionFolder from './components/projects/PermissionFolder';
 import UserSetting from './components/users/UserSetting';
 import Progress from './components/Progress';
@@ -118,6 +119,17 @@ function App() {
       if (stored) setActiveCompany(JSON.parse(stored));
     } catch (e) { /* ignore */ }
   }, []);
+
+  // ========================================
+  // Theme & Dark Mode Synchronizer
+  // ========================================
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // ========================================
   // Fetch User on Mount
@@ -254,6 +266,8 @@ function App() {
             <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/company-settings" element={<CompanySettings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/project-settings" element={<ProjectSetting user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+            <Route path="/project-settings/add" element={<ProjectForm user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
+            <Route path="/project-settings/edit/:id" element={<ProjectForm user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/permission-folder" element={<PermissionFolder user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
           </Route>
 

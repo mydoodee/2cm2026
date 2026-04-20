@@ -31,21 +31,26 @@
 }
 
 /* สไตล์ตาราง */
-.project-table .ant-table {
-  border-radius: 12px;
-  overflow: hidden;
+.project-settings-table .ant-table-thead > tr > th {
+  background: #64748b !important; /* เทางานละเอียด (Slate 500) */
+  color: #ffffff !important;
+  border-bottom: none !important;
 }
 
-.project-table .ant-table-thead > tr > th {
-  font-family: 'Kanit', sans-serif;
-  font-weight: 500;
-  background: #f8fafc;
-  color: #1f2937;
+.project-settings-table.ant-table-dark .ant-table-thead > tr > th {
+  background: #334155 !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
 }
 
-.project-table.ant-table-dark .ant-table-thead > tr > th {
-  background: #374151;
-  color: #e5e7eb;
+/* Fix ant design sorting icons taking inherited color */
+.project-settings-table .ant-table-column-sorter-up.active,
+.project-settings-table .ant-table-column-sorter-down.active {
+  color: #818cf8 !important; /* brighter blue for active sort */
+}
+.project-settings-table .ant-table-column-sorter-up,
+.project-settings-table .ant-table-column-sorter-down {
+  color: #64748b !important; /* dim slate for inactive sort */
 }
 
 /* สไตล์สำหรับโหมด dark */

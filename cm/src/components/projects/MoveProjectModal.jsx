@@ -11,6 +11,7 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
     const [loading, setLoading] = useState(false);
     const [companies, setCompanies] = useState([]);
     const [templates, setTemplates] = useState([]);
+    const [companyMembers, setCompanyMembers] = useState([]);
     const [fetching, setFetching] = useState(false);
 
     useEffect(() => {
@@ -18,7 +19,8 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
             fetchData();
             form.setFieldsValue({
                 current_job: project?.job_number,
-                current_name: project?.project_name
+                current_name: project?.project_name,
+                notified_users: project?.team_members?.map(m => m.user_id) || []
             });
         }
     }, [visible, project]);
@@ -32,11 +34,17 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
             ]);
             
             // กรองเอาบริษัทปัจจุบันออก
-            const currentCompanyId = localStorage.getItem('activeCompanyId');
-            const otherCompanies = compRes.data?.companies?.filter(c => c.company_id !== currentCompanyId) || [];
+            const currentCompanyId = project?.company_id || localStorage.getItem('activeCompanyId');
+            const otherCompanies = compRes.data?.companies?.filter(c => String(c.company_id) !== String(currentCompanyId)) || [];
             
             setCompanies(otherCompanies);
             setTemplates(tempRes.data?.templates || []);
+
+            // ดึงสมาชิกในบริษัทปัจจุบันมาเพื่อใช้ในการแจ้งเตือน
+            if (currentCompanyId) {
+                const memRes = await api.get(`/api/companies/${currentCompanyId}`);
+                setCompanyMembers(memRes.data?.members || []);
+            }
         } catch (error) {
             console.error('Failed to fetch data:', error);
             message.error('ไม่สามารถโหลดข้อมูลเริ่มต้นได้');
@@ -51,7 +59,8 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
             const res = await api.post(`/api/project/${project.project_id}/move`, {
                 new_company_id: values.new_company_id,
                 new_job_number: values.new_job_number,
-                template_id: values.template_id
+                template_id: values.template_id,
+                notified_users: values.notified_users
             });
 
             if (res.data) {
@@ -76,7 +85,7 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
             title={
                 <div className="flex items-center space-x-2 text-indigo-600 font-kanit">
                     <TrophyOutlined className="text-xl" />
-                    <span className="font-bold">Win Tender - ย้ายเข้าสู่การทำงานจริง</span>
+                    <span className="font-bold">สร้าง Job - ย้ายเข้าสู่การทำงานจริง</span>
                 </div>
             }
             width={600}
@@ -93,10 +102,10 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
         >
             <div className="py-2 font-kanit">
                 <Alert
-                    message={<span className="font-bold text-indigo-800 font-kanit">ยืนยันการชนะการประมูล?</span>}
+                    message={<span className="font-bold text-indigo-800 font-kanit">ยืนยันการสร้าง Job สำหรับงานจริง?</span>}
                     description={
                         <div className="text-xs text-indigo-700 font-kanit">
-                            การกดย้ายโครงการจะทำการเปลี่ยนบริษัทผู้รับใช้ และเริ่มสร้างโครงสร้างโฟลเดอร์สำหรับงานก่อสร้างจริงตาม Template ที่เลือก 
+                            การกดย้ายโครงการจะทำการเปลี่ยนบริษัทที่รับผิดชอบ และเริ่มสร้างโครงสร้างโฟลเดอร์สำหรับงานก่อสร้างจริงตาม Template ที่เลือก 
                             โดยไฟล์งานประมูลเดิมจะถูกเก็บไว้ที่ <Text code className="font-kanit">[00] Bidding Documents</Text>
                         </div>
                     }
@@ -191,6 +200,28 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
                                 </Select.Option>
                             ))}
                         </Select>
+                    </Form.Item>
+
+                    <Divider plain className="!my-4">
+                        <Text type="secondary" className="text-[10px] uppercase tracking-widest font-bold font-kanit">การแจ้งเตือน</Text>
+                    </Divider>
+
+                    <Form.Item 
+                        label={<span className="font-kanit">ข้อความแจ้งเตือนถึงผู้ใช้งาน (เฉพาะผู้ที่มีส่วนเกี่ยวข้องใน Tender นี้)</span>} 
+                        name="notified_users"
+                    >
+                        <Select 
+                            mode="multiple" 
+                            className="w-full min-h-[44px] font-kanit"
+                            placeholder="ระบบจะเลือกแจ้งเตือนทุกคนอัตโนมัติ (สามารถปรับลดได้)"
+                            loading={fetching}
+                            maxTagCount="responsive"
+                            options={companyMembers.map(u => ({ 
+                                value: u.user_id, 
+                                label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username})`.trim()
+                            }))}
+                            classNames={{ popup: { root: 'font-kanit' } }}
+                        />
                     </Form.Item>
 
                     <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 mt-4">

@@ -10,7 +10,8 @@ const {
     updateCompany,
     addUserToCompany,
     removeUserFromCompany,
-    getAvailableUsers
+    getAvailableUsers,
+    deleteCompany
 } = require('../controllers/companyController');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,5 +36,8 @@ router.delete('/companies/:id/users/:userId', authenticateToken, removeUserFromC
 
 // ดึง users ที่ยังไม่อยู่ในบริษัท (สำหรับเลือกเพิ่ม)
 router.get('/companies/:id/available-users', authenticateToken, getAvailableUsers);
+
+// ลบบริษัท
+router.delete('/companies/:id', authenticateToken, deleteCompany);
 
 module.exports = router;

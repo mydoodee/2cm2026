@@ -14,6 +14,7 @@ const JobStatusCard = ({
   imageErrors,
   setImageLoading,
   setImageErrors,
+  isTenderMode,
 }) => {
   const [details, setDetails] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -73,7 +74,7 @@ const JobStatusCard = ({
         <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
           <div className="flex items-center">
             <InfoCircleOutlined className="mr-2 text-teal-600 text-lg" />
-            <Title level={5} className="m-0 text-gray-800 font-kanit">Job Status</Title>
+            <Title level={5} className="m-0 text-gray-800 font-kanit">{isTenderMode ? 'Tender Status' : 'Job Status'}</Title>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-xs text-gray-500 font-kanit">Progress:</span>
@@ -187,10 +188,10 @@ const JobStatusCard = ({
               </div>
               <div className="text-center">
                 <Text className="text-gray-400 text-sm italic font-kanit">
-                  กรุณาเพิ่มรายละเอียดสถานะงานที่ปุ่ม
+                  กรุณาเพิ่มรายละเอียดสถานะ{isTenderMode ? ' Tender ' : 'งาน'}ที่ปุ่ม
                 </Text>
                 <br />
-                <Text strong className="text-teal-600 font-kanit">"สถานะงาน"</Text>
+                <Text strong className="text-teal-600 font-kanit">"{isTenderMode ? 'สถานะ Tender' : 'สถานะงาน'}"</Text>
                 <Text className="text-gray-400 text-sm italic font-kanit"> ด้านบนครับ</Text>
               </div>
             </div>

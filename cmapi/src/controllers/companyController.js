@@ -68,6 +68,7 @@ const getUserCompanies = async (req, res) => {
 const getCompanyById = async (req, res) => {
     let connection;
     try {
+        console.log(`🔍 Fetching company members for ID: ${req.params.id}`);
         connection = await getConnection();
         const [rows] = await connection.execute(`
             SELECT c.*,
@@ -78,6 +79,7 @@ const getCompanyById = async (req, res) => {
         `, [req.params.id]);
 
         if (rows.length === 0) {
+            console.log(`⚠️ Company not found or inactive: ${req.params.id}`);
             return res.status(404).json({ message: 'ไม่พบบริษัท' });
         }
 
@@ -90,6 +92,8 @@ const getCompanyById = async (req, res) => {
             WHERE cu.company_id = ? AND cu.active = 1 AND u.active = 1
             ORDER BY cu.role ASC, u.first_name ASC
         `, [req.params.id]);
+
+        console.log(`✅ Found ${members.length} members for company ${req.params.id}`);
 
         res.json({ company: rows[0], members });
     } catch (error) {
@@ -343,6 +347,7 @@ const removeUserFromCompany = async (req, res) => {
     let connection;
     try {
         const { id, userId } = req.params; // company_id, user_id
+        console.log(`🗑️ Request to remove user ${userId} from company ${id}`);
 
         connection = await getConnection();
 
@@ -417,6 +422,50 @@ const getAvailableUsers = async (req, res) => {
     }
 };
 
+/**
+ * ลบบริษัท (Admin/Owner เท่านั้น)
+ */
+const deleteCompany = async (req, res) => {
+    let connection;
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้ใน token' });
+        }
+
+        const { id } = req.params;
+        connection = await getConnection();
+
+        // ตรวจสอบสิทธิ์
+        const [companyUser] = await connection.execute(
+            'SELECT role FROM company_users WHERE company_id = ? AND user_id = ? AND active = 1',
+            [id, req.user.user_id]
+        );
+        const [globalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
+            [req.user.user_id]
+        );
+        const isSuperAdmin = globalRoles.length > 0 || req.user.username === 'admin' || req.user.username === 'adminspk';
+        const isCompanyOwner = companyUser.length > 0 && companyUser[0].role === 'owner';
+
+        if (!isSuperAdmin && !isCompanyOwner) {
+            return res.status(403).json({ message: 'จำกัดเฉพาะเจ้าของบริษัทหรือผู้ดูแลระบบ' });
+        }
+
+        // Logical Delete
+        await connection.execute(
+            'UPDATE companies SET active = 0, updated_at = NOW() WHERE company_id = ?',
+            [id]
+        );
+
+        res.json({ message: 'ลบบริษัทสำเร็จ' });
+    } catch (error) {
+        console.error('Error in deleteCompany:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
+    } finally {
+        if (connection) await connection.release();
+    }
+};
+
 module.exports = {
     getUserCompanies,
     getCompanyById,
@@ -424,5 +473,6 @@ module.exports = {
     updateCompany,
     addUserToCompany,
     removeUserFromCompany,
-    getAvailableUsers
+    getAvailableUsers,
+    deleteCompany
 };

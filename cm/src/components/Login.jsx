@@ -43,15 +43,15 @@ function Login({ setUser, theme }) {
     const token = localStorage.getItem('token');
     if (token) {
       api.get('/api/user')
-      .then(res => {
-        setUser(res.data.user);
-        navigate('/dashboard');
-      })
-      .catch(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        setUser(null);
-      });
+        .then(res => {
+          setUser(res.data.user);
+          navigate('/dashboard');
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          setUser(null);
+        });
     }
   }, [setUser, navigate]);
 
@@ -105,18 +105,18 @@ function Login({ setUser, theme }) {
         'w-full max-w-md',
         'rounded-2xl sm:rounded-3xl overflow-hidden',
         'shadow-xl sm:shadow-2xl backdrop-blur-sm',
-        theme === 'dark' 
-          ? 'bg-gray-900/95 border border-gray-800' 
+        theme === 'dark'
+          ? 'bg-gray-900/95 border border-gray-800'
           : 'bg-white border border-gray-100'
       )}>
-        
+
         {/* Header */}
         <div className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 text-center">
           {/* Logo */}
           <div className="flex justify-center mb-4 sm:mb-6">
-            <img 
-              src={logoSpk} 
-              alt="SPK Logo" 
+            <img
+              src={logoSpk}
+              alt="SPK Logo"
               className={clsx(
                 'w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl object-contain p-2',
                 'transition-transform active:scale-95 sm:hover:scale-105',
@@ -131,14 +131,14 @@ function Login({ setUser, theme }) {
             '!mb-1 sm:!mb-2 !text-xl sm:!text-2xl font-bold',
             theme === 'dark' ? '!text-white' : '!text-gray-900'
           )}>
-            ยินดีต้อนรับ
+            Project Management
           </Title>
-          
+
           <Text className={clsx(
             'text-sm sm:text-base',
             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           )}>
-            เข้าสู่ระบบ SPK Construction
+            เข้าสู่ระบบ การบริหารโครงการ
           </Text>
         </div>
 
@@ -151,16 +151,16 @@ function Login({ setUser, theme }) {
               showIcon
               className={clsx(
                 'mb-6 rounded-xl',
-                theme === 'dark' 
-                  ? '!bg-red-950/50 !border-red-900' 
+                theme === 'dark'
+                  ? '!bg-red-950/50 !border-red-900'
                   : '!bg-red-50 !border-red-200'
               )}
             />
           )}
 
           <Form form={form} onFinish={handleLogin} layout="vertical">
-            <Form.Item 
-              name="username" 
+            <Form.Item
+              name="username"
               rules={[{ required: true, message: 'กรุณากรอกชื่อผู้ใช้' }]}
               className="mb-5"
             >
@@ -171,15 +171,15 @@ function Login({ setUser, theme }) {
                 size="large"
                 className={clsx(
                   'rounded-xl h-12',
-                  theme === 'dark' 
-                    ? 'bg-gray-800 border-gray-700' 
+                  theme === 'dark'
+                    ? 'bg-gray-800 border-gray-700'
                     : 'bg-gray-50 border-gray-200'
                 )}
               />
             </Form.Item>
 
-            <Form.Item 
-              name="password" 
+            <Form.Item
+              name="password"
               rules={[{ required: true, message: 'กรุณากรอกรหัสผ่าน' }]}
               className="mb-6"
             >
@@ -190,8 +190,8 @@ function Login({ setUser, theme }) {
                 iconRender={visible => visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />}
                 className={clsx(
                   'rounded-xl h-12',
-                  theme === 'dark' 
-                    ? 'bg-gray-800 border-gray-700' 
+                  theme === 'dark'
+                    ? 'bg-gray-800 border-gray-700'
                     : 'bg-gray-50 border-gray-200'
                 )}
               />
@@ -208,7 +208,7 @@ function Login({ setUser, theme }) {
                   'shadow-lg hover:shadow-xl active:scale-[0.98]',
                   'transition-all duration-200 border-none'
                 )}
-                style={{ 
+                style={{
                   backgroundColor: isLoading ? (theme === 'dark' ? '#991b1b' : '#f87171') : (theme === 'dark' ? '#dc2626' : '#ef4444'),
                   color: 'white'
                 }}
@@ -237,8 +237,8 @@ function Login({ setUser, theme }) {
         {/* Footer */}
         <div className={clsx(
           'px-10 py-4 text-center border-t',
-          theme === 'dark' 
-            ? 'bg-gray-950/50 border-gray-800' 
+          theme === 'dark'
+            ? 'bg-gray-950/50 border-gray-800'
             : 'bg-gray-50 border-gray-100'
         )}>
           <Text className={clsx(
