@@ -178,7 +178,7 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => navigate('/project-settings')} className="h-11 px-8 rounded-xl font-bold border-slate-300">ยกเลิก</Button>
-                <Button type="primary" icon={<SaveOutlined />} onClick={handleSubmit} loading={submitting} className="h-11 px-10 rounded-xl font-bold border-0 shadow-lg" style={{ backgroundColor: primaryColor }}>บันทึกข้อมูล</Button>
+                                <Button type="primary" icon={<SaveOutlined />} onClick={handleSubmit} loading={submitting} className="h-11 px-10 rounded-xl font-bold border-0 shadow-lg">บันทึกข้อมูล</Button>
               </div>
             </div>
 
@@ -291,7 +291,7 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
         <style dangerouslySetInnerHTML={{ __html: `
           .ant-form-item { margin-bottom: 12px !important; }
           .ant-form-item-label label { font-weight: 800 !important; color: #475569 !important; font-size: 11px !important; text-transform: uppercase; }
-          .ant-input, .ant-picker, .ant-select-selector { border: 1.5px solid #94a3b8 !important; border-radius: 8px !important; background-color: #fff !important; }
+          
           .ant-input:focus, .ant-picker-focused, .ant-select-focused .ant-select-selector { border-color: ${primaryColor} !important; box-shadow: 0 0 0 3px ${primaryLightColor} !important; }
           .final-compact-upload .ant-upload.ant-upload-select-picture-card { width: 100% !important; height: 90px !important; margin: 0 !important; border: 2px dashed #cbd5e1 !important; border-radius: 12px !important; background-color: #f8fafc !important; }
           .final-compact-upload .ant-upload-list-picture-card-container { width: 100% !important; height: 90px !important; }
