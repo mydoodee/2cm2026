@@ -544,12 +544,20 @@ const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
 
   const handleTenderStatusChange = async (newStatus) => {
     try {
-      const response = await api.put(`/api/project/${id}`, {
-        tender_status: newStatus
-      });
+      const updateData = { tender_status: newStatus };
+      
+      // If status is changed to win and winner company is not set, auto-fill with contractor or Active Company
+      if (newStatus === 'tender_win' && !project.tender_winner_company) {
+        updateData.tender_winner_company = project.contractor || activeCompany?.company_name;
+      }
+
+      const response = await api.put(`/api/project/${id}`, updateData);
       
       if (response.status === 200) {
-        setProject(prev => ({ ...prev, tender_status: newStatus }));
+        setProject(prev => ({ 
+          ...prev, 
+          ...updateData
+        }));
         message.success('อัปเดตสถานะการประมูลเรียบร้อยแล้ว');
       }
     } catch (error) {
@@ -643,6 +651,7 @@ const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
             isTenderMode={isTenderMode}
             onMoveProject={() => setIsMoveModalVisible(true)}
             onTenderStatusChange={handleTenderStatusChange}
+            activeCompany={activeCompany}
           />
 
           {project.show_progress_summary !== false && (

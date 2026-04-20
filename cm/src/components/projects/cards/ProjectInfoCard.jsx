@@ -1,7 +1,7 @@
 import { Card, Progress, Typography, Tag, Button, Skeleton, Space, Select, message } from 'antd';
 import { Link } from 'react-router-dom';
 import {
-  CalendarOutlined, UserOutlined, ToolOutlined, EnvironmentOutlined, TrophyOutlined
+  CalendarOutlined, UserOutlined, ToolOutlined, EnvironmentOutlined, TrophyOutlined, InfoCircleOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
 
@@ -21,6 +21,7 @@ const ProjectInfoCard = ({
   isTenderMode,
   onMoveProject,
   onTenderStatusChange,
+  activeCompany,
 }) => {
   return (
     <Card className="image-card bg-white shadow-md rounded-lg overflow-hidden h-[360px]">
@@ -114,16 +115,68 @@ const ProjectInfoCard = ({
         {/* ---------- ข้อมูลโครงการ ---------- */}
         <div className="p-3 flex flex-col flex-1">
           <div className="space-y-1.5 text-xs flex-1">
-            <div className="flex items-center">
-              <CalendarOutlined className="mr-2 text-blue-600 w-4" />
-              <Text className="text-gray-600 font-kanit text-xs">ระยะเวลา</Text>
-              <Text className="text-gray-800 font-kanit ml-auto text-xs">
-                {moment(project.start_date).format('DD/MM/YY')} -{' '}
-                {moment(project.end_date).format('DD/MM/YY')}
-              </Text>
-            </div>
+            {isTenderMode && project.tender_doc_date && (
+              <div className="flex items-center">
+                <CalendarOutlined className="mr-2 text-blue-600 w-4" />
+                <Text className="text-gray-600 font-kanit text-xs">รับเอกสาร</Text>
+                <Text className="text-gray-800 font-kanit ml-auto text-xs">
+                  {moment(project.tender_doc_date).format('DD MMM YYYY')}
+                </Text>
+              </div>
+            )}
 
-            {project.owner && (
+            {isTenderMode && project.tender_project_number && (
+              <div className="flex items-center">
+                <InfoCircleOutlined className="mr-2 text-indigo-600 w-4" />
+                <Text className="text-gray-600 font-kanit text-xs">เลขที่โครงการ</Text>
+                <Text className="text-gray-800 font-kanit ml-auto text-xs">
+                  {project.tender_project_number}
+                </Text>
+              </div>
+            )}
+
+            {isTenderMode && project.tender_announcement_number && (
+              <div className="flex items-center">
+                <FileTextOutlined className="mr-2 text-orange-600 w-4" />
+                <Text className="text-gray-600 font-kanit text-xs">เลขที่ประกาศ</Text>
+                <Text className="text-gray-800 font-kanit ml-auto text-xs">
+                  {project.tender_announcement_number}
+                </Text>
+              </div>
+            )}
+
+            {isTenderMode && project.tender_organization && (
+              <div className="flex items-center">
+                <EnvironmentOutlined className="mr-2 text-green-600 w-4" />
+                <Text className="text-gray-600 font-kanit text-xs">หน่วยงาน</Text>
+                <Text className="text-gray-800 font-kanit ml-auto text-right max-w-[150px] line-clamp-1 text-xs">
+                  {project.tender_organization}
+                </Text>
+              </div>
+            )}
+
+            {isTenderMode && (project.tender_winner_company || project.tender_status === 'tender_win') && (
+              <div className="flex items-center">
+                <TrophyOutlined className="mr-2 text-emerald-600 w-4" />
+                <Text className="text-gray-600 font-kanit text-xs">บริษัทที่ได้งาน</Text>
+                <Text className="text-emerald-700 font-bold font-kanit ml-auto text-right max-w-[150px] line-clamp-1 text-xs">
+                  {project.tender_winner_company || (project.tender_status === 'tender_win' ? (project.contractor || activeCompany?.company_name) : null) || '-'}
+                </Text>
+              </div>
+            )}
+
+            {!isTenderMode && (
+              <div className="flex items-center">
+                <CalendarOutlined className="mr-2 text-blue-600 w-4" />
+                <Text className="text-gray-600 font-kanit text-xs">ระยะเวลา</Text>
+                <Text className="text-gray-800 font-kanit ml-auto text-xs">
+                  {moment(project.start_date).format('DD/MM/YY')} -{' '}
+                  {moment(project.end_date).format('DD/MM/YY')}
+                </Text>
+              </div>
+            )}
+
+            {project.owner && !isTenderMode && (
               <div className="flex items-center">
                 <UserOutlined className="mr-2 text-purple-600 w-4" />
                 <Text className="text-gray-600 font-kanit text-xs">เจ้าของ</Text>
@@ -133,7 +186,7 @@ const ProjectInfoCard = ({
               </div>
             )}
 
-            {project.contractor && (
+            {project.contractor && !isTenderMode && (
               <div className="flex items-center">
                 <ToolOutlined className="mr-2 text-orange-600 w-4" />
                 <Text className="text-gray-600 font-kanit text-xs">ผู้รับเหมา</Text>
@@ -143,7 +196,7 @@ const ProjectInfoCard = ({
               </div>
             )}
 
-            {project.address && (
+            {project.address && !isTenderMode && (
               <div className="flex items-start">
                 <EnvironmentOutlined className="mr-2 text-green-600 w-4" />
                 <Text className="text-gray-600 font-kanit text-xs">ที่อยู่</Text>

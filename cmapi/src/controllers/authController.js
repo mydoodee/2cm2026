@@ -418,17 +418,43 @@ const getAllUsers = async (req, res) => {
         }
 
         const includeInactive = req.query.includeInactive === 'true';
-        const [users] = await connection.execute(`
-            SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
-                   GROUP_CONCAT(DISTINCT pur.role_id) as role_ids,
-                   GROUP_CONCAT(pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name) as project_roles
-            FROM users u
-            LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
-            LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1
-            LEFT JOIN roles r ON pur.role_id = r.role_id
-            WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
-            GROUP BY u.user_id
-        `);
+
+        // ✅ ดึง company_id จาก header (ส่งมาจาก axiosConfig.js)
+        const companyId = req.headers['x-company-id'] || req.companyId || null;
+
+        let users;
+        if (companyId) {
+            // ✅ Filter เฉพาะ user ของ company นั้น
+            [users] = await connection.execute(`
+                SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
+                       GROUP_CONCAT(DISTINCT ur.role_id) as role_ids,
+                       GROUP_CONCAT(
+                           pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name
+                           ORDER BY pur.project_id
+                       ) as project_roles
+                FROM users u
+                INNER JOIN company_users cu ON cu.user_id = u.user_id AND cu.company_id = ?
+                LEFT JOIN user_roles ur ON u.user_id = ur.user_id
+                LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
+                LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1 AND p.company_id = ?
+                LEFT JOIN roles r ON pur.role_id = r.role_id
+                WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
+                GROUP BY u.user_id
+            `, [companyId, companyId]);
+        } else {
+            // Fallback: ถ้าไม่ได้ส่ง company มา (backward compatible)
+            [users] = await connection.execute(`
+                SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
+                       GROUP_CONCAT(DISTINCT pur.role_id) as role_ids,
+                       GROUP_CONCAT(pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name) as project_roles
+                FROM users u
+                LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
+                LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1
+                LEFT JOIN roles r ON pur.role_id = r.role_id
+                WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
+                GROUP BY u.user_id
+            `);
+        }
 
         const formattedUsers = users.map(user => {
             let userRoles = user.role_ids ? user.role_ids.split(',').map(Number) : [];

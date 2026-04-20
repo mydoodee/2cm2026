@@ -1,160 +1,125 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Typography, Input, Select, Form, DatePicker, Upload, App, InputNumber, Checkbox, Divider, Tag, Spin, ConfigProvider, Row, Col } from 'antd';
-import { PlusOutlined, ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, PictureOutlined, CheckCircleOutlined, PercentageOutlined } from '@ant-design/icons';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
+import { 
+  Form, 
+  Input, 
+  Button, 
+  Card, 
+  Row, 
+  Col, 
+  Typography, 
+  DatePicker, 
+  Select, 
+  Spin,
+  ConfigProvider,
+  message,
+  Checkbox,
+  Upload,
+  Tooltip,
+  Divider
+} from 'antd';
+import { 
+  ArrowLeftOutlined, 
+  SaveOutlined, 
+  PlusOutlined,
+  ProjectOutlined,
+  TeamOutlined,
+  PictureOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  LayoutOutlined,
+  CameraOutlined,
+  TrophyOutlined
+} from '@ant-design/icons';
+import { useNavigate, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import Navbar from '../Navbar';
 import api from '../../axiosConfig';
 import Swal from 'sweetalert2';
-import dayjs from 'dayjs';
-import 'dayjs/locale/th';
 
-const { Option } = Select;
+const { Title, Text } = Typography;
 
 const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveCompany }) => {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const location = useLocation();
-  const { message } = App.useApp();
   const [form] = Form.useForm();
+  const { id } = useParams();
+  const navigate = useNavigate();
 
   const isEditMode = !!id;
+  const isTenderMode = activeCompany?.company_name === 'Tender';
+  
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
-
-  const [templates, setTemplates] = useState([]);
-  const [isFetchingTemplates, setIsFetchingTemplates] = useState(false);
-  const [allUsers, setAllUsers] = useState([]);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
-
+  const [users, setUsers] = useState([]);
   const [fileLists, setFileLists] = useState({
-    progress_summary: [],
-    payment: [],
-    design: [],
-    pre_construction: [],
-    construction: [],
-    cm: [],
-    general: [],
-    precast: [],
-    bidding: [],
-    job_status: [],
+    image: [],
+    progress_summary_image: [],
+    payment_image: [],
+    design_image: [],
+    pre_construction_image: [],
+    construction_image: [],
+    cm_image: [],
+    precast_image: [],
+    bidding_image: [],
+    job_status_image: []
   });
 
-  const fetchDependencies = useCallback(async () => {
-    setIsFetchingTemplates(true);
-    setIsFetchingUsers(true);
-    try {
-      const [templatesRes, usersRes] = await Promise.all([
-        api.get('/api/folder-templates').catch(() => ({ data: { templates: [] } })),
-        activeCompany?.company_id 
-          ? api.get(`/api/companies/${activeCompany.company_id}`).then(res => ({ data: { users: res.data.members } }))
-          : api.get('/api/users').catch(() => ({ data: { users: [] } }))
-      ]);
-      setTemplates(templatesRes.data.templates || []);
-      setAllUsers(usersRes.data.users || []);
-    } catch (error) {
-      console.error('Error fetching dependencies', error);
-    } finally {
-      setIsFetchingTemplates(false);
-      setIsFetchingUsers(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchDependencies();
-  }, [fetchDependencies]);
+    const fetchUsers = async () => {
+      setIsFetchingUsers(true);
+      try {
+        const response = await api.get('/api/users');
+        const userData = Array.isArray(response.data) ? response.data : (response.data?.users || []);
+        setUsers(userData);
+      } catch (error) {
+        console.error('Fetch users error:', error);
+      } finally {
+        setIsFetchingUsers(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     const initData = async () => {
       if (isEditMode) {
         try {
-          const stateProject = location.state?.project;
-          let projectData = stateProject;
-
-          if (!projectData) {
-            const response = await api.get(`/api/project/${id}`);
-            projectData = response.data.project;
-          }
-
-          if (projectData) {
-            form.setFieldsValue({
-              project_name: projectData.project_name,
-              job_number: projectData.job_number,
-              description: projectData.description,
-              start_date: projectData.start_date ? dayjs(projectData.start_date) : null,
-              end_date: projectData.end_date ? dayjs(projectData.end_date) : null,
-              status: projectData.status,
-              progress: projectData.progress,
-              owner: projectData.owner,
-              consusltant: projectData.consusltant,
-              contractor: projectData.contractor,
-              address: projectData.address,
-              show_design: projectData.show_design !== undefined ? projectData.show_design : true,
-              show_pre_construction: projectData.show_pre_construction !== undefined ? projectData.show_pre_construction : true,
-              show_construction: projectData.show_construction !== undefined ? projectData.show_construction : true,
-              show_precast: projectData.show_precast !== undefined ? projectData.show_precast : true,
-              show_cm: projectData.show_cm !== undefined ? projectData.show_cm : true,
-              show_bidding: projectData.show_bidding !== undefined ? projectData.show_bidding : true,
-              show_progress_summary: projectData.show_progress_summary !== undefined ? projectData.show_progress_summary : true,
-              show_payment: projectData.show_payment !== undefined ? projectData.show_payment : true,
-              show_job_status: projectData.show_job_status !== undefined ? projectData.show_job_status : true,
-              bidding_progress: projectData.bidding_progress || 0,
-              design_progress: projectData.design_progress || 0,
-              pre_construction_progress: projectData.pre_construction_progress || 0,
-              construction_progress: projectData.construction_progress || 0,
-              precast_progress: projectData.precast_progress || 0,
-              cm_progress: projectData.cm_progress || 0,
-              job_status_progress: projectData.job_status_progress || 0,
-              notified_users: projectData.notified_users || [],
-            });
-
-            setFileLists({
-              progress_summary: projectData.progress_summary_image ? [{ uid: '-1', name: 'progress_summary.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.progress_summary_image}` }] : [],
-              payment: projectData.payment_image ? [{ uid: '-2', name: 'payment.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.payment_image}` }] : [],
-              design: projectData.design_image ? [{ uid: '-3', name: 'design.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.design_image}` }] : [],
-              pre_construction: projectData.pre_construction_image ? [{ uid: '-4', name: 'pre_construction.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.pre_construction_image}` }] : [],
-              construction: projectData.construction_image ? [{ uid: '-5', name: 'construction.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.construction_image}` }] : [],
-              cm: projectData.cm_image ? [{ uid: '-6', name: 'cm.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.cm_image}` }] : [],
-              general: projectData.image ? [{ uid: '-7', name: 'image.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.image}` }] : [],
-              precast: projectData.precast_image ? [{ uid: '-8', name: 'precast.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.precast_image}` }] : [],
-              bidding: projectData.bidding_image ? [{ uid: '-9', name: 'bidding.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.bidding_image}` }] : [],
-              job_status: projectData.job_status_image ? [{ uid: '-10', name: 'job_status.png', status: 'done', url: `${import.meta.env.VITE_API_URL}/${projectData.job_status_image}` }] : [],
-            });
-          }
+          const response = await api.get(`/api/project/${id}`);
+          const data = response.data;
+          
+          form.setFieldsValue({
+            ...data,
+            start_date: data.start_date ? dayjs(data.start_date) : null,
+            end_date: data.end_date ? dayjs(data.end_date) : null,
+            tender_doc_date: data.tender_doc_date ? dayjs(data.tender_doc_date) : null,
+            notified_users: data.team_members?.map(m => m.user_id) || []
+          });
+          
         } catch (error) {
-          message.error('ไม่สามารถดึงข้อมูลโครงการได้');
-          navigate('/project-settings');
+          console.error('Fetch project error:', error);
+          message.error('ไม่สามารถโหลดข้อมูลโครงการได้');
         } finally {
           setLoading(false);
         }
       } else {
         form.setFieldsValue({
-          show_design: true,
-          show_pre_construction: true,
-          show_construction: true,
-          show_precast: true,
-          show_cm: true,
-          show_bidding: true,
-          show_progress_summary: true,
-          show_payment: true,
-          show_job_status: true,
-          bidding_progress: 0,
-          design_progress: 0,
-          pre_construction_progress: 0,
-          construction_progress: 0,
-          precast_progress: 0,
-          cm_progress: 0,
-          job_status_progress: 0,
+          status: 'Planning',
+          progress: 0,
+          tender_status: 'tender_in_progress',
+          show_design: 1,
+          show_pre_construction: 1,
+          show_construction: 1,
+          show_precast: 1,
+          show_cm: 1,
+          show_bidding: 1,
+          show_progress_summary: 1,
+          show_payment: 1,
+          show_job_status: 1
         });
         setLoading(false);
       }
     };
     initData();
-  }, [id, isEditMode, form, location.state, navigate, message]);
-
-  const handleBack = () => {
-    navigate('/project-settings');
-  };
+  }, [id, isEditMode, form]);
 
   const handleFileChange = (category) => ({ fileList }) => {
     setFileLists(prev => ({ ...prev, [category]: fileList.slice(-1) }));
@@ -168,10 +133,8 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
       
       Object.keys(values).forEach(key => {
         if (values[key] === null || values[key] === undefined) return;
-        if (key.includes('date')) {
+        if (dayjs.isDayjs(values[key])) {
           formData.append(key, values[key].format('YYYY-MM-DD'));
-        } else if (key.startsWith('show_')) {
-          formData.append(key, values[key] ? '1' : '0');
         } else if (key === 'notified_users') {
           formData.append(key, JSON.stringify(values[key]));
         } else {
@@ -179,24 +142,15 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
         }
       });
 
-      const fileMappings = {
-        'general': 'image',
-        'progress_summary': 'progress_summary_image',
-        'payment': 'payment_image',
-        'design': 'design_image',
-        'pre_construction': 'pre_construction_image',
-        'construction': 'construction_image',
-        'cm': 'cm_image',
-        'precast': 'precast_image',
-        'bidding': 'bidding_image',
-        'job_status': 'job_status_image'
-      };
-
-      for (const [key, fieldName] of Object.entries(fileMappings)) {
-        if (fileLists[key][0]?.originFileObj) {
-          formData.append(fieldName, fileLists[key][0].originFileObj);
-        }
+      if (!isEditMode && activeCompany?.company_id) {
+        formData.append('company_id', activeCompany.company_id);
       }
+
+      Object.keys(fileLists).forEach(key => {
+        if (fileLists[key][0]?.originFileObj) {
+          formData.append(key, fileLists[key][0].originFileObj);
+        }
+      });
 
       let response;
       if (isEditMode) {
@@ -205,345 +159,204 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
         response = await api.post('/api/project', formData);
       }
       
-      Swal.fire({
-        icon: 'success',
-        title: 'สำเร็จ',
-        text: response.data.message || 'บันทึกข้อมูลเรียบร้อย',
-        confirmButtonColor: '#4f46e5',
-      });
+      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'บันทึกข้อมูลเรียบร้อย', confirmButtonColor: '#4f46e5' });
       navigate('/project-settings');
       
     } catch (error) {
       console.error('Submit Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'ข้อผิดพลาด',
-        text: error.response?.data?.message || 'ไม่สามารถบันทึกโครงการได้',
-        confirmButtonColor: '#ef4444',
-      });
+      Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: error.response?.data?.message || 'ไม่สามารถบันทึกได้', confirmButtonColor: '#ef4444' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const phaseItems = [
+    { label: 'Bidding', showKey: 'show_bidding', progressKey: 'bidding_progress', imgKey: 'bidding_image' },
+    { label: 'Design', showKey: 'show_design', progressKey: 'design_progress', imgKey: 'design_image' },
+    { label: 'Pre-Con', showKey: 'show_pre_construction', progressKey: 'pre_construction_progress', imgKey: 'pre_construction_image' },
+    { label: 'Construction', showKey: 'show_construction', progressKey: 'construction_progress', imgKey: 'construction_image' },
+    { label: 'Precast', showKey: 'show_precast', progressKey: 'precast_progress', imgKey: 'precast_image' },
+    { label: 'CM', showKey: 'show_cm', progressKey: 'cm_progress', imgKey: 'cm_image' },
+    { label: 'สถานะงาน', showKey: 'show_job_status', progressKey: 'job_status_progress', imgKey: 'job_status_image' },
+    { label: 'สรุปผลงาน', showKey: 'show_progress_summary', progressKey: null, imgKey: 'progress_summary_image' },
+    { label: 'การชำระเงิน', showKey: 'show_payment', progressKey: null, imgKey: 'payment_image' }
+  ];
+
+  const galleryItems = [
+    { label: 'รูปหลัก (MAIN)', key: 'image' },
+    { label: 'สรุปผลงาน', key: 'progress_summary_image' },
+    { label: 'การชำระเงิน', key: 'payment_image' },
+    { label: 'ออกแบบ', key: 'design_image' },
+    { label: 'เตรียมงาน', key: 'pre_construction_image' },
+    { label: 'ก่อสร้าง', key: 'construction_image' },
+    { label: 'PRECAST', key: 'precast_image' },
+    { label: 'บริหารงาน', key: 'cm_image' },
+    { label: 'ประมูลงาน', key: 'bidding_image' },
+    { label: 'สถานะงาน', key: 'job_status_image' }
+  ];
+
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          fontFamily: 'Kanit, sans-serif',
-          borderRadius: 12,
-          colorPrimary: '#6366f1',
-        },
-      }}
-    >
+    <ConfigProvider theme={{ token: { fontFamily: 'Kanit, sans-serif', borderRadius: 16, colorPrimary: '#4f46e5' } }}>
       <div className={`flex flex-col min-h-screen ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-[#f8fafc] text-slate-800'} font-kanit`}>
         <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
         
-        <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 relative">
-          
+        <div className="flex-1 w-full max-w-[1400px] mx-auto px-6 py-8">
           {loading ? (
-             <div className="flex flex-col items-center justify-center p-20 min-h-[60vh]">
-               <Spin size="large" />
-               <Typography.Text className="mt-4 font-kanit text-slate-400">กำลังโหลดข้อมูล...</Typography.Text>
-             </div>
+             <div className="flex flex-col items-center justify-center p-20 min-h-[60vh]"><Spin size="large" /><Text className="mt-4 text-slate-400">ระบบกำลังเตรียมข้อมูล...</Text></div>
           ) : (
-            <div className="flex flex-col gap-6">
-              
-              {/* Header Page */}
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-800/80 p-6 rounded-[2rem] shadow-sm border border-slate-200/50 dark:border-slate-700/50">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-indigo-500/10 rounded-2xl">
-                    <SaveOutlined className="text-2xl text-indigo-500" />
+            <Form form={form} layout="vertical">
+              <div className="flex flex-col gap-8">
+                
+                {/* Header Toolbar */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-800/80 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 bg-indigo-600 rounded-3xl shadow-lg shadow-indigo-100">
+                      <ProjectOutlined className="text-3xl text-white" />
+                    </div>
+                    <div>
+                      <Typography.Title level={3} className={`!mb-0 font-extrabold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                        {isEditMode ? 'แก้ไขรายละเอียดงาน' : 'สร้างโครงการใหม่'}
+                      </Typography.Title>
+                      <Text className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Management Suite</Text>
+                    </div>
                   </div>
-                  <div>
-                    <Typography.Title level={3} className={`!mb-0 font-kanit font-extrabold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                      {isEditMode ? 'แก้ไขรายละเอียดโครงการ' : 'สร้างโครงการใหม่'}
-                    </Typography.Title>
-                    <Typography.Text className="text-slate-400 text-xs uppercase tracking-widest font-bold">
-                      Project Management Center
-                    </Typography.Text>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={() => navigate('/project-settings')} className="h-11 px-6 rounded-xl font-bold border-0 bg-slate-100 dark:bg-slate-700">ยกเลิก</Button>
+                    <Button type="primary" onClick={handleSubmit} loading={submitting} className="h-11 px-10 rounded-xl font-bold bg-blue-500 shadow-lg shadow-blue-100 transition-transform hover:scale-105 border-0">บันทึกข้อมูล</Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                  <Button
-                    icon={<ArrowLeftOutlined />}
-                    onClick={handleBack}
-                    className={`flex-1 md:flex-none h-11 px-6 rounded-xl font-bold border-0 transition-all ${theme === 'dark' ? 'bg-slate-700 text-slate-300 hover:!bg-slate-600 hover:!text-white' : 'bg-slate-100 text-slate-600 hover:!bg-slate-200 hover:!text-slate-800'}`}
-                  >
-                    ยกเลิก
-                  </Button>
-                  <Button
-                    type="primary"
-                    icon={<SaveOutlined />}
-                    onClick={handleSubmit}
-                    loading={submitting}
-                    className="flex-1 md:flex-none h-11 px-8 rounded-xl font-bold bg-indigo-600 hover:!bg-indigo-500 border-0 shadow-lg shadow-indigo-500/20 !text-white"
-                  >
-                    บันทึกข้อมูล
-                  </Button>
-                </div>
-              </div>
 
-              <Form form={form} layout="vertical">
                 <Row gutter={[24, 24]}>
-                  
-                  {/* Left Column: Basic Info & Stakeholders */}
+                  {/* Left Column */}
                   <Col xs={24} lg={16}>
                     <div className="flex flex-col gap-6">
-                      
-                      {/* Section: ข้อมูลพื้นฐาน */}
-                      <Card className="border-0 rounded-[2rem] shadow-sm overflow-hidden dark:bg-slate-800/40" 
-                            title={<div className="flex items-center gap-2 text-indigo-500 font-bold"><InfoCircleOutlined/> ข้อมูลโครงการ</div>}>
+                      <Card className="border-0 rounded-[2.5rem] shadow-sm dark:bg-slate-800/40" 
+                            title={<div className="flex items-center gap-2 text-indigo-600 font-bold"><LayoutOutlined/> ข้อมูลโครงการและรายละเอียดผู้เกี่ยวข้อง</div>}>
                         <Row gutter={[16, 8]}>
-                          <Col xs={24} md={12}>
-                            <Form.Item name="project_name" label="ชื่อโครงการ" rules={[{ required: true }]} className="mb-4">
-                              <Input className="h-10 rounded-lg" placeholder="ชื่อโครงการ..." />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="job_number" label="เลขที่งาน" rules={[{ required: true }]} className="mb-4">
-                              <Input className="h-10 rounded-lg" placeholder="SPK-XXXX" />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="status" label="สถานะ" rules={[{ required: true }]} className="mb-4">
-                              <Select className="h-10">
-                                <Option value="Planning">วางแผน</Option>
-                                <Option value="In Progress">ดำเนินการ</Option>
-                                <Option value="Completed">เสร็จสิ้น</Option>
-                              </Select>
-                            </Form.Item>
-                          </Col>
-
-                          <Col xs={24} md={6}>
-                            <Form.Item name="start_date" label="วันที่เริ่ม" className="mb-4">
-                              <DatePicker className="w-full h-10 rounded-lg" format="DD/MM/YYYY" placeholder="เริ่ม" />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="end_date" label="วันที่สิ้นสุด" className="mb-4">
-                              <DatePicker className="w-full h-10 rounded-lg" format="DD/MM/YYYY" placeholder="สิ้นสุด" />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="progress" label="ความคืบหน้ารวม (%)" className="mb-4">
-                              <InputNumber min={0} max={100} className="w-full h-10 rounded-lg flex items-center" />
-                            </Form.Item>
-                          </Col>
-                          {!isEditMode && (
-                            <Col xs={24} md={6}>
-                              <Form.Item name="template_id" label="โครงสร้างโฟลเดอร์" className="mb-4">
-                                <Select className="h-10" loading={isFetchingTemplates} placeholder="เลือก Template">
-                                  {templates.map(t => <Option key={t.template_id} value={t.template_id}>{t.template_name}</Option>)}
-                                </Select>
-                              </Form.Item>
-                            </Col>
-                          )}
-                          <Col span={24}>
-                            <Form.Item name="description" label="คำอธิบาย" className="mb-0">
-                              <Input className="h-10 rounded-lg" placeholder="รายละเอียดโครงการคร่าวๆ..." />
-                            </Form.Item>
-                          </Col>
+                          <Col xs={24} md={6}><Form.Item name="job_number" label={<span className="text-red-500 font-bold">* JOB NUMBER</span>} rules={[{required:true}]}><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold"/></Form.Item></Col>
+                          <Col xs={24} md={18}><Form.Item name="project_name" label={<span className="text-red-500 font-bold">* ชื่อโครงการ</span>} rules={[{required:true}]}><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200"/></Form.Item></Col>
+                          <Col xs={12} md={6}><Form.Item name="start_date" label={<span className="text-red-500 font-bold">* วันเริ่มงาน</span>} rules={[{required:true}]}><DatePicker className="w-full h-11 rounded-xl bg-slate-50 border border-slate-200" format="DD/MM/YYYY"/></Form.Item></Col>
+                          <Col xs={12} md={6}><Form.Item name="end_date" label={<span className="text-red-500 font-bold">* วันสิ้นสุด</span>} rules={[{required:true}]}><DatePicker className="w-full h-11 rounded-xl bg-slate-50 border border-slate-200" format="DD/MM/YYYY"/></Form.Item></Col>
+                          <Col xs={24} md={6}><Form.Item name="status" label="สถานะ"><Select className="h-11 rounded-xl bg-slate-50 border border-slate-200" options={[{label:'Planning',value:'Planning'},{label:'In Progress',value:'In Progress'},{label:'Completed',value:'Completed'}]}/></Form.Item></Col>
+                          <Col xs={24} md={6}><Form.Item name="progress" label="ความคืบหน้าหลัก (%)"><Input type="number" className="h-11 rounded-xl bg-slate-50 border border-slate-200 font-bold"/></Form.Item></Col>
+                          
+                          <Col xs={12} md={6}><Form.Item name="owner" label="เจ้าของโครงการ"><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200" placeholder="Owner"/></Form.Item></Col>
+                          <Col xs={12} md={6}><Form.Item name="consusltant" label="ที่ปรึกษา"><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200" placeholder="Consultant"/></Form.Item></Col>
+                          <Col xs={12} md={6}><Form.Item name="contractor" label="ผู้รับเหมา"><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200" placeholder="Contractor"/></Form.Item></Col>
+                          <Col xs={12} md={6}><Form.Item name="address" label="ที่ตั้งโครงการ"><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200" placeholder="Location"/></Form.Item></Col>
                         </Row>
                       </Card>
 
-                      {/* Section: ผู้เกี่ยวข้อง */}
-                      <Card className="border-0 rounded-[2rem] shadow-sm overflow-hidden dark:bg-slate-800/40"
-                            title={<div className="flex items-center gap-2 text-indigo-500 font-bold"><CheckCircleOutlined/> ผู้ที่เกี่ยวข้องและที่ตั้ง</div>}>
-                        <Row gutter={[16, 8]}>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="owner" label="เจ้าของโครงการ" className="mb-2">
-                              <Input className="h-10 rounded-lg" />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="consusltant" label="ที่ปรึกษา" className="mb-2">
-                              <Input className="h-10 rounded-lg" />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="contractor" label="ผู้รับเหมา" className="mb-2">
-                              <Input className="h-10 rounded-lg" />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={6}>
-                            <Form.Item name="address" label="ที่ตั้งโครงการ" className="mb-2">
-                              <Input className="h-10 rounded-lg" />
-                            </Form.Item>
-                          </Col>
-                        </Row>
-                      </Card>
-
-                      {/* Section: แจ้งเตือน */}
-                      <Card className="border-0 rounded-[2rem] shadow-sm overflow-hidden dark:bg-slate-800/40"
-                            title={<div className="flex items-center gap-2 text-indigo-500 font-bold"><InfoCircleOutlined/> การแจ้งเตือน (Notify Users)</div>}>
-                        <Form.Item name="notified_users" className="mb-0">
-                          <Select 
-                            mode="multiple" 
-                            className="w-full min-h-[44px]"
-                            placeholder="เลือกรายชื่อผู้ใช้..."
-                            loading={isFetchingUsers}
-                            maxTagCount="responsive"
-                            options={allUsers.map(u => ({ 
-                              value: u.user_id, 
-                              label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username})`.trim()
-                            }))}
-                          />
-                        </Form.Item>
+                      <Card className="border-0 rounded-[2.5rem] shadow-sm dark:bg-slate-800/40"
+                            title={<div className="flex items-center gap-2 text-indigo-600 font-bold"><CheckCircleOutlined/> การจัดการเฟสงานและความคืบหน้า (%)</div>}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {phaseItems.map(item => (
+                            <div key={item.showKey} className="p-4 rounded-[1.8rem] bg-white dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700 flex flex-col gap-2 shadow-sm">
+                              <div className="flex justify-between items-center">
+                                <Form.Item name={item.showKey} valuePropName="checked" className="mb-0">
+                                  <Checkbox className="font-bold text-slate-700 dark:text-slate-200">{item.label}</Checkbox>
+                                </Form.Item>
+                                {item.progressKey && (
+                                  <Form.Item name={item.progressKey} className="mb-0 w-16">
+                                    <Input type="number" size="small" suffix="%" className="h-7 rounded-lg border-slate-200 text-center font-bold text-indigo-600" />
+                                  </Form.Item>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </Card>
                     </div>
                   </Col>
 
-                  {/* Right Column: Visibility & Progress */}
+                  {/* Right Column */}
                   <Col xs={24} lg={8}>
-                    <Card className="border-0 rounded-[2rem] shadow-sm overflow-hidden dark:bg-slate-800/40 h-full"
-                          title={<div className="flex items-center gap-2 text-indigo-500 font-bold"><PercentageOutlined/> เมนูและความคืบหน้าเฟส</div>}>
-                      <div className="flex flex-col gap-4">
-                        {[
-                          { id: "bidding", label: "Bidding", show: "show_bidding", prog: "bidding_progress" },
-                          { id: "design", label: "Design", show: "show_design", prog: "design_progress" },
-                          { id: "pre_con", label: "Pre-Con", show: "show_pre_construction", prog: "pre_construction_progress" },
-                          { id: "const", label: "Construction", show: "show_construction", prog: "construction_progress" },
-                          { id: "precast", label: "Precast", show: "show_precast", prog: "precast_progress" },
-                          { id: "cm", label: "Management", show: "show_cm", prog: "cm_progress" },
-                          { id: "job", label: "Tender Status", show: "show_job_status", prog: "job_status_progress" },
-                          { id: "summ", label: "Summary", show: "show_progress_summary", prog: null },
-                          { id: "pay", label: "Payment", show: "show_payment", prog: null }
-                        ].map(phase => {
-                          const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
-                          const label = phase.id === 'job' 
-                            ? (isTenderMode ? 'Tender Status' : 'Job Status') 
-                            : phase.label;
-                            
-                          return (
-                            <div key={phase.id} className="flex items-center justify-between gap-4 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-600">
-                              <Form.Item name={phase.show} valuePropName="checked" className="mb-0">
-                                <Checkbox><span className="font-bold text-slate-600 dark:text-slate-300">{label}</span></Checkbox>
-                              </Form.Item>
-                              {phase.prog && (
-                                <Form.Item name={phase.prog} className="mb-0 w-24">
-                                  <InputNumber min={0} max={100} size="small" suffix="%" className="w-full rounded-lg" />
-                                </Form.Item>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </Card>
-                  </Col>
+                    <div className="flex flex-col gap-6">
+                      {isTenderMode && (
+                        <Card className="border-0 rounded-[2.5rem] shadow-sm dark:bg-slate-800/40"
+                              title={<div className="flex items-center gap-2 text-indigo-600 font-bold"><TrophyOutlined/> รายละเอียด Tender</div>}>
+                          <Row gutter={[12, 12]}>
+                            <Col span={24}><Form.Item name="tender_doc_date" label="วันที่รับเอกสาร"><DatePicker className="w-full h-11 rounded-xl bg-slate-50 border border-slate-200" format="DD/MM/YYYY"/></Form.Item></Col>
+                            <Col span={24}><Form.Item name="tender_status" label="สถานะประมูล"><Select className="h-11 rounded-xl bg-slate-50 border border-slate-200" options={[{label:'กำลังดำเนินการ',value:'tender_in_progress'},{label:'ชนะ',value:'tender_win'},{label:'ไม่ชนะ',value:'tender_lost'}]}/></Form.Item></Col>
+                            <Col span={24}><Form.Item name="tender_project_number" label="เลขโครงการ"><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200"/></Form.Item></Col>
+                            <Col span={24}><Form.Item name="tender_organization" label="หน่วยงาน"><Input className="h-11 rounded-xl bg-slate-50 border border-slate-200"/></Form.Item></Col>
+                          </Row>
+                        </Card>
+                      )}
 
-                  {/* Section: รูปภาพ (Full Width) */}
-                  <Col span={24}>
-                    <Card className="border-0 rounded-[2rem] shadow-sm overflow-hidden dark:bg-slate-800/40"
-                          title={<div className="flex items-center gap-2 text-indigo-500 font-bold text-sm"><PictureOutlined/> คลังรูปภาพโครงการ</div>}>
-                      <Row gutter={[12, 12]}>
-                        {[
-                          { name: "general", label: "หน้าปก", field: "image" },
-                          { name: "bidding", label: "ประมูลงาน", field: "bidding_image" },
-                          { name: "design", label: "ออกแบบ", field: "design_image" },
-                          { name: "pre_construction", label: "เตรียมงาน", field: "pre_construction_image" },
-                          { name: "construction", label: "ก่อสร้าง", field: "construction_image" },
-                          { name: "precast", label: "Precast", field: "precast_image" },
-                          { name: "cm", label: "บริหารงาน", field: "cm_image" },
-                          { name: "progress_summary", label: "สรุปผล", field: "progress_summary_image" },
-                          { name: "payment", label: "การเงิน", field: "payment_image" },
-                          { name: "job_status", label: "สถานะ", field: "job_status_image" }
-                        ].map(img => (
-                          <Col xs={12} sm={8} md={6} lg={4} xl={2.4} key={img.name}>
-                            <div className="flex flex-col gap-1">
-                              <Typography.Text className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter ml-1 truncate">
-                                {img.label}
-                              </Typography.Text>
-                              <div className={`p-1.5 rounded-xl border transition-all ${theme === 'dark' ? 'bg-slate-900/40 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                                <Form.Item name={img.field} noStyle>
-                                  <Upload
-                                    fileList={fileLists[img.name] || []}
-                                    onChange={handleFileChange(img.name)}
-                                    beforeUpload={() => false}
-                                    accept="image/*"
-                                    listType="picture-card"
-                                    className="form-gallery-uploader-compact"
-                                  >
-                                    {(fileLists[img.name] || []).length < 1 && (
-                                      <div className="flex flex-col items-center">
-                                        <PlusOutlined className="text-sm text-indigo-400" />
-                                        <div className="text-[9px] text-slate-400 font-bold">UP</div>
-                                      </div>
-                                    )}
-                                  </Upload>
-                                </Form.Item>
-                              </div>
-                            </div>
-                          </Col>
-                        ))}
-                      </Row>
-                    </Card>
+                      <Card className="border-0 rounded-[2.5rem] shadow-sm dark:bg-slate-800/40"
+                            title={<div className="flex items-center gap-2 text-indigo-600 font-bold"><ClockCircleOutlined/> การแจ้งเตือนผู้ใช้งาน</div>}>
+                        <Form.Item name="notified_users" className="mb-0">
+                          <Select mode="multiple" className="w-full" placeholder="เลือกรายชื่อ..." options={(Array.isArray(users) ? users : []).map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))} variant="outlined" style={{ borderRadius: '1rem' }} />
+                        </Form.Item>
+                      </Card>
+                    </div>
                   </Col>
                 </Row>
-              </Form>
-            </div>
+
+                <Card className="border-0 rounded-[2.5rem] shadow-sm dark:bg-slate-800/40 mt-6"
+                      title={<div className="flex items-center gap-2 text-indigo-600 font-bold"><PictureOutlined/> คลังรูปภาพโครงการ (Gallery Dashboard)</div>}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {galleryItems.map(item => (
+                      <div key={`gallery-${item.key}`} className="p-5 rounded-[2rem] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4 min-h-[200px]">
+                        <Text className="text-[11px] font-black text-slate-400 uppercase tracking-wider">{item.label}</Text>
+                        <div className="flex-1 flex items-center justify-center">
+                          <Upload
+                            listType="picture-card"
+                            maxCount={1}
+                            fileList={fileLists[item.key]}
+                            onChange={handleFileChange(item.key)}
+                            beforeUpload={() => false}
+                            className="custom-upload-gallery"
+                          >
+                            {fileLists[item.key].length === 0 && (
+                              <div className="flex flex-col items-center gap-2">
+                                <PlusOutlined className="text-xl text-indigo-300" />
+                                <Text className="text-[10px] font-bold text-indigo-300 uppercase">อัปโหลด</Text>
+                              </div>
+                            )}
+                          </Upload>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </Form>
           )}
         </div>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          .ant-card-head { border-bottom: 0 !important; padding: 24px 32px 8px !important; }
+          .ant-card-body { padding: 8px 32px 32px !important; }
+          .ant-form-item-label label { font-weight: 700 !important; color: #64748b !important; font-size: 11px !important; text-transform: uppercase !important; }
+          .ant-checkbox-checked .ant-checkbox-inner { background-color: #4f46e5 !important; border-color: #4f46e5 !important; }
+          .custom-upload-gallery .ant-upload.ant-upload-select-picture-card {
+            width: 100% !important;
+            height: 110px !important;
+            background-color: #f8fafc !important;
+            border: 2px dashed #e2e8f0 !important;
+            border-radius: 1.5rem !important;
+            margin: 0 !important;
+          }
+          .dark .custom-upload-gallery .ant-upload.ant-upload-select-picture-card { background-color: rgba(51, 65, 85, 0.2) !important; border-color: #334155 !important; }
+          
+          /* Show borders for inputs clearly */
+          .ant-input, .ant-picker, .ant-select-selector { 
+            border: 1.5px solid #e2e8f0 !important;
+            transition: all 0.3s ease !important;
+          }
+          .ant-input:hover, .ant-picker:hover, .ant-select-selector:hover { 
+            border-color: #6366f1 !important; 
+          }
+          .ant-input:focus, .ant-picker-focused, .ant-select-focused .ant-select-selector { 
+            border-color: #4f46e5 !important;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important;
+          }
+        `}} />
       </div>
-
-      <style>{`
-        .ant-card-head {
-          border-bottom: 1px solid rgba(0,0,0,0.03) !important;
-          padding: 0 20px !important;
-          min-height: 40px !important;
-        }
-        .ant-card-head-title {
-          padding: 8px 0 !important;
-          font-size: 13px !important;
-        }
-        .ant-form-item-label {
-          padding-bottom: 4px !important;
-        }
-        .ant-form-item-label > label {
-          font-size: 13px !important;
-          font-weight: 600 !important;
-          color: #64748b !important;
-        }
-        .dark .ant-form-item-label > label {
-          color: #94a3b8 !important;
-        }
-
-        .form-gallery-uploader-compact .ant-upload-select-picture-card {
-          width: 100% !important;
-          height: 64px !important;
-          margin-bottom: 0 !important;
-          margin-inline-end: 0 !important;
-          border-radius: 10px !important;
-          background-color: transparent !important;
-          border: 1px dashed #cbd5e1 !important;
-          transition: all 0.3s ease;
-        }
-        .dark .form-gallery-uploader-compact .ant-upload-select-picture-card {
-           border: 1px dashed #334155 !important;
-        }
-        .form-gallery-uploader-compact .ant-upload-list-item-container {
-          width: 100% !important;
-          height: 64px !important;
-        }
-        .form-gallery-uploader-compact .ant-upload-list-item {
-          border-radius: 10px !important;
-          padding: 2px !important;
-        }
-        .ant-card-body {
-          padding: 20px !important;
-        }
-      `}</style>
     </ConfigProvider>
   );
-};
-
-ProjectForm.propTypes = {
-  user: PropTypes.object,
-  setUser: PropTypes.func.isRequired,
-  theme: PropTypes.string.isRequired,
-  setTheme: PropTypes.func.isRequired,
-  activeCompany: PropTypes.object,
-  setActiveCompany: PropTypes.func,
 };
 
 export default ProjectForm;

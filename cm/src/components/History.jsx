@@ -386,10 +386,10 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
                 <ClockCircleOutlined style={{ fontSize: '36px', color: primaryColor }} />
               </div>
               <div>
-                <h1 className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-3xl sm:text-4xl font-extrabold tracking-tight`}>
+                <h1 className={`font-kanit ${theme === 'dark' ? 'text-white' : 'text-slate-800'} !mb-0 text-2xl sm:text-3xl font-bold tracking-tight`}>
                   History & Activity
                 </h1>
-                <p className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-lg mt-1`}>
+                <p className={`font-kanit ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-sm font-medium mt-1.5 tracking-wide`}>
                   บันทึกกิจกรรมย้อนหลังและสรุปสถิติผู้ใช้งาน
                 </p>
               </div>
@@ -397,14 +397,14 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <div className={`flex p-1.5 rounded-2xl shadow-xl ${theme === 'dark' ? 'bg-slate-800/80 border border-slate-700/50' : 'bg-white border border-slate-100'}`}>
+            <div className={`flex items-center p-1.5 rounded-[1rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border ${theme === 'dark' ? 'bg-[#121620] border-white/5' : 'bg-white border-slate-200'}`}>
               <select
                 value={selectedYear}
                 onChange={(e) => {
                   setSelectedYear(e.target.value);
                   setSelectedProject('all');
                 }}
-                className={`bg-transparent px-4 py-2 font-bold focus:outline-none cursor-pointer ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}
+                className={`bg-transparent px-4 py-1.5 text-sm font-semibold focus:outline-none cursor-pointer ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}
               >
                 <option value="all">ทุกปี ({userProjects.length})</option>
                 {projectYears.map((year) => (
@@ -417,7 +417,7 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className={`bg-transparent px-4 py-2 font-bold focus:outline-none max-w-[250px] cursor-pointer ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}
+                className={`bg-transparent px-4 py-1.5 text-sm font-semibold focus:outline-none max-w-[250px] cursor-pointer ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}
               >
                 <option value="all">ทุกโครงการ</option>
                 {yearFilteredProjects.map((p) => (
@@ -430,8 +430,8 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
             
             <button
               onClick={() => fetchDashboardData()}
-              className={`p-4 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 ${
-                theme === 'dark' ? 'text-white' : 'bg-white border border-slate-100'
+              className={`p-3.5 rounded-2xl shadow-[0_8px_20px_rgba(0,0,0,0.06)] transition-all duration-300 hover:scale-105 border-0 ${
+                theme === 'dark' ? 'text-white' : 'bg-white'
               }`}
               style={{ 
                 backgroundColor: theme === 'dark' ? primaryColor : 'white',
@@ -446,62 +446,62 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <div className={`group relative rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
-          }`}>
+          <div className={`group relative rounded-2xl p-6 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-white/10' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-indigo-200 hover:shadow-[0_8px_30px_rgb(99,102,241,0.12)]'
+          } hover:-translate-y-1`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ไฟล์ทั้งหมด</p>
-                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalFiles?.toLocaleString() || 0}</p>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider mb-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ไฟล์ทั้งหมด</p>
+                <p className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalFiles?.toLocaleString() || 0}</p>
               </div>
-              <div className="p-4 rounded-2xl shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><FileOutlined className="text-2xl" /></div>
+              <div className="p-3.5 rounded-xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><FileOutlined className="text-xl" /></div>
             </div>
           </div>
 
-          <div className={`group relative rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
-          }`}>
+          <div className={`group relative rounded-2xl p-6 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-white/10' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-indigo-200 hover:shadow-[0_8px_30px_rgb(99,102,241,0.12)]'
+          } hover:-translate-y-1`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ดาวน์โหลดรวม</p>
-                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalDownloads?.toLocaleString() || 0}</p>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider mb-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ดาวน์โหลดรวม</p>
+                <p className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalDownloads?.toLocaleString() || 0}</p>
               </div>
-              <div className="p-4 rounded-2xl shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><DownloadOutlined className="text-xl" /></div>
+              <div className="p-3.5 rounded-xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><DownloadOutlined className="text-xl" /></div>
             </div>
           </div>
 
-          <div className={`group relative rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
-          }`}>
+          <div className={`group relative rounded-2xl p-6 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-white/10' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-indigo-200 hover:shadow-[0_8px_30px_rgb(99,102,241,0.12)]'
+          } hover:-translate-y-1`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>พื้นที่ใช้งาน</p>
-                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalSizeGB || 0} GB</p>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider mb-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>พื้นที่ใช้งาน</p>
+                <p className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{statistics?.totalSizeGB || 0} GB</p>
               </div>
-              <div className="p-4 rounded-2xl shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><DatabaseOutlined className="text-xl" /></div>
+              <div className="p-3.5 rounded-xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><DatabaseOutlined className="text-xl" /></div>
             </div>
           </div>
 
-          <div className={`group relative rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
-          }`}>
+          <div className={`group relative rounded-2xl p-6 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-white/10' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-indigo-200 hover:shadow-[0_8px_30px_rgb(99,102,241,0.12)]'
+          } hover:-translate-y-1`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>โครงการที่เข้าถึง</p>
-                <p className={`text-3xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedYear === 'all' ? userProjects.length : yearFilteredProjects.length}</p>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider mb-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>โครงการที่เข้าถึง</p>
+                <p className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedYear === 'all' ? userProjects.length : yearFilteredProjects.length}</p>
               </div>
-              <div className="p-4 rounded-2xl shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><FolderOutlined className="text-xl" /></div>
+              <div className="p-3.5 rounded-xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}><FolderOutlined className="text-xl" /></div>
             </div>
           </div>
         </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-12">
-          <div className={`xl:col-span-2 rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
+          <div className={`xl:col-span-2 rounded-2xl p-7 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)]' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)]'
           }`}>
-            <h2 className={`text-2xl font-black mb-8 flex items-center gap-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-              <div className="w-2.5 h-10 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+            <h2 className={`text-lg font-bold mb-8 flex items-center gap-3 tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: primaryColor }}></div>
               สถิติช่วง 7 วันที่ผ่านมา
             </h2>
             <div className="w-full h-[350px]">
@@ -538,11 +538,11 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
             </div>
           </div>
 
-          <div className={`rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
+          <div className={`rounded-2xl p-7 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)]' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)]'
           }`}>
-            <h2 className={`text-2xl font-black mb-10 flex items-center gap-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-              <div className="w-2.5 h-10 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+            <h2 className={`text-lg font-bold mb-8 flex items-center gap-3 tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: primaryColor }}></div>
               ไฟล์ยอดนิยม
             </h2>
             <div className="space-y-4">
@@ -575,12 +575,12 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
 
         {/* Recent Activity and Leaderboard */}
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-10">
-          <div className={`2xl:col-span-1 rounded-lg p-6 transition-all duration-300 border ${
-            theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-slate-100 shadow-sm'
+          <div className={`2xl:col-span-1 rounded-2xl p-7 transition-all duration-500 border ${
+            theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)]' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)]'
           }`}>
-            <h2 className={`text-2xl font-black mb-10 flex items-center justify-between ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-              <span className="flex items-center gap-4">
-                <div className="w-2.5 h-10 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+            <h2 className={`text-lg font-bold mb-8 flex items-center justify-between tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              <span className="flex items-center gap-3">
+                <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: primaryColor }}></div>
                 กิจกรรมล่าสุด
               </span>
               <span 
@@ -647,11 +647,11 @@ function History({ user, setUser, theme, setTheme, activeCompany, setActiveCompa
           </div>
 
           <div className="2xl:col-span-2 space-y-10">
-            <div className={`rounded-lg p-6 transition-all duration-300 border ${
-              theme === 'dark' ? 'bg-[#141414] border-slate-800 shadow-sm' : 'bg-white border-gray-200 shadow-sm'
+            <div className={`rounded-2xl p-7 transition-all duration-500 border ${
+              theme === 'dark' ? 'bg-[#121620] border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)]' : 'bg-white border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)]'
             }`}>
-              <h2 className={`text-2xl font-black mb-10 flex items-center gap-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                <div className="w-2.5 h-10 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+              <h2 className={`text-lg font-bold mb-8 flex items-center gap-3 tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: primaryColor }}></div>
                 ผู้อัปโหลดสูงสุด (Top Contributors)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

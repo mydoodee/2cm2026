@@ -427,9 +427,147 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                     onClick: () => handleProjectClick(record.project_id),
                     className: "cursor-pointer group/row"
                   })}
-                  columns={[
+                  columns={isTenderMode ? [
                     {
-                      title: isTenderMode ? 'รหัส TENDER' : 'รหัสงาน',
+                      title: 'เลขที่งาน',
+                      dataIndex: 'job_number',
+                      key: 'job_number',
+                      width: 150,
+                      render: (text) => (
+                        <div className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-[10px] tracking-wider border whitespace-nowrap
+                          ${theme === 'dark' 
+                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-100'}`}
+                        >
+                          {text || 'N/A'}
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'ชื่อโครงการ',
+                      dataIndex: 'project_name',
+                      key: 'project_name',
+                      width: 180,
+                      render: (text) => <div className={`font-bold text-[12px] truncate ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{text || '-'}</div>
+                    },
+                    {
+                      title: 'วันที่รับเอกสาร',
+                      dataIndex: 'tender_doc_date',
+                      key: 'tender_doc_date',
+                      width: 110,
+                      render: (date) => (
+                        <span className={`text-[11px] font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {formatThaiDate(date)}
+                        </span>
+                      )
+                    },
+                    {
+                      title: 'เลขที่โครงการ',
+                      dataIndex: 'tender_project_number',
+                      key: 'tender_project_number',
+                      width: 110,
+                      render: (text) => <span className="text-[11px] font-medium">{text || '-'}</span>
+                    },
+                    {
+                      title: 'เลขที่ประกาศ',
+                      dataIndex: 'tender_announcement_number',
+                      key: 'ann_no',
+                      width: 120,
+                      render: (text) => <span className="text-[11px] font-medium">{text || '-'}</span>
+                    },
+                    {
+                      title: 'หน่วยงาน',
+                      dataIndex: 'tender_organization',
+                      key: 'org',
+                      width: 150,
+                      render: (text) => <div className="text-[11px] font-medium line-clamp-2" title={text}>{text || '-'}</div>
+                    },
+                    {
+                      title: 'รายการ',
+                      dataIndex: 'tender_item_description',
+                      key: 'item_desc',
+                      width: 150,
+                      render: (text) => <div className={`text-[11px] font-medium line-clamp-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{text || '-'}</div>
+                    },
+                    {
+                      title: 'บริษัทที่ได้งาน',
+                      dataIndex: 'tender_winner_company',
+                      key: 'winner_company',
+                      width: 150,
+                      render: (text, record) => {
+                        // Priority: 1. Input field, 2. If Win -> Contractor Name, 3. Active Company Name, 4. Dash
+                        const winner = text || (record.tender_status === 'tender_win' ? (record.contractor || activeCompany?.company_name) : null);
+                        return (
+                          <div className={`text-[11px] font-bold line-clamp-2 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                            {winner || '-'}
+                          </div>
+                        );
+                      }
+                    },
+                    {
+                      title: 'ความคืบหน้า',
+                      dataIndex: 'progress',
+                      key: 'progress',
+                      width: 120,
+                      render: (progress) => (
+                        <div className="flex flex-col gap-1.5 pr-4">
+                          <div className="flex justify-between text-[10px] items-center">
+                            <span className={`font-black ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{progress || 0}%</span>
+                          </div>
+                          <Progress 
+                            percent={progress || 0} 
+                            size="small" 
+                            strokeColor={primaryColor} 
+                            trailColor={theme === 'dark' ? '#1e293b' : '#f1f5f9'}
+                            showInfo={false}
+                            className="m-0 h-1"
+                          />
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'สถานะ',
+                      key: 'status',
+                      width: 120,
+                      render: (_, record) => (
+                        <div className="flex items-center">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase shadow-sm ${getTenderStatusConfig(record.tender_status).color}`}>
+                            {getTenderStatusConfig(record.tender_status).label}
+                          </span>
+                        </div>
+                      )
+                    },
+                    {
+                      title: '',
+                      key: 'action',
+                      width: 50,
+                      render: () => (
+                        <div className="flex justify-end pr-2">
+                          <div className={`w-8 h-8 flex items-center justify-center rounded-full transition-all border border-slate-200/50 shadow-sm ${
+                            theme === 'dark' ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-400 group-hover/row:text-white'
+                          }`}
+                          style={{ 
+                            backgroundColor: theme === 'dark' ? undefined : 'white',
+                          }}>
+                            <RightOutlined className="text-[10px] transition-transform group-hover/row:translate-x-0.5" />
+                          </div>
+                        </div>
+                      )
+                    }
+                  ] : [
+                    {
+                      title: 'วันที่เริ่ม',
+                      dataIndex: 'start_date',
+                      key: 'date',
+                      width: 120,
+                      render: (date) => (
+                        <span className={`text-[11px] font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {formatThaiDate(date)}
+                        </span>
+                      )
+                    },
+                    {
+                      title: 'รหัสงาน',
                       dataIndex: 'job_number',
                       key: 'job_number',
                       width: 120,
@@ -473,7 +611,7 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                       title: 'ความคืบหน้า',
                       dataIndex: 'progress',
                       key: 'progress',
-                      width: 180,
+                      width: 150,
                       render: (progress) => (
                         <div className="flex flex-col gap-1.5 pr-4">
                           <div className="flex justify-between text-[10px] items-center">
@@ -493,48 +631,21 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                     {
                       title: 'สถานะ',
                       key: 'status',
-                      width: 140,
+                      width: 130,
                       render: (_, record) => (
                         <div className="flex items-center">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase shadow-sm ${
-                            isTenderMode 
-                              ? getTenderStatusConfig(record.tender_status).color 
-                              : (theme === 'dark' ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-600')
+                            theme === 'dark' ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-600'
                           }`}>
-                            {isTenderMode ? getTenderStatusConfig(record.tender_status).label : (record.status || 'ACTIVE')}
+                            {record.status || 'ACTIVE'}
                           </span>
-                        </div>
-                      )
-                    },
-                    {
-                      title: 'ทีมงาน',
-                      key: 'team',
-                      width: 120,
-                      render: (_, record) => (
-                        <div className="flex -space-x-2">
-                          {record.team_members?.slice(0, 3).map((member, i) => (
-                            <Tooltip key={i} title={member.name}>
-                              <Avatar 
-                                size="small" 
-                                style={{ backgroundColor: `hsl(${i * 60}, 70%, 60%)`, width: 24, height: 24 }}
-                                className="border-[2px] border-white dark:border-slate-900 shadow-sm"
-                              >
-                                <span className="text-[10px]">{member.name.charAt(0)}</span>
-                              </Avatar>
-                            </Tooltip>
-                          ))}
-                          {record.team_members?.length > 3 && (
-                            <Avatar size="small" className="bg-slate-100 dark:bg-slate-800 text-indigo-600 border-2 border-white dark:border-slate-900 text-[10px] font-bold">
-                              +{record.team_members.length - 3}
-                            </Avatar>
-                          )}
                         </div>
                       )
                     },
                     {
                       title: '',
                       key: 'action',
-                      width: 60,
+                      width: 50,
                       render: () => (
                         <div className="flex justify-end pr-2">
                           <div className={`w-8 h-8 flex items-center justify-center rounded-full transition-all border border-slate-200/50 shadow-sm ${
@@ -630,14 +741,25 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
           background: transparent !important;
         }
         .premium-table .ant-table-thead > tr > th {
-          background: transparent !important;
-          color: ${theme === 'dark' ? '#94a3b8' : '#64748b'} !important;
-          border-bottom: 1px solid ${theme === 'dark' ? '#1e293b' : '#f1f5f9'} !important;
-          font-weight: 600 !important;
+          background: ${theme === 'dark' ? '#1e293b' : '#e2e8f0'} !important;
+          color: ${theme === 'dark' ? '#e2e8f0' : '#1e293b'} !important;
+          border-bottom: none !important;
+          font-weight: 700 !important;
           text-transform: uppercase;
-          font-size: 10px;
-          letter-spacing: 0.1em;
+          font-size: 11.5px;
+          letter-spacing: 0.05em;
           padding: 14px 20px !important;
+        }
+        .premium-table .ant-table-thead > tr > th::before {
+          display: none !important; /* Hide the vertical separator lines */
+        }
+        .premium-table .ant-table-thead > tr > th:first-child {
+          border-top-left-radius: 12px !important;
+          border-bottom-left-radius: 12px !important;
+        }
+        .premium-table .ant-table-thead > tr > th:last-child {
+          border-top-right-radius: 12px !important;
+          border-bottom-right-radius: 12px !important;
         }
         .premium-table .ant-table-tbody > tr > td {
           border-bottom: 1px solid ${theme === 'dark' ? '#1e293b' : '#f1f5f9'} !important;

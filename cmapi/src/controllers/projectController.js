@@ -188,9 +188,11 @@ const getProjects = async (req, res) => {
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-               p.company_id
+               p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+               c.company_name as project_company_name
         FROM projects p
-        WHERE active = 1 ${companyFilter}
+        LEFT JOIN companies c ON p.company_id = c.company_id
+        WHERE p.active = 1 ${companyFilter}
         ORDER BY p.job_number DESC
       `, companyParam);
     } else {
@@ -203,8 +205,10 @@ const getProjects = async (req, res) => {
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-               p.company_id
+               p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+               c.company_name as project_company_name
         FROM projects p
+        LEFT JOIN companies c ON p.company_id = c.company_id
         JOIN project_user_roles pur ON p.project_id = pur.project_id
         WHERE pur.user_id = ? AND p.active = 1 ${companyFilter}
         ORDER BY p.job_number DESC
@@ -272,8 +276,10 @@ const getProjectById = async (req, res) => {
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                 p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-                p.company_id
+                p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+                c.company_name as project_company_name
          FROM projects p
+         LEFT JOIN companies c ON p.company_id = c.company_id
          WHERE p.project_id = ? AND p.company_id = ? AND p.active = 1`,
         [req.params.id, req.companyId]
       );
@@ -287,8 +293,10 @@ const getProjectById = async (req, res) => {
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                 p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-                p.company_id
+                p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+                c.company_name as project_company_name
          FROM projects p
+         LEFT JOIN companies c ON p.company_id = c.company_id
          WHERE p.project_id = ? AND p.company_id = ? AND p.active = 1 AND EXISTS (
              SELECT 1 FROM project_user_roles pur 
              WHERE pur.project_id = p.project_id AND pur.user_id = ?
@@ -435,23 +443,20 @@ const createProject = async (req, res) => {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
       show_bidding = 1, show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1, show_progress_summary = 1, show_payment = 1, show_job_status = 1,
       bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0, job_status_progress = 0, tender_status = 'tender_in_progress',
-      template_id, notified_users
+      template_id, notified_users,
+      tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
     } = req.body;
     const files = req.files || {};
     const companyId = req.headers['x-company-id'] || req.companyId || req.body.company_id;
 
-    if (!job_number || !project_name || !start_date || !end_date || !owner || !consusltant || !contractor || !address) {
+    if (!job_number || !project_name || !start_date || !end_date) {
       return res.status(400).json({
-        message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด',
+        message: 'กรุณาระบุข้อมูลที่จำเป็น (Job Number, ชื่อโครงการ, วันเริ่มต้น-สิ้นสุด)',
         missingFields: {
           job_number: !!job_number,
           project_name: !!project_name,
           start_date: !!start_date,
-          end_date: !!end_date,
-          owner: !!owner,
-          consusltant: !!consusltant,
-          contractor: !!contractor,
-          address: !!address
+          end_date: !!end_date
         }
       });
     }
@@ -473,54 +478,26 @@ const createProject = async (req, res) => {
     await connection.execute(
       `INSERT INTO projects (
         project_id, job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
-        owner, consusltant, contractor, address, image, progress_summary_image, payment_image, design_image, 
-        pre_construction_image, construction_image, cm_image, precast_image, bidding_image, job_status_image,
+        owner, consusltant, contractor, address, 
+        image, progress_summary_image, payment_image, design_image, pre_construction_image, construction_image, cm_image, precast_image, bidding_image, job_status_image,
         show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
         bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
-        company_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        company_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 
+        ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?, ?
+      )`,
       [
-        projectId,
-        job_number,
-        project_name,
-        description || null,
-        start_date,
-        end_date,
-        progressValue,
-        status || 'Planning',
-        1,
-        owner,
-        consusltant,
-        contractor,
-        address,
-        null, // image
-        null, // progress_summary_image
-        null, // payment_image
-        null, // design_image
-        null, // pre_construction_image
-        null, // construction_image
-        null, // cm_image
-        null,  // precast_image
-        null,  // bidding_image
-        null,  // job_status_image
-        show_design,
-        show_pre_construction,
-        show_construction,
-        show_precast,
-        show_cm,
-        show_bidding,
-        show_progress_summary,
-        show_payment,
-        show_job_status,
-        Number(bidding_progress) || 0,
-        Number(design_progress) || 0,
-        Number(pre_construction_progress) || 0,
-        Number(construction_progress) || 0,
-        Number(precast_progress) || 0,
-        Number(cm_progress) || 0,
-        Number(job_status_progress) || 0,
-        tender_status,
-        companyId
+        projectId, job_number, project_name, description || null, start_date, end_date, progressValue, status || 'Planning', 1,
+        owner || null, consusltant || null, contractor || null, address || null,
+        null, null, null, null, null, null, null, null, null, null,
+        show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
+        Number(bidding_progress) || 0, Number(design_progress) || 0, Number(pre_construction_progress) || 0, Number(construction_progress) || 0, Number(precast_progress) || 0, Number(cm_progress) || 0, Number(job_status_progress) || 0, tender_status,
+        companyId, tender_doc_date || null, tender_project_number || null, tender_announcement_number || null, tender_organization || null, tender_item_description || null, tender_winner_company || null
       ]
     );
 
@@ -664,7 +641,8 @@ const updateProject = async (req, res) => {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
       show_bidding, show_progress_summary, show_payment, show_job_status,
       show_design, show_pre_construction, show_construction, show_precast, show_cm,
-      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status
+      bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
+      tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
     } = req.body;
     const files = req.files || {};
 
@@ -704,10 +682,6 @@ const updateProject = async (req, res) => {
     const missingFields = [];
     if (!final_project_name) missingFields.push('project_name');
     if (!final_job_number) missingFields.push('job_number');
-    if (!final_owner) missingFields.push('owner');
-    if (!final_consusltant) missingFields.push('consusltant');
-    if (!final_contractor) missingFields.push('contractor');
-    if (!final_address) missingFields.push('address');
 
     if (missingFields.length > 0) {
       console.warn(`⚠️ UpdateProject Warning: Missing mandatory fields: ${missingFields.join(', ')}`);
@@ -815,6 +789,12 @@ const updateProject = async (req, res) => {
     if (cm_progress !== undefined) addField('cm_progress', Number(cm_progress) || 0);
     if (job_status_progress !== undefined) addField('job_status_progress', Number(job_status_progress) || 0);
     if (tender_status !== undefined) addField('tender_status', tender_status);
+    if (tender_doc_date !== undefined) addField('tender_doc_date', tender_doc_date);
+    if (tender_project_number !== undefined) addField('tender_project_number', tender_project_number);
+    if (tender_announcement_number !== undefined) addField('tender_announcement_number', tender_announcement_number);
+    if (tender_organization !== undefined) addField('tender_organization', tender_organization);
+    if (tender_item_description !== undefined) addField('tender_item_description', tender_item_description);
+    if (tender_winner_company !== undefined) addField('tender_winner_company', tender_winner_company);
 
     for (const key of Object.keys(imagePaths)) {
       addField(key, imagePaths[key]);
@@ -1145,13 +1125,20 @@ const moveProject = async (req, res) => {
       [newProjectId, id]
     );
 
-    // 4. อัปเดตสถานะโครงการเดิมในหน้า Tender ให้เป็น 'ได้งาน (Win)' และ ล็อคไม่ให้เปลี่ยนสถานะอีก
+    // 4. ดึงชื่อบริษัทปลายทางเพื่อนำมาบันทึกเป็น "บริษัทที่ได้งาน" ในโปรเจ็กต์ต้นฉบับ
+    const [targetCompRows] = await connection.execute(
+      'SELECT company_name FROM companies WHERE company_id = ?',
+      [new_company_id]
+    );
+    const targetCompanyName = targetCompRows.length > 0 ? targetCompRows[0].company_name : null;
+
+    // 5. อัปเดตสถานะโครงการเดิมในหน้า Tender ให้เป็น 'ได้งาน (Win)' และบันทึกชื่อบริษัทที่ได้งาน
     await connection.execute(
-      "UPDATE projects SET tender_status = 'tender_win', is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
-      [id]
+      "UPDATE projects SET tender_status = 'tender_win', tender_winner_company = ?, is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
+      [targetCompanyName, id]
     );
 
-    // 5. จัดการโครงสร้างโฟลเดอร์ในโครงการใหม่
+    // 6. จัดการโครงสร้างโฟลเดอร์ในโครงการใหม่
     if (template_id) {
       const [templateItems] = await connection.execute(
         'SELECT * FROM folder_template_items WHERE template_id = ?',

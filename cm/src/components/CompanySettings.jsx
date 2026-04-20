@@ -191,82 +191,96 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
     // Columns
     const columns = [
         {
-            title: 'โลโก้',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">โลโก้</span>,
             dataIndex: 'company_logo',
             key: 'logo',
-            width: 80,
+            width: 72,
             render: (logo, record) => (
                 <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center border"
-                    style={{ borderColor: record.company_color + '40', backgroundColor: record.company_color + '10' }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shadow-sm"
+                    style={{ borderColor: record.company_color || '#dc2626', backgroundColor: (record.company_color || '#dc2626') + '18' }}
                 >
                     {logo ? (
-                        <img src={`${API_BASE}/${logo}`} alt="logo" className="max-w-full max-h-full p-1" 
+                        <img src={`${API_BASE}/${logo}`} alt="logo" className="max-w-full max-h-full p-1 object-contain" 
                              onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
                     ) : null}
-                    <div className={clsx("font-bold", logo ? "hidden" : "flex")} style={{ color: record.company_color }}>
-                        {record.company_name?.charAt(0) || 'C'}
+                    <div className={clsx("font-black text-base", logo ? "hidden" : "flex")} style={{ color: record.company_color || '#dc2626' }}>
+                        {record.company_name?.charAt(0)?.toUpperCase() || 'C'}
                     </div>
                 </div>
             )
         },
         {
-            title: 'ชื่อบริษัท',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">ชื่อบริษัท</span>,
             dataIndex: 'company_name',
             key: 'company_name',
             render: (text, record) => (
                 <div>
-                    <div className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{text}</div>
-                    <div className="text-xs text-gray-500">{record.company_subtitle}</div>
+                    <div className={`font-semibold text-[15px] ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{text}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{record.company_subtitle || '—'}</div>
                 </div>
             )
         },
         {
-            title: 'สี',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">สี</span>,
             dataIndex: 'company_color',
             key: 'company_color',
-            width: 80,
+            width: 70,
+            align: 'center',
             render: (color) => (
-                <div className="w-6 h-6 rounded-full shadow-sm" style={{ backgroundColor: color || '#dc2626' }} />
+                <div className="flex items-center justify-center">
+                    <div 
+                        className="w-7 h-7 rounded-full shadow-md border-2 border-white"
+                        style={{ backgroundColor: color || '#dc2626', boxShadow: `0 0 0 2px ${color || '#dc2626'}40` }}
+                    />
+                </div>
             )
         },
         {
-            title: 'สมาชิก',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">สมาชิก</span>,
             dataIndex: 'member_count',
             key: 'member_count',
             align: 'center',
             width: 100,
-            render: (count) => <Tag color="blue"><TeamOutlined /> {count || 0}</Tag>
+            render: (count) => (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs">
+                    <TeamOutlined className="text-blue-500" /> {count || 0}
+                </span>
+            )
         },
         {
-            title: 'โครงการ',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">โครงการ</span>,
             dataIndex: 'project_count',
             key: 'project_count',
             align: 'center',
             width: 100,
-            render: (count) => <Tag color="green"><ProjectOutlined /> {count || 0}</Tag>
+            render: (count) => (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs">
+                    <ProjectOutlined className="text-emerald-500" /> {count || 0}
+                </span>
+            )
         },
         {
-            title: 'จัดการ',
+            title: <span className="text-white font-bold text-xs tracking-widest uppercase drop-shadow">จัดการ</span>,
             key: 'action',
-            width: 200,
+            width: 220,
             align: 'center',
             render: (_, record) => (
-                <Space>
+                <Space size={6}>
                     <Button 
                         type="primary"
-                        ghost
                         icon={<TeamOutlined />} 
                         onClick={() => handleManageMembers(record.company_id)}
-                        className="hover:!bg-indigo-600 hover:!text-white border-indigo-600 text-indigo-600 rounded-lg flex items-center gap-1"
+                        className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !text-white rounded-lg font-semibold shadow-sm"
+                        size="small"
                     >
-                        จัดการสมาชิก
+                        สมาชิก
                     </Button>
                     <Button 
-                        type="primary" 
                         icon={<EditOutlined />} 
                         onClick={() => handleEditCompany(record)}
-                        className="bg-indigo-600 hover:!bg-indigo-500 border-0 !text-white"
+                        className={`rounded-lg font-semibold shadow-sm border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-white hover:!bg-slate-600' : 'bg-white border-slate-300 text-slate-700 hover:!bg-slate-50 hover:!border-slate-400'}`}
+                        size="small"
                     />
                     <Popconfirm
                         title="ยืนยันการลบบริษัท?"
@@ -277,7 +291,12 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         okButtonProps={{ danger: true, size: 'small' }}
                         cancelButtonProps={{ size: 'small' }}
                     >
-                        <Button type="primary" danger icon={<DeleteOutlined />} className="hover:!bg-red-500" />
+                        <Button 
+                            danger 
+                            icon={<DeleteOutlined />} 
+                            className="rounded-lg font-semibold shadow-sm"
+                            size="small"
+                        />
                     </Popconfirm>
                 </Space>
             )
@@ -385,8 +404,13 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                         columns={columns} 
                         rowKey="company_id" 
                         loading={loading}
-                        pagination={{ pageSize: 10 }}
-                        className={theme === 'dark' ? 'ant-table-dark' : ''}
+                        pagination={{ pageSize: 10, showSizeChanger: false }}
+                        className={theme === 'dark' ? 'ant-table-dark' : 'company-table-light'}
+                        rowClassName={(_, index) => 
+                            index % 2 === 0 
+                                ? (theme === 'dark' ? 'bg-slate-800/60' : 'bg-white') 
+                                : (theme === 'dark' ? 'bg-slate-800/30' : 'bg-slate-50/60')
+                        }
                     />
                 </Card>
             </div>
