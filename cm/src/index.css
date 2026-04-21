@@ -52,14 +52,6 @@
 
 /* ใน index.css */
 @layer components {
-  .ant-btn-primary {
-    background-color: var(--primary-color) !important;
-    border-color: var(--primary-color) !important;
-  }
-  .ant-btn-primary:hover {
-    background-color: var(--primary-hover) !important;
-    border-color: var(--primary-hover) !important;
-  }
   /* ปุ่มทั่วไปใน Dark Theme */
   :where(.css-dev-only-do-not-override-1xg9z9n) .ant-btn-default {
     background-color: var(--dark-bg-secondary) !important;
@@ -67,9 +59,7 @@
     color: var(--dark-text) !important;
   }
   .ant-btn-default:hover {
-    background-color: var(--primary-hover) !important;
-    border-color: var(--primary-hover) !important;
-    color: #ffffff !important;
+    opacity: 0.8 !important;
   }
 /* Global Ant Design Dropdown Fix */
 .ant-select-dropdown {

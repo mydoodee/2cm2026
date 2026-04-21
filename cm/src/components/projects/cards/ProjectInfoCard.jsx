@@ -253,42 +253,44 @@ const ProjectInfoCard = ({
                   </Button>
                 </Link>
 
-                {/* ✅ ปุ่ม Win Tender & Status - เพิ่มเฉพาะตอนเป็น Tender Mode */}
-                 {isTenderMode && (
-                    <div className="col-span-full mt-2 flex items-stretch gap-2 h-8">
-                      <Select
-                         size="small"
-                         value={project.tender_status || 'tender_in_progress'}
-                         onChange={(val) => onTenderStatusChange(val)}
-                         disabled={project.is_job_created === 1}
-                         className="flex-[1.5] font-kanit text-xs"
-                         style={{ fontFamily: 'Kanit, sans-serif' }}
-                         classNames={{ popup: { root: 'tender-status-select font-kanit font-medium' } }}
-                         styles={{ popup: { root: { fontFamily: 'Kanit, sans-serif' } } }}
-                         options={[
-                           { value: 'tender_in_progress', label: '🔵 กำลังดำเนินงาน' },
-                           { value: 'tender_win', label: '🟢 ได้งาน (Win)' },
-                           { value: 'tender_loss', label: '🔴 ไม่ได้งาน (Loss)' },
-                           { value: 'tender_cancelled', label: '🟠 ยกเลิกประมูล' },
-                           { value: 'tender_announcement_cancelled', label: '⚫ ยกเลิกประกาศ' },
-                         ]}
-                      />
-                       <Button
-                         type="primary"
-                         size="small"
-                         icon={<TrophyOutlined className="text-[10px]" />}
-                         onClick={onMoveProject}
-                         disabled={project.tender_status !== 'tender_win' || project.is_job_created === 1}
-                         className={`flex-1 h-full font-kanit text-[10px] sm:text-[11px] font-bold shadow-sm rounded-lg flex items-center justify-center transition-all ${
-                           project.tender_status === 'tender_win' && project.is_job_created !== 1
-                             ? '!bg-sky-500 !text-white !border-sky-500 hover:!bg-sky-600 hover:!border-sky-600 shadow-sky-200 hover:scale-[1.02] active:scale-95' 
-                             : 'opacity-50 grayscale cursor-not-allowed !bg-slate-200 !text-slate-400 !border-slate-300'
-                         }`}
-                       >
-                         {project.is_job_created === 1 ? 'สร้าง Job แล้ว' : 'สร้าง Job'}
-                       </Button>
-                    </div>
-                 )}
+                {/* ✅ ปุ่ม Win Tender & Status - แสดงเฉพาะ Tender Mode และ Admin */}
+                {isTenderMode && user?.isAdmin && (
+                  <div className="col-span-full mt-2 flex items-stretch gap-2 h-8">
+                    <Select
+                      size="small"
+                      value={project.tender_status || 'tender_in_progress'}
+                      onChange={(val) => onTenderStatusChange(val)}
+                      disabled={project.is_job_created === 1}
+                      className="flex-[1.5] font-kanit text-xs"
+                      style={{ fontFamily: 'Kanit, sans-serif' }}
+                      classNames={{ popup: { root: 'tender-status-select font-kanit font-medium' } }}
+                      styles={{ popup: { root: { fontFamily: 'Kanit, sans-serif' } } }}
+                      options={[
+                        { value: 'tender_in_progress', label: '🔵 กำลังดำเนินงาน' },
+                        { value: 'tender_win', label: '🟢 ได้งาน (Win)' },
+                        { value: 'tender_loss', label: '🔴 ไม่ได้งาน (Loss)' },
+                        { value: 'tender_cancelled', label: '🟠 ยกเลิกประมูล' },
+                        { value: 'tender_announcement_cancelled', label: '⚫ ยกเลิกประกาศ' },
+                      ]}
+                    />
+                    {project.is_job_created !== 1 && (
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<TrophyOutlined className="text-[10px]" />}
+                        onClick={onMoveProject}
+                        disabled={project.tender_status !== 'tender_win'}
+                        className={`flex-1 h-full font-kanit text-[10px] sm:text-[11px] font-bold shadow-sm rounded-lg flex items-center justify-center transition-all ${
+                          project.tender_status === 'tender_win'
+                            ? '!bg-sky-500 !text-white !border-sky-500 hover:!bg-sky-600 hover:!border-sky-600 shadow-sky-200 hover:scale-[1.02] active:scale-95'
+                            : 'opacity-50 grayscale cursor-not-allowed !bg-slate-200 !text-slate-400 !border-slate-300'
+                        }`}
+                      >
+                        สร้าง Job
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

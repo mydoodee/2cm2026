@@ -188,7 +188,7 @@ const getProjects = async (req, res) => {
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-               p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+               p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                c.company_name as project_company_name
         FROM projects p
         LEFT JOIN companies c ON p.company_id = c.company_id
@@ -205,7 +205,7 @@ const getProjects = async (req, res) => {
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-               p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+               p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                c.company_name as project_company_name
         FROM projects p
         LEFT JOIN companies c ON p.company_id = c.company_id
@@ -276,7 +276,7 @@ const getProjectById = async (req, res) => {
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                 p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-                p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+                p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                 c.company_name as project_company_name
          FROM projects p
          LEFT JOIN companies c ON p.company_id = c.company_id
@@ -293,7 +293,7 @@ const getProjectById = async (req, res) => {
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
                 p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
-                p.company_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
+                p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                 c.company_name as project_company_name
          FROM projects p
          LEFT JOIN companies c ON p.company_id = c.company_id
@@ -471,6 +471,8 @@ const createProject = async (req, res) => {
       return res.status(400).json({ message: 'ความคืบหน้าต้องเป็นตัวเลขระหว่าง 0-100' });
     }
 
+    const parseBool = (val) => (val === true || val === "true" || val === 1 || val === "1") ? 1 : 0;
+
     connection = await getConnection();
     await connection.beginTransaction();
 
@@ -482,22 +484,22 @@ const createProject = async (req, res) => {
         image, progress_summary_image, payment_image, design_image, pre_construction_image, construction_image, cm_image, precast_image, bidding_image, job_status_image,
         show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
         bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
-        company_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
+        company_id, template_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 
         ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, 
-        ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?
       )`,
       [
         projectId, job_number, project_name, description || null, start_date, end_date, progressValue, status || 'Planning', 1,
         owner || null, consusltant || null, contractor || null, address || null,
         null, null, null, null, null, null, null, null, null, null,
-        show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
+        parseBool(show_design), parseBool(show_pre_construction), parseBool(show_construction), parseBool(show_precast), parseBool(show_cm), parseBool(show_bidding), parseBool(show_progress_summary), parseBool(show_payment), parseBool(show_job_status),
         Number(bidding_progress) || 0, Number(design_progress) || 0, Number(pre_construction_progress) || 0, Number(construction_progress) || 0, Number(precast_progress) || 0, Number(cm_progress) || 0, Number(job_status_progress) || 0, tender_status,
-        companyId, tender_doc_date || null, tender_project_number || null, tender_announcement_number || null, tender_organization || null, tender_item_description || null, tender_winner_company || null
+        companyId, template_id || null, tender_doc_date || null, tender_project_number || null, tender_announcement_number || null, tender_organization || null, tender_item_description || null, tender_winner_company || null
       ]
     );
 
@@ -642,7 +644,7 @@ const updateProject = async (req, res) => {
       show_bidding, show_progress_summary, show_payment, show_job_status,
       show_design, show_pre_construction, show_construction, show_precast, show_cm,
       bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
-      tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
+      template_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
     } = req.body;
     const files = req.files || {};
 
@@ -795,6 +797,7 @@ const updateProject = async (req, res) => {
     if (tender_organization !== undefined) addField('tender_organization', tender_organization);
     if (tender_item_description !== undefined) addField('tender_item_description', tender_item_description);
     if (tender_winner_company !== undefined) addField('tender_winner_company', tender_winner_company);
+    if (template_id !== undefined) addField('template_id', template_id);
 
     for (const key of Object.keys(imagePaths)) {
       addField(key, imagePaths[key]);
@@ -1070,7 +1073,18 @@ const deleteRole = async (req, res) => {
  */
 const moveProject = async (req, res) => {
   const { id } = req.params;
-  const { new_company_id, new_job_number, template_id, notified_users } = req.body;
+  const { 
+    new_company_id, new_job_number, template_id, notified_users,
+    owner, consusltant, contractor, address,
+    show_bidding, bidding_progress,
+    show_design, design_progress,
+    show_pre_construction, pre_construction_progress,
+    show_construction, construction_progress,
+    show_precast, precast_progress,
+    show_cm, cm_progress,
+    show_job_status, job_status_progress,
+    show_progress_summary, show_payment
+  } = req.body;
   let connection;
 
   try {
@@ -1079,6 +1093,13 @@ const moveProject = async (req, res) => {
     }
 
     connection = await getConnection();
+    // Verify admin rights: only admins can create a job from tender
+    const [globalRoles] = await connection.execute('SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1', [req.user.user_id]);
+    const [projectRoles] = await connection.execute('SELECT role_id FROM project_user_roles WHERE user_id = ? AND role_id = 1', [req.user.user_id]);
+    const isAdmin = globalRoles.length > 0 || projectRoles.length > 0 || req.user.username === 'adminspk' || req.user.username === 'admin';
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'คุณไม่มีสิทธิ์สร้าง Job (ต้องเป็น admin)' });
+    }
     await connection.beginTransaction();
 
     // 1. ตรวจสอบและดึงข้อมูลโปรเจ็กต์เดิม
@@ -1097,7 +1118,7 @@ const moveProject = async (req, res) => {
     const userId = req.user.user_id;
 
     // 2. สร้างโครงการใหม่ (สำเนาจากที่เดิม) 
-    // เราจะใช้ข้อมูลทั้งหมดจากโครงการเดิม แต่เปลี่ยน company_id, job_number และ reset progress บางส่วน
+    // เราจะใช้ข้อมูลทั้งหมดจากโครงการเดิม แต่เปลี่ยน company_id, job_number และข้อมูลจาก req.body ถ้ามีส่งมา
     await connection.execute(
       `INSERT INTO projects (
         project_id, job_number, project_name, description, start_date, end_date, progress, status, active, created_at, updated_at, 
@@ -1110,11 +1131,29 @@ const moveProject = async (req, res) => {
       [
         newProjectId, new_job_number, oldProject.project_name, oldProject.description, 
         oldProject.start_date, oldProject.end_date, 0, 'Planning', 1,
-        oldProject.owner, oldProject.consusltant, oldProject.contractor, oldProject.address,
+        owner !== undefined ? owner : oldProject.owner, 
+        consusltant !== undefined ? consusltant : oldProject.consusltant, 
+        contractor !== undefined ? contractor : oldProject.contractor, 
+        address !== undefined ? address : oldProject.address,
         oldProject.image, oldProject.progress_summary_image, oldProject.payment_image, oldProject.design_image,
         oldProject.pre_construction_image, oldProject.construction_image, oldProject.cm_image, oldProject.precast_image, oldProject.bidding_image, oldProject.job_status_image,
-        oldProject.show_design, oldProject.show_pre_construction, oldProject.show_construction, oldProject.show_precast, oldProject.show_cm, oldProject.show_bidding, oldProject.show_progress_summary, oldProject.show_payment, oldProject.show_job_status,
-        0, 0, 0, 0, 0, 0, 0, 'tender_in_progress', // สถานะในโครงการใหม่ 
+        show_design !== undefined ? show_design : oldProject.show_design, 
+        show_pre_construction !== undefined ? show_pre_construction : oldProject.show_pre_construction, 
+        show_construction !== undefined ? show_construction : oldProject.show_construction, 
+        show_precast !== undefined ? show_precast : oldProject.show_precast, 
+        show_cm !== undefined ? show_cm : oldProject.show_cm, 
+        show_bidding !== undefined ? show_bidding : oldProject.show_bidding, 
+        show_progress_summary !== undefined ? show_progress_summary : oldProject.show_progress_summary, 
+        show_payment !== undefined ? show_payment : oldProject.show_payment, 
+        show_job_status !== undefined ? show_job_status : oldProject.show_job_status,
+        bidding_progress !== undefined ? Number(bidding_progress) : 0, 
+        design_progress !== undefined ? Number(design_progress) : 0, 
+        pre_construction_progress !== undefined ? Number(pre_construction_progress) : 0, 
+        construction_progress !== undefined ? Number(construction_progress) : 0, 
+        precast_progress !== undefined ? Number(precast_progress) : 0, 
+        cm_progress !== undefined ? Number(cm_progress) : 0, 
+        job_status_progress !== undefined ? Number(job_status_progress) : 0, 
+        'tender_in_progress', // สถานะในโครงการใหม่ 
         new_company_id
       ]
     );
@@ -1134,7 +1173,7 @@ const moveProject = async (req, res) => {
 
     // 5. อัปเดตสถานะโครงการเดิมในหน้า Tender ให้เป็น 'ได้งาน (Win)' และบันทึกชื่อบริษัทที่ได้งาน
     await connection.execute(
-      "UPDATE projects SET tender_status = 'tender_win', tender_winner_company = ?, is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
+      "UPDATE projects SET tender_status = 'tender_win', status = 'In Progress', tender_winner_company = ?, is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
       [targetCompanyName, id]
     );
 
