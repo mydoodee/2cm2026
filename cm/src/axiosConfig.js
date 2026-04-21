@@ -15,7 +15,7 @@ api.interceptors.request.use(
 
         // ✅ เพิ่ม Company Context Header
         const activeCompanyId = localStorage.getItem('activeCompanyId');
-        if (activeCompanyId) {
+        if (activeCompanyId && activeCompanyId !== 'null' && activeCompanyId !== 'undefined') {
             config.headers['X-Company-Id'] = activeCompanyId;
         }
 

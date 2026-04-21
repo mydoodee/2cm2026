@@ -1093,6 +1093,13 @@ const moveProject = async (req, res) => {
     }
 
     connection = await getConnection();
+    // Verify admin rights: only admins can create a job from tender
+    const [globalRoles] = await connection.execute('SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1', [req.user.user_id]);
+    const [projectRoles] = await connection.execute('SELECT role_id FROM project_user_roles WHERE user_id = ? AND role_id = 1', [req.user.user_id]);
+    const isAdmin = globalRoles.length > 0 || projectRoles.length > 0 || req.user.username === 'adminspk' || req.user.username === 'admin';
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'คุณไม่มีสิทธิ์สร้าง Job (ต้องเป็น admin)' });
+    }
     await connection.beginTransaction();
 
     // 1. ตรวจสอบและดึงข้อมูลโปรเจ็กต์เดิม
@@ -1166,7 +1173,7 @@ const moveProject = async (req, res) => {
 
     // 5. อัปเดตสถานะโครงการเดิมในหน้า Tender ให้เป็น 'ได้งาน (Win)' และบันทึกชื่อบริษัทที่ได้งาน
     await connection.execute(
-      "UPDATE projects SET tender_status = 'tender_win', tender_winner_company = ?, is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
+      "UPDATE projects SET tender_status = 'tender_win', status = 'In Progress', tender_winner_company = ?, is_job_created = 1, updated_at = NOW() WHERE project_id = ?",
       [targetCompanyName, id]
     );
 

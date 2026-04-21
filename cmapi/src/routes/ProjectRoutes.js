@@ -117,7 +117,7 @@ router.put(
   updateProject
 );
 router.delete('/project/:id', authenticateToken, deleteProject);
-router.post('/project/:id/move', authenticateToken, requireCompany, moveProject);
+router.post('/project/:id/move', authenticateToken, moveProject);
 
 // Job Status Details Routes
 router.get('/project/:id/job-status-details', authenticateToken, requireCompany, getJobStatusDetails);
