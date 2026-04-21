@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Typography, Space, Progress, Badge, message, Input, Table, Avatar, Tooltip, Tag, Segmented } from 'antd';
-import { FileTextOutlined, CalendarOutlined, TeamOutlined, UserOutlined, SearchOutlined, TrophyOutlined, AppstoreOutlined, TableOutlined, EyeOutlined, RightOutlined } from '@ant-design/icons';
+import { FileTextOutlined, CalendarOutlined, TeamOutlined, UserOutlined, SearchOutlined, TrophyOutlined, AppstoreOutlined, TableOutlined, EyeOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import api from '../../axiosConfig';
@@ -132,7 +132,7 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
     let mounted = true;
 
     const loadProjects = async () => {
-      if (mounted) {
+      if (mounted && activeCompany) {
         await fetchProjects();
       }
     };
@@ -142,7 +142,7 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
     return () => {
       mounted = false;
     };
-  }, [fetchProjects]);
+  }, [fetchProjects, activeCompany]);
 
   useEffect(() => {
     return () => {
@@ -267,16 +267,30 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
               </div>
 
               {/* View Switcher & Actions - Moved to far right */}
-              <div className={`p-1 rounded-xl border sm:ml-auto ${theme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-                <Segmented
-                  value={viewMode}
-                  onChange={setViewMode}
-                  options={[
-                    { value: 'card', icon: <AppstoreOutlined /> },
-                    { value: 'table', icon: <TableOutlined /> }
-                  ]}
-                  className={`font-kanit custom-segmented ${theme === 'dark' ? 'dark-segmented' : ''}`}
-                />
+              <div className="flex items-center gap-2 sm:ml-auto">
+                <div className={`p-1 rounded-xl border ${theme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+                  <Segmented
+                    value={viewMode}
+                    onChange={setViewMode}
+                    options={[
+                      { value: 'card', icon: <AppstoreOutlined /> },
+                      { value: 'table', icon: <TableOutlined /> }
+                    ]}
+                    className={`font-kanit custom-segmented ${theme === 'dark' ? 'dark-segmented' : ''}`}
+                  />
+                </div>
+                {(user?.roles?.includes(1) || activeCompany?.user_role === 'admin' || activeCompany?.user_role === 'owner') && (
+                  <button
+                    onClick={() => navigate('/project-settings')}
+                    className={`h-[38px] px-4 rounded-xl font-bold flex items-center gap-2 transition-all duration-300 ${
+                      theme === 'dark' 
+                        ? 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700' 
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-indigo-600'
+                    }`}
+                  >
+                    <SettingOutlined /> ตั้งค่าโครงการ
+                  </button>
+                )}
               </div>
             </div>
           </div>

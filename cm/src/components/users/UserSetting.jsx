@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, Space, Row, Col, Typography, Card, Divider, message } from 'antd';
+import { Button, Form, Input, Space, Row, Col, Typography, Card, Divider, message, ConfigProvider, theme as antdTheme } from 'antd';
 import { 
     LeftOutlined, PlusOutlined, SearchOutlined, UserOutlined, SettingOutlined
 } from '@ant-design/icons';
@@ -343,7 +343,13 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     };
 
     return (
-        <div className={`min-h-screen font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 pb-10`}>
+        <ConfigProvider
+            theme={{
+                algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+                token: { fontFamily: 'Kanit, sans-serif' }
+            }}
+        >
+            <div className={`min-h-screen font-kanit ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'} transition-all duration-500 pb-10`}>
             <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
             
             <div className="max-w-[1600px] mx-auto px-6 pt-8">
@@ -568,6 +574,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
                 }
             `}</style>
         </div>
+        </ConfigProvider>
     );
 }
 

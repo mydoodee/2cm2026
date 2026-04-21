@@ -88,8 +88,8 @@ api.interceptors.response.use(
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
 
-                if (window.location.pathname !== '/login') {
-                    window.location.href = '/login';
+                if (!window.location.pathname.includes('/login')) {
+                    window.location.href = '/cm/login';
                 }
                 return Promise.reject(new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'));
             }

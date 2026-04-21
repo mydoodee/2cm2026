@@ -13,7 +13,8 @@ import {
   ConfigProvider,
   message,
   Checkbox,
-  Upload
+  Upload,
+  theme as antdTheme
 } from 'antd';
 import { 
   SaveOutlined, 
@@ -52,6 +53,7 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
   const [submitting, setSubmitting] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
   const [users, setUsers] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [fileLists, setFileLists] = useState({
     image: [], progress_summary_image: [], payment_image: [], design_image: [],
     pre_construction_image: [], construction_image: [], cm_image: [],
@@ -72,11 +74,21 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
   }, []);
 
   useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await api.get('/api/folder-templates');
+        setTemplates(response.data.templates || []);
+      } catch (error) { console.error('Fetch templates error:', error); }
+    };
+    if (!isEditMode) fetchTemplates();
+  }, [isEditMode]);
+
+  useEffect(() => {
     const initData = async () => {
       if (isEditMode) {
         try {
           const response = await api.get(`/api/project/${id}`);
-          const data = response.data;
+          const data = response.data.project || response.data;
           form.setFieldsValue({
             ...data,
             start_date: data.start_date ? dayjs(data.start_date) : null,
@@ -84,15 +96,44 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
             tender_doc_date: data.tender_doc_date ? dayjs(data.tender_doc_date) : null,
             notified_users: data.team_members?.map(m => m.user_id) || []
           });
+
+          // Populate image thumbnails
+          const newFileLists = {};
+          const imageKeys = [
+            'image', 'progress_summary_image', 'payment_image', 'design_image',
+            'pre_construction_image', 'construction_image', 'cm_image',
+            'precast_image', 'bidding_image', 'job_status_image'
+          ];
+          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://app.spkconstruction.co.th:3050';
+          
+          imageKeys.forEach(key => {
+            if (data[key]) {
+              newFileLists[key] = [{
+                uid: `-${key}`,
+                name: data[key].split('/').pop() || 'image.png',
+                status: 'done',
+                url: data[key].startsWith('http') ? data[key] : `${API_BASE_URL}/${data[key]}`
+              }];
+            } else {
+              newFileLists[key] = [];
+            }
+          });
+          setFileLists(prev => ({ ...prev, ...newFileLists }));
         } catch (error) {
           console.error('Fetch project error:', error);
           message.error('ไม่สามารถโหลดข้อมูลได้');
         } finally { setLoading(false); }
       } else {
+        form.resetFields();
         form.setFieldsValue({
           status: 'Planning', progress: 0, tender_status: 'tender_in_progress',
           show_design: 1, show_pre_construction: 1, show_construction: 1, show_precast: 1,
           show_cm: 1, show_bidding: 1, show_progress_summary: 1, show_payment: 1, show_job_status: 1
+        });
+        setFileLists({
+          image: [], progress_summary_image: [], payment_image: [], design_image: [],
+          pre_construction_image: [], construction_image: [], cm_image: [],
+          precast_image: [], bidding_image: [], job_status_image: []
         });
         setLoading(false);
       }
@@ -161,7 +202,12 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
   ];
 
   return (
-    <ConfigProvider theme={{ token: { fontFamily: 'Kanit, sans-serif', borderRadius: 10, colorPrimary: primaryColor } }}>
+    <ConfigProvider 
+      theme={{ 
+        algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: { fontFamily: 'Kanit, sans-serif', borderRadius: 10, colorPrimary: primaryColor } 
+      }}
+    >
       <div className={`flex flex-col min-h-screen ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-[#f4f7fa] text-slate-800'} font-kanit pb-10`}>
         <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
         
@@ -187,13 +233,30 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                 <div className="flex flex-col gap-5">
                   <CompactCard icon={<InfoCircleOutlined />} title="ข้อมูลพื้นฐานและระยะเวลา">
                     <Row gutter={[12, 0]}>
-                      <Col xs={24} md={6}><Form.Item name="job_number" label="* เลขที่งาน (Job #)"><Input className="font-mono font-black border-slate-400 h-10" /></Form.Item></Col>
-                      <Col xs={24} md={18}><Form.Item name="project_name" label="* ชื่อโครงการ"><Input className="font-bold border-slate-400 h-10" /></Form.Item></Col>
-                      <Col xs={12} md={6}><Form.Item name="start_date" label="วันเริ่มงาน"><DatePicker className="w-full border-slate-400 h-10" format="DD/MM/YYYY" /></Form.Item></Col>
-                      <Col xs={12} md={6}><Form.Item name="end_date" label="วันสิ้นสุดงาน"><DatePicker className="w-full border-slate-400 h-10" format="DD/MM/YYYY" /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item name="job_number" label="* เลขที่งาน (Job #)" rules={[{ required: true, message: 'กรุณาระบุเลขที่งาน' }]}><Input className="font-mono font-black border-slate-400 h-10" /></Form.Item></Col>
+                      <Col xs={24} md={18}><Form.Item name="project_name" label="* ชื่อโครงการ" rules={[{ required: true, message: 'กรุณาระบุชื่อโครงการ' }]}><Input className="font-bold border-slate-400 h-10" /></Form.Item></Col>
+                      <Col xs={12} md={6}><Form.Item name="start_date" label="วันเริ่มงาน" rules={[{ required: true, message: 'กรุณาระบุวันเริ่มงาน' }]}><DatePicker className="w-full border-slate-400 h-10" format="DD/MM/YYYY" /></Form.Item></Col>
+                      <Col xs={12} md={6}><Form.Item name="end_date" label="วันสิ้นสุดงาน" rules={[{ required: true, message: 'กรุณาระบุวันสิ้นสุดงาน' }]}><DatePicker className="w-full border-slate-400 h-10" format="DD/MM/YYYY" /></Form.Item></Col>
                       <Col xs={12} md={6}><Form.Item name="status" label="สถานะ"><Select className="h-10" options={[{label:'Planning',value:'Planning'},{label:'In Progress',value:'In Progress'},{label:'Completed',value:'Completed'}]} /></Form.Item></Col>
                       <Col xs={12} md={6}><Form.Item name="progress" label="ความคืบหน้า (%)"><Input type="number" className="font-bold border-slate-400 h-10" style={{ color: primaryColor }} /></Form.Item></Col>
                       <Col span={24}><Form.Item name="description" label="รายละเอียดโครงการ (Note)" className="mb-0"><Input.TextArea rows={2} className="border-slate-400" /></Form.Item></Col>
+                      <Col span={24} className="mt-4">
+                        <Form.Item 
+                          name="template_id" 
+                          label="* แม่แบบโฟลเดอร์ (Folder Template)" 
+                          rules={[{ required: !isEditMode, message: 'กรุณาเลือกแม่แบบโฟลเดอร์' }]}
+                          extra={<Text className="text-[10px] text-slate-400">{isEditMode ? 'โครงการนี้ถูกสร้างด้วยแม่แบบนี้ (แก้ไขไม่ได้)' : 'เลือกระบบโครงสร้างโฟลเดอร์ที่จะใช้สำหรับโครงการนี้ (Master Folder)'}</Text>}
+                        >
+                          <Select 
+                            className="h-10 border-slate-400" 
+                            placeholder="เลือกแม่แบบ..."
+                            options={templates.map(t => ({ value: t.template_id, label: t.template_name }))}
+                            showSearch
+                            optionFilterProp="label"
+                            disabled={isEditMode}
+                          />
+                        </Form.Item>
+                      </Col>
                     </Row>
                   </CompactCard>
 

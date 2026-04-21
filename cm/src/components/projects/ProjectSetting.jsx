@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Table, Space, Card, Typography, Input, Select, Empty, Image, App, ConfigProvider } from 'antd';
+import { Button, Table, Space, Card, Typography, Input, Select, Empty, Image, App, ConfigProvider, theme as antdTheme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, SettingOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -13,7 +13,11 @@ import './ProjectSetting.css';
 
 const { Option } = Select;
 
-const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
+const ProjectSetting = ({ user, setUser, theme, setTheme, activeCompany, setActiveCompany }) => {
+  const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
+  const TENDER_COLOR = '#0ea5e9'; // Elegant Sky Blue theme for Tender
+  const primaryColor = isTenderMode ? TENDER_COLOR : (activeCompany?.company_color || '#4f46e5');
+
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [yearStats, setYearStats] = useState({});
@@ -142,7 +146,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
           icon: 'success',
           title: 'สำเร็จ',
           text: 'ลบโครงการสำเร็จ',
-          confirmButtonColor: '#4f46e5',
+          confirmButtonColor: primaryColor,
         });
         await fetchProjects();
       } catch (error) {
@@ -170,12 +174,16 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       navigate('/login');
       return;
     }
-    if (!user.roles?.includes(1)) {
+    const isGlobalAdmin = user.roles?.includes(1);
+    const isCompanyAdmin = activeCompany?.user_role === 'admin' || activeCompany?.user_role === 'owner';
+    if (!isGlobalAdmin && !isCompanyAdmin) {
       navigate('/projects');
       return;
     }
-    fetchProjects();
-  }, [user, navigate, fetchProjects]);
+    if (activeCompany) {
+      fetchProjects();
+    }
+  }, [user, activeCompany, navigate, fetchProjects]);
 
   const columns = [
     {
@@ -273,9 +281,11 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
       render: (_, record) => (
         <Space size="small">
           <Button 
-            icon={<EditOutlined className="text-indigo-500 text-lg" />} 
+            icon={<EditOutlined className="text-lg" style={{ color: primaryColor }} />} 
             onClick={(e) => { e.currentTarget.blur(); handleAddOrEdit(record); }} 
-            className="rounded-xl border-slate-100 dark:border-slate-700 bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center justify-center p-0 w-10 h-10 transition-all"
+            className="rounded-xl border-slate-100 dark:border-slate-700 bg-transparent flex items-center justify-center p-0 w-10 h-10 transition-all"
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${primaryColor}15`}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           />
           <Button 
             icon={<DeleteOutlined className="text-rose-500 text-lg" />} 
@@ -291,10 +301,11 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
   return (
     <ConfigProvider
       theme={{
+        algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
           fontFamily: 'Kanit, sans-serif',
           borderRadius: 8,
-          colorPrimary: '#4f46e5',
+          colorPrimary: primaryColor,
         },
         components: {
           Card: {
@@ -310,7 +321,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
     >
       <App>
         <div className={clsx('min-h-screen', theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100')}>
-          <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
+          <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
           <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
             <Card className={`border-0 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${
               theme === 'dark' ? 'bg-slate-800/40 shadow-[0_20px_50px_rgba(0,0,0,0.3)]' : 'bg-white shadow-[0_10px_40px_rgba(0,0,0,0.03)]'
@@ -318,8 +329,8 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center">
-                    <div className={`p-4 rounded-[1.25rem] mr-4 ${theme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
-                      <SettingOutlined className={`text-3xl ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                    <div className="p-4 rounded-[1.25rem] mr-4" style={{ backgroundColor: `${primaryColor}15` }}>
+                      <SettingOutlined className="text-3xl" style={{ color: primaryColor }} />
                     </div>
                     <div>
                       <Typography.Title level={2} className={`!mb-1 font-kanit font-extrabold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
@@ -377,15 +388,22 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                                 className={clsx(
                                   "cursor-pointer px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 border select-none",
                                   selectedYear === year.toString() 
-                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                                    ? "text-white"
                                     : (theme === 'dark' ? "bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50")
                                 )}
+                                style={selectedYear === year.toString() ? { 
+                                  backgroundColor: primaryColor, 
+                                  borderColor: primaryColor,
+                                  boxShadow: `0 4px 6px -1px ${primaryColor}40, 0 2px 4px -1px ${primaryColor}20` 
+                                } : {}}
                               >
                                 <span>ปี {year}</span>
                                 <span className={clsx(
                                   "px-2 py-0.5 rounded-full text-xs font-black",
-                                  selectedYear === year.toString() ? "bg-white/20 text-white" : (theme === 'dark' ? "bg-slate-900 text-indigo-400" : "bg-slate-100 text-indigo-600")
-                                )}>
+                                  selectedYear === year.toString() ? "bg-white/20 text-white" : (theme === 'dark' ? "bg-slate-900" : "bg-slate-100")
+                                )}
+                                style={selectedYear !== year.toString() ? { color: primaryColor } : {}}
+                                >
                                   {yearStats[year].total}
                                 </span>
                               </div>
@@ -438,7 +456,7 @@ const ProjectSetting = ({ user, setUser, theme, setTheme }) => {
                 <div className="w-full overflow-hidden">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center p-20">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: primaryColor }}></div>
                     </div>
                   ) : filteredProjects.length === 0 ? (
                     <div className={`p-16 rounded-[2rem] text-center border-2 border-dashed ${theme === 'dark' ? 'bg-slate-800/20 border-slate-700/50' : 'bg-slate-50/50 border-slate-200'}`}>
@@ -479,6 +497,8 @@ ProjectSetting.propTypes = {
   setUser: PropTypes.func.isRequired,
   theme: PropTypes.string.isRequired,
   setTheme: PropTypes.func.isRequired,
+  activeCompany: PropTypes.object,
+  setActiveCompany: PropTypes.func,
 };
 
 export default ProjectSetting;

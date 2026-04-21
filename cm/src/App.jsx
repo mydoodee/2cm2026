@@ -265,7 +265,7 @@ function App() {
             <Route path="/profile" element={<Profile user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/company-settings" element={<CompanySettings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
-            <Route path="/project-settings" element={<ProjectSetting user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+            <Route path="/project-settings" element={<ProjectSetting user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/project-settings/add" element={<ProjectForm user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/project-settings/edit/:id" element={<ProjectForm user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/permission-folder" element={<PermissionFolder user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />

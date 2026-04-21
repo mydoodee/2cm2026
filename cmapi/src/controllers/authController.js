@@ -413,14 +413,25 @@ const getAllUsers = async (req, res) => {
             ...userProjectRoles.map(r => r.role_id)
         ])];
 
-        if (!allRoles.includes(1) && req.user.username !== 'adminspk' && req.user.username !== 'admin') {
-            return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถดูรายการผู้ใช้ได้' });
-        }
-
         const includeInactive = req.query.includeInactive === 'true';
 
         // ✅ ดึง company_id จาก header (ส่งมาจาก axiosConfig.js)
         const companyId = req.headers['x-company-id'] || req.companyId || null;
+
+        let isCompanyAdmin = false;
+        if (companyId) {
+            const [companyUserRows] = await connection.execute(
+                'SELECT role FROM company_users WHERE user_id = ? AND company_id = ? AND active = 1',
+                [req.user.user_id, companyId]
+            );
+            if (companyUserRows.length > 0 && (companyUserRows[0].role === 'admin' || companyUserRows[0].role === 'owner')) {
+                isCompanyAdmin = true;
+            }
+        }
+
+        if (!allRoles.includes(1) && req.user.username !== 'adminspk' && req.user.username !== 'admin' && !isCompanyAdmin) {
+            return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถดูรายการผู้ใช้ได้' });
+        }
 
         let users;
         if (companyId) {

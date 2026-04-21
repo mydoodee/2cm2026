@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
     Table, Button, Modal, Form, Input, Card, Space, Tag, Popconfirm, 
     Upload, message, Typography, ColorPicker, Drawer, Select, Spin,
-    Empty, Avatar, List, Badge
+    Empty, Avatar, List, Badge, ConfigProvider, theme as antdTheme
 } from 'antd';
 import { 
     PlusOutlined, EditOutlined, DeleteOutlined, 
@@ -357,10 +357,16 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
     ];
 
     return (
-        <div className={clsx(
-            'min-h-screen w-full font-kanit transition-all duration-300 flex flex-col',
-            theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
-        )}>
+        <ConfigProvider
+            theme={{
+                algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+                token: { fontFamily: 'Kanit, sans-serif' }
+            }}
+        >
+            <div className={clsx(
+                'min-h-screen w-full font-kanit transition-all duration-300 flex flex-col',
+                theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+            )}>
             <Navbar user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />
             
             <div className="flex-1 p-6">
@@ -625,6 +631,7 @@ function CompanySettings({ user, setUser, theme, setTheme, activeCompany, setAct
                 )}
             </Drawer>
         </div>
+        </ConfigProvider>
     );
 }
 
