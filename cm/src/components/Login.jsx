@@ -45,7 +45,15 @@ function Login({ setUser, theme }) {
       api.get('/api/user')
         .then(res => {
           setUser(res.data.user);
-          navigate('/dashboard');
+          // ✅ ตรวจสอบ activeCompanyId — ถ้าไม่มีให้ไป select-company
+          const storedCompanyId = localStorage.getItem('activeCompanyId');
+          const storedCompany = localStorage.getItem('activeCompany');
+          if (storedCompanyId && storedCompany && storedCompany !== 'null') {
+            navigate('/dashboard');
+          } else {
+            // ไม่มี company → ไปเลือกใหม่
+            navigate('/select-company');
+          }
         })
         .catch(() => {
           localStorage.removeItem('token');
@@ -66,26 +74,27 @@ function Login({ setUser, theme }) {
         password: values.password.trim()
       }, { timeout: 10000 });
 
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
-      setUser(res.data.user);
+      const { user, token, refreshToken, companies, activeCompany, requireCompanySelection } = res.data;
 
-      // ✅ Multi-Company Logic
-      const { companies, activeCompany, requireCompanySelection } = res.data;
+      // 1. บันทึก Token พื้นฐานก่อน
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
 
+      // 2. จัดการข้อมูลบริษัท (สำคัญ: ต้องทำก่อน setUser)
       if (activeCompany) {
-        // บริษัทเดียว → เข้าเลย
+        // กรณีมีบริษัทเดียว -> บันทึกค่าทันที
         localStorage.setItem('activeCompanyId', activeCompany.company_id);
         localStorage.setItem('activeCompany', JSON.stringify(activeCompany));
+        setUser(user); // แจ้ง App ว่า Login สำเร็จ
         navigate('/projects');
       } else if (requireCompanySelection && companies?.length > 1) {
-        // หลายบริษัท → ไปเลือก
+        // กรณีมีหลายบริษัท -> เก็บรายการไว้ให้เลือก
         localStorage.setItem('pendingCompanies', JSON.stringify(companies));
+        setUser(user); // แจ้ง App ว่า Login สำเร็จ
         navigate('/select-company');
-      } else if (companies?.length === 0) {
-        // ไม่มีบริษัท (Super Admin ที่ยังไม่สร้าง)
-        navigate('/projects');
       } else {
+        // กรณีอื่นๆ (เช่น Super Admin ที่ยังไม่มีบริษัท)
+        setUser(user);
         navigate('/projects');
       }
     } catch (err) {

@@ -109,15 +109,42 @@ function App() {
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('light');
   const [loading, setLoading] = useState(true);
-  const [activeCompany, setActiveCompany] = useState(null);
+  const [activeCompany, setActiveCompany] = useState(() => {
+    try {
+      const stored = localStorage.getItem('activeCompany');
+      // กรองค่าขยะออกด้วย
+      if (stored && stored !== 'null' && stored !== 'undefined') {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error('Failed to parse activeCompany from localStorage', e);
+    }
+    return null;
+  });
   const navigate = useNavigate();
 
   // โหลด activeCompany จาก localStorage ตอนเริ่ม
   useEffect(() => {
     try {
       const stored = localStorage.getItem('activeCompany');
-      if (stored) setActiveCompany(JSON.parse(stored));
-    } catch (e) { /* ignore */ }
+      const storedId = localStorage.getItem('activeCompanyId');
+      
+      // ✅ ตรวจสอบว่าเป็นค่าที่ถูกต้อง (ไม่เป็น null/undefined string)
+      const isValid = stored && storedId && storedId !== 'null' && storedId !== 'undefined';
+      
+      if (isValid) {
+        setActiveCompany(JSON.parse(stored));
+      } else {
+        // ล้างค่าที่อาจเป็นขยะออก
+        localStorage.removeItem('activeCompany');
+        localStorage.removeItem('activeCompanyId');
+        setActiveCompany(null);
+      }
+    } catch (e) { 
+      localStorage.removeItem('activeCompany');
+      localStorage.removeItem('activeCompanyId');
+      setActiveCompany(null);
+    }
   }, []);
 
   // ========================================
@@ -204,6 +231,7 @@ function App() {
                 <CompanySelector
                   companies={JSON.parse(localStorage.getItem('pendingCompanies') || '[]')}
                   user={user}
+                  setUser={setUser}
                   setActiveCompany={(company) => {
                     setActiveCompany(company);
                     if (company) {

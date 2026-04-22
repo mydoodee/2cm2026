@@ -286,15 +286,16 @@ const MoveProjectModal = ({ visible, onCancel, project, onSuccess, theme }) => {
                         </Form.Item>
 
                         <Form.Item 
-                            label={<span className="font-kanit">แจ้งเตือนผู้ใช้งาน (เฉพาะผู้ที่มีส่วนเกี่ยวข้อง)</span>} 
+                            label={<span className="font-kanit">สมาชิกโครงการงานจริง (พร้อมแจ้งเตือน)</span>} 
                             name="notified_users"
                             className="mb-0"
+                            extra={<span className="text-[10px] text-slate-400 font-kanit">ผู้ที่เลือกจะได้รับสิทธิ์เข้าใช้งานโครงการใหม่ทันที และจะได้รับอีเมลแจ้งเตือน</span>}
                         >
                             <Select 
                                 mode="multiple" 
                                 size="large"
                                 className="w-full font-kanit"
-                                placeholder="ระบบจะเลือกอัตโนมัติ"
+                                placeholder="เลือกสมาชิกที่ต้องการเพิ่ม..."
                                 loading={fetching}
                                 maxTagCount="responsive"
                                 options={companyMembers.map(u => ({ 

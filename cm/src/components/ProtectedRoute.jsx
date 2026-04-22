@@ -30,8 +30,10 @@ const ProtectedRoute = ({ user }) => {
 
     // ✅ เช็คว่าเลือกบริษัทหรือยัง (ยกเว้นหน้าเลือกบริษัทเอง)
     const activeCompanyId = localStorage.getItem('activeCompanyId');
-    if (!activeCompanyId && location.pathname !== '/select-company') {
-        console.log('🏢 No company selected - redirecting to select-company');
+    const isValidCompany = activeCompanyId && activeCompanyId !== 'null' && activeCompanyId !== 'undefined';
+
+    if (!isValidCompany && location.pathname !== '/select-company') {
+        console.log('🏢 No valid company selected - redirecting to select-company');
         return <Navigate to="/select-company" replace />;
     }
 

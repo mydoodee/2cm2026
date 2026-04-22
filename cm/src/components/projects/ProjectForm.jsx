@@ -304,9 +304,13 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                     </CompactCard>
                   )}
 
-                  <CompactCard icon={<TeamOutlined />} title="แจ้งเตือนผู้ใช้งาน">
-                    <Form.Item name="notified_users" className="mb-0">
-                      <Select mode="multiple" className="w-full" placeholder="เลือกรายชื่อ..." options={(Array.isArray(users) ? users : []).map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))} />
+                  <CompactCard icon={<TeamOutlined />} title="สมาชิกโครงการ">
+                    <Form.Item 
+                      name="notified_users" 
+                      className="mb-0"
+                      extra={<Text className="text-[10px] text-slate-400 mt-1 block">ผู้ที่เลือกจะได้รับสิทธิ์เข้าใช้งานโครงการนี้ทันที และจะได้รับอีเมลแจ้งเตือน</Text>}
+                    >
+                      <Select mode="multiple" className="w-full" placeholder="เลือกสมาชิกที่ต้องการเพิ่ม..." options={(Array.isArray(users) ? users : []).map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))} />
                     </Form.Item>
                   </CompactCard>
 
