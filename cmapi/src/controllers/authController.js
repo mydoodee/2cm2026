@@ -252,6 +252,18 @@ const updateUser = async (req, res) => {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์แก้ไขผู้ใช้นี้' });
         }
 
+        // ✅ Handle partial update (e.g. toggling is_pm only)
+        const isPmOnlyUpdate = is_pm !== undefined && !username && !email && !first_name && !last_name && !password && !profileImage;
+        if (isPmOnlyUpdate) {
+            if (!isAdmin) {
+                return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถแก้ไขสิทธิ์ PM ได้' });
+            }
+            const isPmValue = (is_pm === 'true' || is_pm === true || is_pm === 1 || is_pm === '1') ? 1 : 0;
+            await connection.execute('UPDATE users SET is_pm = ? WHERE user_id = ?', [isPmValue, targetId]);
+            console.log(`DEBUG: PM-only update for user ${targetId} => is_pm=${isPmValue}`);
+            return res.json({ message: 'อัปเดตสิทธิ์ PM สำเร็จ', user: { user_id: targetId, is_pm: !!isPmValue } });
+        }
+
         if (!username || !email || !first_name || !last_name) {
             return res.status(400).json({ message: 'กรุณาระบุข้อมูลที่จำเป็นทั้งหมด (username, email, firstName, lastName)' });
         }
