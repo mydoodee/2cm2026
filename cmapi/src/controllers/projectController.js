@@ -591,6 +591,25 @@ const createProject = async (req, res) => {
       [projectId, req.user.user_id, 1]
     );
 
+    // เพิ่มสมาชิกที่เลือกเข้า project_user_roles (role_id=2 = member)
+    if (notified_users) {
+      try {
+        const memberIds = typeof notified_users === 'string' ? JSON.parse(notified_users) : notified_users;
+        if (Array.isArray(memberIds) && memberIds.length > 0) {
+          for (const memberId of memberIds) {
+            // ข้ามถ้าเป็น creator (มีอยู่แล้วในฐานะ admin)
+            if (String(memberId) === String(req.user.user_id)) continue;
+            await connection.execute(
+              'INSERT IGNORE INTO project_user_roles (project_id, user_id, role_id, created_at) VALUES (?, ?, 2, NOW())',
+              [projectId, memberId]
+            );
+          }
+        }
+      } catch (err) {
+        console.error('❌ Error adding members to project_user_roles:', err);
+      }
+    }
+
     await connection.commit();
 
     // Trigger email notifications
@@ -1158,11 +1177,28 @@ const moveProject = async (req, res) => {
       ]
     );
 
-    // 3. คัดลอกรหัสพนักงานและสิทธิ์ (Project User Roles)
+    // 3. คัดลอกรหัสพนักงานและสิทธิ์ (Project User Roles) จาก Tender
     await connection.execute(
       'INSERT INTO project_user_roles (project_id, user_id, role_id) SELECT ?, user_id, role_id FROM project_user_roles WHERE project_id = ?',
       [newProjectId, id]
     );
+
+    // 3.1 เพิ่มสมาชิกใหม่จาก notified_users เข้าโครงการงานจริง (ถ้ายังไม่มี)
+    if (notified_users) {
+      try {
+        const memberIds = typeof notified_users === 'string' ? JSON.parse(notified_users) : notified_users;
+        if (Array.isArray(memberIds) && memberIds.length > 0) {
+          for (const memberId of memberIds) {
+            await connection.execute(
+              'INSERT IGNORE INTO project_user_roles (project_id, user_id, role_id) VALUES (?, ?, 2)',
+              [newProjectId, memberId]
+            );
+          }
+        }
+      } catch (err) {
+        console.error('❌ Error adding notified_users to new project_user_roles:', err);
+      }
+    }
 
     // 4. ดึงชื่อบริษัทปลายทางเพื่อนำมาบันทึกเป็น "บริษัทที่ได้งาน" ในโปรเจ็กต์ต้นฉบับ
     const [targetCompRows] = await connection.execute(

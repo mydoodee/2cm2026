@@ -95,6 +95,23 @@ api.interceptors.response.use(
             }
         }
 
+        // ✅ 400 - missing company header (Safety Net)
+        if (status === 400 && error.response?.data?.message?.includes('เลือกบริษัทก่อน')) {
+            const isSelectorCall = originalRequest?.url?.includes('/companies') || originalRequest?.url?.includes('/user');
+            
+            // ล้างค่าที่อาจเป็นขยะออกเพื่อให้ระบบ Redirect ไปเริ่มใหม่ได้ถูกต้อง
+            localStorage.removeItem('activeCompanyId');
+            localStorage.removeItem('activeCompany');
+
+            if (!isSelectorCall) {
+                console.warn(`🏢 Missing company header for ${originalRequest?.url} - redirecting to select-company`);
+                if (!window.location.pathname.includes('/select-company') && !window.location.pathname.includes('/login')) {
+                    window.location.href = '/select-company';
+                }
+            }
+            return Promise.reject(new Error(`กรุณาเลือกบริษัทก่อนเข้าใช้งาน (${originalRequest?.url})`));
+        }
+
         // Error อื่นๆ
         const errorMessage = error.response?.data?.message || error.message || 'เกิดข้อผิดพลาด';
         return Promise.reject(new Error(errorMessage));

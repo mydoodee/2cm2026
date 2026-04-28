@@ -80,7 +80,7 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
         setTemplates(response.data.templates || []);
       } catch (error) { console.error('Fetch templates error:', error); }
     };
-    if (!isEditMode) fetchTemplates();
+    fetchTemplates();
   }, [isEditMode]);
 
   useEffect(() => {
@@ -294,7 +294,7 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                     <CompactCard icon={<TrophyOutlined />} title="รายละเอียด TENDER" className="bg-white border-blue-200">
                       <Row gutter={[10, 0]}>
                         <Col span={24}><Form.Item name="tender_doc_date" label="วันที่รับเอกสาร"><DatePicker className="w-full border-slate-400 h-10" format="DD/MM/YYYY" /></Form.Item></Col>
-                        <Col span={24}><Form.Item name="tender_status" label="สถานะประมูล"><Select className="h-10 border-slate-400" options={[{label:'กำลังดำเนินการ',value:'tender_in_progress'},{label:'ชนะ',value:'tender_win'},{label:'ไม่ชนะ',value:'tender_lost'}]} /></Form.Item></Col>
+                        <Col span={24}><Form.Item name="tender_status" label="สถานะประมูล"><Select className="h-10 border-slate-400" options={[{label:'กำลังดำเนินการ',value:'tender_in_progress'},{label:'ชนะ',value:'tender_win'},{label:'ไม่ชนะ',value:'tender_loss'}]} /></Form.Item></Col>
                         <Col span={12}><Form.Item name="tender_project_number" label="เลขที่โครงการ"><Input className="border-slate-400 h-10" /></Form.Item></Col>
                         <Col span={12}><Form.Item name="tender_announcement_number" label="เลขที่ประกาศ"><Input className="border-slate-400 h-10" /></Form.Item></Col>
                         <Col span={24}><Form.Item name="tender_organization" label="หน่วยงานจัดซื้อ"><Input className="border-slate-400 h-10" /></Form.Item></Col>
@@ -304,9 +304,13 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                     </CompactCard>
                   )}
 
-                  <CompactCard icon={<TeamOutlined />} title="แจ้งเตือนผู้ใช้งาน">
-                    <Form.Item name="notified_users" className="mb-0">
-                      <Select mode="multiple" className="w-full" placeholder="เลือกรายชื่อ..." options={(Array.isArray(users) ? users : []).map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))} />
+                  <CompactCard icon={<TeamOutlined />} title="สมาชิกโครงการ">
+                    <Form.Item 
+                      name="notified_users" 
+                      className="mb-0"
+                      extra={<Text className="text-[10px] text-slate-400 mt-1 block">ผู้ที่เลือกจะได้รับสิทธิ์เข้าใช้งานโครงการนี้ทันที และจะได้รับอีเมลแจ้งเตือน</Text>}
+                    >
+                      <Select mode="multiple" className="w-full" placeholder="เลือกสมาชิกที่ต้องการเพิ่ม..." options={(Array.isArray(users) ? users : []).map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))} />
                     </Form.Item>
                   </CompactCard>
 
@@ -337,9 +341,12 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                         className="final-compact-upload"
                       >
                         {fileLists[item.key].length === 0 && (
-                          <div className="flex flex-col items-center gap-1">
-                            <PlusOutlined style={{ color: primaryColor }} />
-                            <Text className="text-[9px] font-bold uppercase" style={{ color: primaryColor }}>อัปโหลด</Text>
+                          <div className="flex flex-col items-center justify-center w-full h-full relative group">
+                            <img src="/spk_logo.png" alt="default" className="absolute inset-0 w-full h-full object-contain opacity-10 p-2" />
+                            <div className="relative z-10 flex flex-col items-center gap-1 bg-white/60 px-3 py-1.5 rounded-lg backdrop-blur-sm group-hover:bg-white/90 transition-all shadow-sm">
+                              <PlusOutlined style={{ color: primaryColor }} />
+                              <Text className="text-[9px] font-black uppercase" style={{ color: primaryColor }}>อัปโหลด</Text>
+                            </div>
                           </div>
                         )}
                       </Upload>

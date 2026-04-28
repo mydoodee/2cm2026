@@ -19,8 +19,10 @@ const companyContext = (req, res, next) => {
 const requireCompany = (req, res, next) => {
     // รับทั้งจาก header โดยตรง หรือจาก req.companyId ที่ companyContext set ไว้
     const companyId = req.companyId || req.headers['x-company-id'];
-    // กรองค่าที่ไม่ถูกต้อง เช่น string "null", "undefined", หรือ empty string
+    
+    // ✅ เพิ่ม Log เพื่อ Debug
     if (!companyId || companyId === 'null' || companyId === 'undefined' || companyId.trim() === '') {
+        console.warn(`⚠️ [requireCompany] Missing/Invalid Company ID for ${req.method} ${req.originalUrl}`);
         return res.status(400).json({ message: 'กรุณาเลือกบริษัทก่อน (X-Company-Id header required)' });
     }
     req.companyId = companyId;

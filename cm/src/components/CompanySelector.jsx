@@ -10,7 +10,7 @@ const { Title, Text } = Typography;
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
 
-function CompanySelector({ companies, user, setActiveCompany, theme }) {
+function CompanySelector({ companies, user, setUser, setActiveCompany, theme }) {
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [compList, setCompList] = useState(companies || []);
@@ -53,6 +53,17 @@ function CompanySelector({ companies, user, setActiveCompany, theme }) {
     setTimeout(() => {
       navigate('/projects');
     }, 400);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('activeCompanyId');
+    localStorage.removeItem('activeCompany');
+    localStorage.removeItem('pendingCompanies');
+    setUser(null);
+    setActiveCompany(null);
+    navigate('/login');
   };
 
   return (
@@ -209,14 +220,29 @@ function CompanySelector({ companies, user, setActiveCompany, theme }) {
         </div>
         )}
 
-        {/* Footer hint */}
-        <div className="text-center mt-8">
+        {/* Footer hint & Logout */}
+        <div className="text-center mt-12 flex flex-col items-center gap-4">
           <Text className={clsx(
             'text-xs',
             theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
           )}>
             คุณสามารถสลับบริษัทได้ตลอดเวลาจากเมนูด้านบน
           </Text>
+          
+          <button
+            onClick={handleLogout}
+            className={clsx(
+              'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300',
+              theme === 'dark'
+                ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 shadow-sm'
+            )}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            ออกจากระบบ
+          </button>
         </div>
       </div>
 
