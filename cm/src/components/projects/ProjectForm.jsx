@@ -14,6 +14,7 @@ import {
   message,
   Checkbox,
   Upload,
+  Switch,
   theme as antdTheme
 } from 'antd';
 import { 
@@ -26,7 +27,8 @@ import {
   TeamOutlined,
   EnvironmentOutlined,
   InfoCircleOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  EyeInvisibleOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -94,7 +96,8 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
             start_date: data.start_date ? dayjs(data.start_date) : null,
             end_date: data.end_date ? dayjs(data.end_date) : null,
             tender_doc_date: data.tender_doc_date ? dayjs(data.tender_doc_date) : null,
-            notified_users: data.team_members?.map(m => m.user_id) || []
+            notified_users: data.team_members?.map(m => m.user_id) || [],
+            is_hidden: !!data.is_hidden
           });
 
           // Populate image thumbnails
@@ -128,7 +131,8 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
         form.setFieldsValue({
           status: 'Planning', progress: 0, tender_status: 'tender_in_progress',
           show_design: 1, show_pre_construction: 1, show_construction: 1, show_precast: 1,
-          show_cm: 1, show_bidding: 1, show_progress_summary: 1, show_payment: 1, show_job_status: 1
+          show_cm: 1, show_bidding: 1, show_progress_summary: 1, show_payment: 1, show_job_status: 1,
+          is_hidden: false
         });
         setFileLists({
           image: [], progress_summary_image: [], payment_image: [], design_image: [],
@@ -152,6 +156,7 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
         if (values[key] === null || values[key] === undefined) return;
         if (dayjs.isDayjs(values[key])) formData.append(key, values[key].format('YYYY-MM-DD'));
         else if (key === 'notified_users') formData.append(key, JSON.stringify(values[key]));
+        else if (key === 'is_hidden') formData.append(key, values[key] ? '1' : '0');
         else formData.append(key, values[key]);
       });
       if (!isEditMode && activeCompany?.company_id) formData.append('company_id', activeCompany.company_id);
@@ -311,6 +316,31 @@ const ProjectForm = ({ user, setUser, theme, setTheme, activeCompany, setActiveC
                       extra={<Text className="text-[10px] text-slate-400 mt-1 block">ผู้ที่เลือกจะได้รับสิทธิ์เข้าใช้งานโครงการนี้ทันที และจะได้รับอีเมลแจ้งเตือน</Text>}
                     >
                       <Select mode="multiple" className="w-full" placeholder="เลือกสมาชิกที่ต้องการเพิ่ม..." options={(Array.isArray(users) ? users : []).map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))} />
+                    </Form.Item>
+                  </CompactCard>
+
+                  {/* Hide Project Card */}
+                  <CompactCard icon={<EyeInvisibleOutlined />} title="การมองเห็น">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex flex-col">
+                        <Text className="font-bold text-slate-700 text-sm">ซ่อนโครงการ</Text>
+                        <Text className="text-[11px] text-slate-400 mt-0.5">โครงการจะไม่แสดงในรายการโครงการ แต่ยังคงเข้าถึงได้จากลิงก์โดยตรง</Text>
+                      </div>
+                      <Form.Item name="is_hidden" valuePropName="checked" className="mb-0 ml-4 flex-shrink-0">
+                        <Switch
+                          checkedChildren="ซ่อน"
+                          unCheckedChildren="แสดง"
+                          style={{}}
+                        />
+                      </Form.Item>
+                    </div>
+                    <Form.Item noStyle shouldUpdate={(prev, cur) => prev.is_hidden !== cur.is_hidden}>
+                      {({ getFieldValue }) => getFieldValue('is_hidden') ? (
+                        <div className="mt-3 flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                          <EyeInvisibleOutlined className="text-amber-500" />
+                          <Text className="text-[11px] text-amber-700 font-semibold">โครงการนี้ถูกซ่อนจากรายการหลักแล้ว</Text>
+                        </div>
+                      ) : null}
                     </Form.Item>
                   </CompactCard>
 

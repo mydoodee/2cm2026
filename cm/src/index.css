@@ -149,4 +149,47 @@
 .dark .ant-btn-default:hover {
   color: white !important;
 }
+
+/* Custom Pagination Styles */
+.dark-pagination .ant-pagination-item a {
+  color: #94a3b8 !important;
+}
+
+.dark-pagination .ant-pagination-item-active {
+  background: #6366f1 !important;
+  border-color: #6366f1 !important;
+}
+
+.dark-pagination .ant-pagination-item-active a {
+  color: white !important;
+}
+
+.dark-pagination .ant-pagination-prev .ant-pagination-item-link,
+.dark-pagination .ant-pagination-next .ant-pagination-item-link {
+  color: #94a3b8 !important;
+}
+
+.dark-pagination .ant-pagination-item:hover:not(.ant-pagination-item-active) {
+  border-color: #6366f1 !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+.dark-pagination .ant-pagination-item:hover:not(.ant-pagination-item-active) a {
+  color: #818cf8 !important;
+}
+
+.dark-pagination .ant-pagination-item-ellipsis {
+  color: #475569 !important;
+}
+
+.custom-pagination .ant-pagination-item {
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.custom-pagination .ant-pagination-prev .ant-pagination-item-link,
+.custom-pagination .ant-pagination-next .ant-pagination-item-link {
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
 }

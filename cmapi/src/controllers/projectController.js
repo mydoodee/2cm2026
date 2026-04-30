@@ -4,6 +4,28 @@ const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const nodemailer = require('nodemailer');
+ 
+const defaultImageMap = {
+  progress_summary_image: 'Uploads/Defaults/progress_summary.jpg',
+  payment_image: 'Uploads/Defaults/payment.jpg',
+  design_image: 'Uploads/Defaults/Design.jpg',
+  pre_construction_image: 'Uploads/Defaults/pre_construction.png',
+  construction_image: 'Uploads/Defaults/construction.jpg',
+  precast_image: 'Uploads/Defaults/precast.jpg',
+  cm_image: 'Uploads/Defaults/cm.jpg',
+  bidding_image: 'Uploads/Defaults/bidding.jpg',
+  job_status_image: 'Uploads/Defaults/job_status.jpg'
+};
+
+const applyProjectDefaults = (project) => {
+  const updatedProject = { ...project };
+  for (const [key, defaultPath] of Object.entries(defaultImageMap)) {
+    if (!updatedProject[key]) {
+      updatedProject[key] = defaultPath;
+    }
+  }
+  return updatedProject;
+};
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -187,7 +209,7 @@ const getProjects = async (req, res) => {
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created, p.is_hidden,
                p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                c.company_name as project_company_name
         FROM projects p
@@ -204,7 +226,7 @@ const getProjects = async (req, res) => {
                p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
+               p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created, p.is_hidden,
                p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                c.company_name as project_company_name
         FROM projects p
@@ -238,7 +260,9 @@ const getProjects = async (req, res) => {
         show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
         tender_status: project.tender_status || 'tender_in_progress',
         is_job_created: project.is_job_created || 0,
+        is_hidden: project.is_hidden || 0,
       };
+      return applyProjectDefaults(mappedProject);
     }));
 
     res.json({ projects: projectsWithMembers });
@@ -275,7 +299,7 @@ const getProjectById = async (req, res) => {
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created, p.is_hidden,
                 p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                 c.company_name as project_company_name
          FROM projects p
@@ -292,7 +316,7 @@ const getProjectById = async (req, res) => {
                 p.pre_construction_image, p.construction_image, p.cm_image, p.precast_image, p.bidding_image, p.job_status_image,
                 p.progress, p.status, p.owner, p.consusltant, p.contractor, p.address,
                 p.show_design, p.show_pre_construction, p.show_construction, p.show_precast, p.show_cm, p.show_bidding, p.show_progress_summary, p.show_payment, p.show_job_status,
-                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created,
+                p.bidding_progress, p.design_progress, p.pre_construction_progress, p.construction_progress, p.precast_progress, p.cm_progress, p.job_status_progress, p.tender_status, p.is_job_created, p.is_hidden,
                 p.company_id, p.template_id, p.tender_doc_date, p.tender_project_number, p.tender_announcement_number, p.tender_organization, p.tender_item_description, p.tender_winner_company,
                 c.company_name as project_company_name
          FROM projects p
@@ -344,9 +368,10 @@ const getProjectById = async (req, res) => {
       show_job_status: project.show_job_status !== undefined ? !!project.show_job_status : true,
       tender_status: project.tender_status || 'tender_in_progress',
       is_job_created: project.is_job_created || 0,
+      is_hidden: project.is_hidden || 0,
     };
 
-    res.json({ project: projectWithMembers });
+    res.json({ project: applyProjectDefaults(projectWithMembers) });
   } catch (error) {
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: error.message });
   } finally {
@@ -443,7 +468,7 @@ const createProject = async (req, res) => {
       job_number, project_name, description, start_date, end_date, progress, status, owner, consusltant, contractor, address,
       show_bidding = 1, show_design = 1, show_pre_construction = 1, show_construction = 1, show_precast = 1, show_cm = 1, show_progress_summary = 1, show_payment = 1, show_job_status = 1,
       bidding_progress = 0, design_progress = 0, pre_construction_progress = 0, construction_progress = 0, precast_progress = 0, cm_progress = 0, job_status_progress = 0, tender_status = 'tender_in_progress',
-      template_id, notified_users,
+      template_id, notified_users, is_hidden = 0,
       tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
     } = req.body;
     const files = req.files || {};
@@ -484,14 +509,16 @@ const createProject = async (req, res) => {
         image, progress_summary_image, payment_image, design_image, pre_construction_image, construction_image, cm_image, precast_image, bidding_image, job_status_image,
         show_design, show_pre_construction, show_construction, show_precast, show_cm, show_bidding, show_progress_summary, show_payment, show_job_status,
         bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
-        company_id, template_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
+        company_id, template_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company,
+        is_hidden
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 
         ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, ?, 
         ?, ?, ?, ?, ?, ?, ?, ?, 
-        ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?
       )`,
       [
         projectId, job_number, project_name, description || null, start_date, end_date, progressValue, status || 'Planning', 1,
@@ -499,7 +526,8 @@ const createProject = async (req, res) => {
         null, null, null, null, null, null, null, null, null, null,
         parseBool(show_design), parseBool(show_pre_construction), parseBool(show_construction), parseBool(show_precast), parseBool(show_cm), parseBool(show_bidding), parseBool(show_progress_summary), parseBool(show_payment), parseBool(show_job_status),
         Number(bidding_progress) || 0, Number(design_progress) || 0, Number(pre_construction_progress) || 0, Number(construction_progress) || 0, Number(precast_progress) || 0, Number(cm_progress) || 0, Number(job_status_progress) || 0, tender_status,
-        companyId, template_id || null, tender_doc_date || null, tender_project_number || null, tender_announcement_number || null, tender_organization || null, tender_item_description || null, tender_winner_company || null
+        companyId, template_id || null, tender_doc_date || null, tender_project_number || null, tender_announcement_number || null, tender_organization || null, tender_item_description || null, tender_winner_company || null,
+        parseBool(is_hidden)
       ]
     );
 
@@ -551,7 +579,7 @@ const createProject = async (req, res) => {
     }
     // --------------------------------------
 
-    const uploadDir = path.join(__dirname, '../Uploads');
+    const uploadDir = path.join(process.cwd(), 'Uploads');
     await fs.mkdir(uploadDir, { recursive: true });
 
     const imageFields = [
@@ -567,6 +595,7 @@ const createProject = async (req, res) => {
       { key: 'job_status_image', file: files.job_status_image },
     ];
 
+
     const imagePaths = {};
     for (const { key, file } of imageFields) {
       if (file && file[0]) {
@@ -574,6 +603,24 @@ const createProject = async (req, res) => {
         const uploadPath = path.join(uploadDir, fileName);
         await fs.writeFile(uploadPath, file[0].buffer);
         imagePaths[key] = `Uploads/${fileName}`;
+      } else if (defaultImageMap[key]) {
+        // Use default image if user didn't upload one
+        const defaultFileName = defaultImageMap[key];
+        const defaultSrcPath = path.join(uploadDir, 'Defaults', defaultFileName);
+        
+        try {
+          // Check if default file exists
+          await fs.access(defaultSrcPath);
+          const fileName = `${key}-${projectId}-default${path.extname(defaultFileName)}`;
+          const uploadPath = path.join(uploadDir, fileName);
+          
+          // Copy the default image to the new path
+          await fs.copyFile(defaultSrcPath, uploadPath);
+          imagePaths[key] = `Uploads/${fileName}`;
+          console.log(`✅ Assigned default image for ${key}: ${imagePaths[key]}`);
+        } catch (err) {
+          console.warn(`⚠️ Default image not found for ${key}: ${defaultSrcPath}`);
+        }
       }
     }
 
@@ -663,7 +710,8 @@ const updateProject = async (req, res) => {
       show_bidding, show_progress_summary, show_payment, show_job_status,
       show_design, show_pre_construction, show_construction, show_precast, show_cm,
       bidding_progress, design_progress, pre_construction_progress, construction_progress, precast_progress, cm_progress, job_status_progress, tender_status,
-      template_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company
+      template_id, tender_doc_date, tender_project_number, tender_announcement_number, tender_organization, tender_item_description, tender_winner_company,
+      is_hidden
     } = req.body;
     const files = req.files || {};
 
@@ -817,6 +865,7 @@ const updateProject = async (req, res) => {
     if (tender_item_description !== undefined) addField('tender_item_description', tender_item_description);
     if (tender_winner_company !== undefined) addField('tender_winner_company', tender_winner_company);
     if (template_id !== undefined) addField('template_id', template_id);
+    if (is_hidden !== undefined) addField('is_hidden', parseBool(is_hidden));
 
     for (const key of Object.keys(imagePaths)) {
       addField(key, imagePaths[key]);
