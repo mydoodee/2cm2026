@@ -4,6 +4,12 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: '/cm/',
   plugins: [react()],
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['three'],
+  },
   server: {
     port: 5173,
     open: true,
@@ -29,9 +35,11 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.woff', '**/*.woff2'],
   resolve: {
+    dedupe: ['three'],
     alias: {
-      '@': '/src', // Simple alias - Vite automatically resolves this relative to project root
-      antd: 'antd', // ช่วยให้แน่ใจว่าการนำเข้า antd ถูกต้อง
+      '@': '/src',
+      antd: 'antd',
+      'opentype.js': 'opentype.js/dist/opentype.js',
     },
   },
   css: {

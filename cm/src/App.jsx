@@ -14,6 +14,7 @@ import Actual from './components/projects/Actual'; // เพิ่มบรร�
 import Design from './components/projects/Design';
 import Bidding from './components/projects/Bidding';
 import ViewerIFC from './components/projects/ViewerIFC';
+import ViewerDXF from './components/projects/ViewerDXF';
 import Preconstruction from './components/projects/Preconstruction';
 import Construction from './components/projects/Construction';
 import ConstructionManagement from './components/projects/ConstructionManagement';
@@ -99,6 +100,74 @@ function ViewerIFCWrapper({ user, setUser, theme, setTheme }) {
 }
 
 ViewerIFCWrapper.propTypes = {
+  user: PropTypes.object,
+  setUser: PropTypes.func,
+  theme: PropTypes.string,
+  setTheme: PropTypes.func,
+};
+
+// ========================================
+// ViewerDXF Wrapper (Public / Shared / Private)
+// ========================================
+function ViewerDXFWrapper({ user, setUser, theme, setTheme }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = useParams();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const checkAccess = () => {
+      const urlParams = new URLSearchParams(location.search);
+      const pathSegments = location.pathname.split('/').filter(Boolean);
+
+      const hasTokenParam = !!params.token;
+      const isSharedMode =
+        hasTokenParam ||
+        pathSegments.includes('shared') ||
+        location.pathname.includes('/viewer/shared/') ||
+        location.pathname.includes('/cm/viewer/shared/');
+
+      const isPublicViewer =
+        pathSegments.includes('viewer') &&
+        !isSharedMode &&
+        pathSegments.length >= 3;
+
+      const isPublicMode =
+        urlParams.get('public') === 'true' ||
+        isPublicViewer ||
+        isSharedMode;
+
+      if (isSharedMode || isPublicMode) {
+        setIsChecking(false);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      if (!user && !token) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
+
+      setIsChecking(false);
+    };
+
+    checkAccess();
+  }, [location, user, navigate, params]);
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+        <Spin size="large">
+          <div className="content" style={{ minHeight: '100px', minWidth: '100px' }} />
+        </Spin>
+      </div>
+    );
+  }
+
+  return <ViewerDXF user={user} setUser={setUser} theme={theme} setTheme={setTheme} />;
+}
+
+ViewerDXFWrapper.propTypes = {
   user: PropTypes.object,
   setUser: PropTypes.func,
   theme: PropTypes.string,
@@ -251,6 +320,10 @@ function App() {
           <Route path="/viewer/shared/:token" element={<ViewerIFCWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
           <Route path="/viewer/:id/:fileId" element={<ViewerIFCWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
           <Route path="/project/:id/viewerifc/:fileId" element={<ViewerIFCWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+          
+          {/* ==================== VIEWER DXF (Public / Shared / Private) ==================== */}
+          <Route path="/viewer/shared/dxf/:token" element={<ViewerDXFWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+          <Route path="/project/:id/viewerdxf/:fileId" element={<ViewerDXFWrapper user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
 
           {/* ==================== PROTECTED ROUTES ==================== */}
           <Route element={<ProtectedRoute user={user} />}>

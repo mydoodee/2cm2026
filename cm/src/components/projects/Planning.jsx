@@ -759,18 +759,34 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
       return <Text type="secondary" style={{ fontSize: '12px' }}>-</Text>;
     }
 
-    const isPdf = record.attachment_url.toLowerCase().endsWith('.pdf');
-    const icon = isPdf
-      ? <FilePdfOutlined style={{ color: '#ef4444', fontSize: '16px' }} />
-      : <FileImageOutlined style={{ color: '#3b82f6', fontSize: '16px' }} />;
+    const url = record.attachment_url.toLowerCase();
+    const isPdf = url.endsWith('.pdf');
+    const isDxf = url.endsWith('.dxf');
+    
+    let icon;
+    if (isPdf) icon = <FilePdfOutlined style={{ color: '#ef4444', fontSize: '16px' }} />;
+    else if (isDxf) icon = <BlockOutlined style={{ color: '#6366f1', fontSize: '16px' }} />;
+    else icon = <FileImageOutlined style={{ color: '#3b82f6', fontSize: '16px' }} />;
+
+    const handleClick = (e) => {
+      if (isDxf) {
+        e.preventDefault();
+        // Use a generated file ID since these are attachments from planning, not project files
+        const fileId = record.key.replace('-', '_'); 
+        const fileName = record.attachment_name || 'แบบแปลน.dxf';
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        window.open(`${baseUrl}project/${id}/viewerdxf/${fileId}?name=${encodeURIComponent(fileName)}`.replace(/\/+/g, '/'), '_blank');
+      }
+    };
 
     return (
       <Tooltip title={record.attachment_name || 'ดูไฟล์'}>
         <a
-          href={`${import.meta.env.VITE_API_URL}${record.attachment_url}`}
-          target="_blank"
+          href={isDxf ? '#' : `${import.meta.env.VITE_API_URL}${record.attachment_url}`}
+          target={isDxf ? '_self' : '_blank'}
           rel="noopener noreferrer"
           style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={handleClick}
         >
           {icon}
         </a>
