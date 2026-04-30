@@ -696,7 +696,7 @@ const SCurveChart = ({ projectId, onActualProgressChange }) => {
   return (
     <Card
       className="bg-white shadow-lg rounded-xl hover:shadow-xl transition-shadow duration-300"
-      bordered={false}
+      variant="borderless"
       style={{ fontFamily: 'Kanit, sans-serif' }}
     >
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">

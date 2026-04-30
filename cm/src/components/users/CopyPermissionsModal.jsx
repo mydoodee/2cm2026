@@ -48,7 +48,7 @@ function CopyPermissionsModal({
                     showSearch
                     optionFilterProp="children"
                     className="modern-select"
-                    popupClassName={theme === 'dark' ? 'dark-dropdown' : ''}
+                    classNames={{ popup: { root: theme === 'dark' ? 'dark-dropdown' : '' } }}
                 >
                     {users
                         .filter(u => u.user_id !== selectedUserForRoles?.user_id)

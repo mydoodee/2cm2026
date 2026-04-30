@@ -95,9 +95,9 @@ function ProjectRoleAssignment({
                                                         size="small"
                                                         style={{ width: 120 }}
                                                         placeholder="เลือกบทบาท"
-                                                        bordered={false}
+                                                        variant="borderless"
                                                         className={`custom-select-small ${isAssigned ? 'font-semibold' : ''}`}
-                                                        popupClassName={theme === 'dark' ? 'dark-dropdown' : ''}
+                                                        classNames={{ popup: { root: theme === 'dark' ? 'dark-dropdown' : '' } }}
                                                         value={assignedRole?.role_id || undefined}
                                                         onChange={(roleId) => {
                                                             if (roleId === undefined || roleId === null) {

@@ -411,6 +411,8 @@ const getAllUsers = async (req, res) => {
         }
 
         connection = await getConnection();
+        // Increase GROUP_CONCAT limit to handle many project-role mappings
+        await connection.query('SET SESSION group_concat_max_len = 1000000');
         // เช็คสิทธิ์ Admin (ทั้ง global และ project)
         const [userGlobalRoles] = await connection.execute(
             'SELECT role_id FROM user_roles WHERE user_id = ?',
@@ -1225,11 +1227,14 @@ const confirmPassword = async (req, res) => {
 const copyUserPermissions = async (req, res) => {
     const { sourceUserId, targetUserId } = req.body;
 
-    if (!sourceUserId || !targetUserId) {
+    const srcId = Number(sourceUserId);
+    const tgtId = Number(targetUserId);
+
+    if (!srcId || !tgtId) {
         return res.status(400).json({ message: 'กรุณาระบุ sourceUserId และ targetUserId' });
     }
 
-    if (sourceUserId === targetUserId) {
+    if (srcId === tgtId) {
         return res.status(400).json({ message: 'ผู้ใช้ต้นทางและปลายทางต้องไม่ใช่คนเดียวกัน' });
     }
 
@@ -1241,12 +1246,13 @@ const copyUserPermissions = async (req, res) => {
 
         connection = await getConnection();
         
-        // ตรวจสอบสิทธิ์ Admin
+        // ตรวจสอบสิทธิ์ Admin (ใช้ project_user_roles ตาราง role_id=1 หรือ username)
         const [adminRoles] = await connection.execute(
-            'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1',
+            'SELECT role_id FROM project_user_roles WHERE user_id = ? AND role_id = 1 LIMIT 1',
             [req.user.user_id]
         );
         const isAdmin = adminRoles.length > 0 || req.user.username === 'admin' || req.user.username === 'adminspk';
+        console.log(`🔐 Copy permissions admin check: user=${req.user.username} isAdmin=${isAdmin}`);
         if (!isAdmin) {
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถคัดลอกสิทธิ์ได้' });
         }
@@ -1254,8 +1260,9 @@ const copyUserPermissions = async (req, res) => {
         // ตรวจสอบว่าผู้ใช้ทั้งสองคนมีอยู่จริง
         const [users] = await connection.execute(
             'SELECT user_id, username FROM users WHERE user_id IN (?, ?) AND active = 1',
-            [sourceUserId, targetUserId]
+            [srcId, tgtId]
         );
+        console.log(`🔍 Found users: ${users.length} (need 2) for ids: ${srcId}, ${tgtId}`);
         if (users.length < 2) {
             return res.status(404).json({ message: 'ไม่พบข้อมูลผู้ใช้ต้นทางหรือปลายทาง' });
         }
@@ -1265,37 +1272,64 @@ const copyUserPermissions = async (req, res) => {
         // 1. คัดลอก Project Roles (project_user_roles)
         const [sourceProjectRoles] = await connection.execute(
             'SELECT project_id, role_id FROM project_user_roles WHERE user_id = ?',
-            [sourceUserId]
+            [srcId]
         );
+        console.log(`📋 Source project roles: ${sourceProjectRoles.length}`);
 
-        for (const role of sourceProjectRoles) {
+        const sourceProjectIds = [...new Set(sourceProjectRoles.map(r => r.project_id))];
+        if (sourceProjectIds.length > 0) {
+            // ลบสิทธิ์เดิมในโครงการที่ซ้ำกันของผู้ใช้ปลายทางออกก่อน
+            const placeholders = sourceProjectIds.map(() => '?').join(',');
             await connection.execute(
-                `INSERT INTO project_user_roles (project_id, user_id, role_id, created_at) 
-                 VALUES (?, ?, ?, NOW()) 
-                 ON DUPLICATE KEY UPDATE role_id = ?, updated_at = NOW()`,
-                [role.project_id, targetUserId, role.role_id, role.role_id]
+                `DELETE FROM project_user_roles WHERE user_id = ? AND project_id IN (${placeholders})`,
+                [tgtId, ...sourceProjectIds]
             );
+            
+            // เพิ่มสิทธิ์ใหม่จากต้นทาง
+            for (const role of sourceProjectRoles) {
+                await connection.execute(
+                    `INSERT INTO project_user_roles (project_id, user_id, role_id, created_at, updated_at) 
+                     VALUES (?, ?, ?, NOW(), NOW())`,
+                    [role.project_id, tgtId, role.role_id]
+                );
+            }
         }
 
         // 2. คัดลอก Folder Permissions (folder_permissions)
         const [sourceFolderPerms] = await connection.execute(
             'SELECT folder_id, permission_type FROM folder_permissions WHERE user_id = ?',
-            [sourceUserId]
+            [srcId]
         );
+        console.log(`📂 Source folder permissions: ${sourceFolderPerms.length}`);
 
-        for (const perm of sourceFolderPerms) {
+        const sourceFolderIds = [...new Set(sourceFolderPerms.map(p => p.folder_id))];
+        if (sourceFolderIds.length > 0) {
+            // ลบสิทธิ์โฟลเดอร์เดิมที่ซ้ำกันออกก่อน
+            const placeholders = sourceFolderIds.map(() => '?').join(',');
             await connection.execute(
-                `INSERT INTO folder_permissions (folder_id, user_id, permission_type, created_at) 
-                 VALUES (?, ?, ?, NOW()) 
-                 ON DUPLICATE KEY UPDATE permission_type = ?, updated_at = NOW()`,
-                [perm.folder_id, targetUserId, perm.permission_type, perm.permission_type]
+                `DELETE FROM folder_permissions WHERE user_id = ? AND folder_id IN (${placeholders})`,
+                [tgtId, ...sourceFolderIds]
             );
+            
+            // เพิ่มสิทธิ์ใหม่
+            for (const perm of sourceFolderPerms) {
+                await connection.execute(
+                    `INSERT INTO folder_permissions (folder_id, user_id, permission_type, created_at, updated_at) 
+                     VALUES (?, ?, ?, NOW(), NOW())`,
+                    [perm.folder_id, tgtId, perm.permission_type]
+                );
+            }
         }
 
-        await connection.execute(
-            'INSERT INTO logs (message) VALUES (?)',
-            [`Permissions copied from user_id: ${sourceUserId} to user_id: ${targetUserId} by admin_id: ${req.user.user_id}`]
-        );
+        // บันทึก log (ไม่บล็อก transaction ถ้า logs table ไม่มี)
+        try {
+            await connection.execute(
+                'INSERT INTO logs (message) VALUES (?)',
+                [`Permissions copied from user_id: ${srcId} to user_id: ${tgtId} by admin_id: ${req.user.user_id}`]
+            );
+        } catch (logErr) {
+            console.warn('⚠️ Could not write to logs table:', logErr.message);
+        }
 
         await connection.commit();
 
@@ -1309,9 +1343,10 @@ const copyUserPermissions = async (req, res) => {
 
     } catch (error) {
         if (connection) await connection.rollback();
+        console.error('❌ copyUserPermissions error:', error.message, error.stack);
         res.status(500).json({
             message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: error.message
         });
     } finally {
         if (connection) await connection.release();
