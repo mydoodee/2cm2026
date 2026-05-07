@@ -428,8 +428,6 @@ const getAllUsers = async (req, res) => {
         ])];
 
         const includeInactive = req.query.includeInactive === 'true';
-
-        // ✅ ดึง company_id จาก header (ส่งมาจาก axiosConfig.js)
         const companyId = req.headers['x-company-id'] || req.companyId || null;
 
         let isCompanyAdmin = false;
@@ -449,29 +447,35 @@ const getAllUsers = async (req, res) => {
 
         let users;
         if (companyId) {
-            // ✅ Filter เฉพาะ user ของ company นั้น
             [users] = await connection.execute(`
                 SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
                        GROUP_CONCAT(DISTINCT ur.role_id) as role_ids,
-                       GROUP_CONCAT(
-                           pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name
-                           ORDER BY pur.project_id
+                       (
+                           SELECT GROUP_CONCAT(
+                               TRIM(px.project_id), '|||', IFNULL(TRIM(px.job_number),''), '|||', purx.role_id, '|||', IFNULL(TRIM(rx.role_name),'')
+                               ORDER BY purx.project_id
+                               SEPARATOR '§§§'
+                           )
+                           FROM project_user_roles purx
+                           JOIN projects px ON purx.project_id = px.project_id
+                           LEFT JOIN roles rx ON purx.role_id = rx.role_id
+                           WHERE purx.user_id = u.user_id AND px.active = 1 AND px.company_id = ?
                        ) as project_roles
                 FROM users u
                 INNER JOIN company_users cu ON cu.user_id = u.user_id AND cu.company_id = ?
                 LEFT JOIN user_roles ur ON u.user_id = ur.user_id
-                LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
-                LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1 AND p.company_id = ?
-                LEFT JOIN roles r ON pur.role_id = r.role_id
                 WHERE ${includeInactive ? '1=1' : 'u.active = 1'}
                 GROUP BY u.user_id
             `, [companyId, companyId]);
         } else {
-            // Fallback: ถ้าไม่ได้ส่ง company มา (backward compatible)
             [users] = await connection.execute(`
                 SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.profile_image, u.active, u.is_pm,
                        GROUP_CONCAT(DISTINCT pur.role_id) as role_ids,
-                       GROUP_CONCAT(pur.project_id, ':', p.job_number, ':', pur.role_id, ':', r.role_name) as project_roles
+                       GROUP_CONCAT(
+                           TRIM(p.project_id), '|||', IFNULL(TRIM(p.job_number),''), '|||', pur.role_id, '|||', IFNULL(TRIM(r.role_name),'')
+                           ORDER BY pur.project_id
+                           SEPARATOR '§§§'
+                       ) as project_roles
                 FROM users u
                 LEFT JOIN project_user_roles pur ON u.user_id = pur.user_id
                 LEFT JOIN projects p ON pur.project_id = p.project_id AND p.active = 1
@@ -494,15 +498,15 @@ const getAllUsers = async (req, res) => {
                 isAdmin: userRoles.includes(1),
                 is_pm: !!user.is_pm,
                 project_roles: user.project_roles
-                    ? user.project_roles.split(',').map(pr => {
-                          const [project_id, job_number, role_id, role_name] = pr.split(':');
-                          return {
-                              project_id: project_id || null,
-                              job_number: job_number || 'ไม่ระบุหมายเลขงาน',
-                              role_id: Number(role_id),
-                              role_name
-                          };
-                      })
+                    ? user.project_roles.split('§§§').map(pr => {
+                          const parts = pr.split('|||');
+                          const project_id = parts[0] ? parts[0].trim() : null;
+                          const job_number = parts[1] ? parts[1].trim() : 'ไม่ระบุหมายเลขงาน';
+                          const role_id = parts[2] ? Number(parts[2]) : null;
+                          const role_name = parts[3] ? parts[3].trim() : '';
+                          if (!project_id || role_id === null) return null;
+                          return { project_id, job_number, role_id, role_name };
+                      }).filter(Boolean)
                     : []
             };
         });
@@ -531,10 +535,8 @@ const createUser = async (req, res) => {
         }
 
         connection = await getConnection();
-        console.error('DEBUG: DB Connection acquired for createUser');
 
         await connection.beginTransaction();
-        console.error('DEBUG: Transaction started for createUser');
 
         const [adminRoles] = await connection.execute(
             'SELECT role_id FROM user_roles WHERE user_id = ?',
@@ -542,7 +544,6 @@ const createUser = async (req, res) => {
         );
         const isAdmin = adminRoles.some(r => r.role_id === 1) || req.user.username === 'admin' || req.user.username === 'adminspk';
         if (!isAdmin) {
-            console.error('DEBUG: User is not admin', { username: req.user.username, user_id: req.user.user_id });
             await connection.rollback();
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถสร้างผู้ใช้ได้' });
         }
@@ -605,16 +606,13 @@ const createUser = async (req, res) => {
             profileImagePath = `Uploads/${fileName}`;
         }
 
-        console.error('DEBUG: Salting and hashing password...');
         const passwordHash = await bcrypt.hash(password, 10);
-        console.error('DEBUG: Password hashed');
 
         const isPmValue = (is_pm === 'true' || is_pm === true || is_pm === 1 || is_pm === '1') ? 1 : 0;
         const [result] = await connection.execute(
             'INSERT INTO users (username, password_hash, email, first_name, last_name, profile_image, is_pm, created_by, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
             [username, passwordHash, email, first_name, last_name, profileImagePath, isPmValue, req.user.user_id]
         );
-        console.error('DEBUG: User inserted', { insertId: result.insertId });
 
         await connection.execute(
             'INSERT INTO user_roles (user_id, role_id, created_at) VALUES (?, ?, NOW())',
@@ -654,10 +652,8 @@ const createUser = async (req, res) => {
             message: 'สร้างผู้ใช้สำเร็จ'
         });
     } catch (error) {
-        console.error('DEBUG: ERROR in createUser:', error);
         if (connection) {
             await connection.rollback();
-            console.error('DEBUG: Transaction rolled back');
         }
         res.status(500).json({
             message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์',
@@ -777,7 +773,6 @@ const hardDeleteUser = async (req, res) => {
 
         connection = await getConnection();
         
-        // ตรวจสอบสิทธิ์ Admin (เฉพาะบทบาท 1 หรือชื่อ admin/adminspk เท่านั้นที่มีสิทธิ์ลบทิ้งถาวร)
         const [adminRoles] = await connection.execute(
             'SELECT role_id FROM project_user_roles WHERE user_id = ?',
             [req.user.user_id]
@@ -788,7 +783,6 @@ const hardDeleteUser = async (req, res) => {
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถลบผู้ใช้ถาวรได้' });
         }
 
-        // ตรวจสอบสถานะว่าถูกลบแบบ Soft Delete (active=0) แล้วหรือไม่ก่อนลบจริง
         const [userRows] = await connection.execute(
             'SELECT user_id, username FROM users WHERE user_id = ?',
             [id]
@@ -811,8 +805,6 @@ const hardDeleteUser = async (req, res) => {
 
         const adminId = req.user.user_id;
 
-        // ลบ/อัปเดตความสัมพันธ์ที่มี Foreign Key เพื่อให้ลบได้จริง
-        // 1. ลบข้อมูลที่ผูกติดกับตัวบุคคล (Session/Token/Permissions/Logs)
         await connection.execute('DELETE FROM refresh_tokens WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM reset_tokens WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM user_roles WHERE user_id = ?', [id]);
@@ -821,16 +813,12 @@ const hardDeleteUser = async (req, res) => {
         await connection.execute('DELETE FROM project_permissions WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM file_downloads WHERE user_id = ?', [id]);
         
-        // 2. อัปเดตข้อมูลที่ต้องเก็บไว้แต่เปลี่ยนคนดูแล (Reassign to Admin)
-        // เนื่องจากคอลัมน์เหล่านี้ใน DB ตั้งค่าเป็น NOT NULL จึงต้องโอนสิทธิ์ให้ Admin แทนการตั้งเป็น NULL
         await connection.execute('UPDATE files SET uploaded_by = ? WHERE uploaded_by = ?', [adminId, id]);
         await connection.execute('UPDATE folders SET created_by = ? WHERE created_by = ?', [adminId, id]);
         await connection.execute('UPDATE project_user_invitations SET invited_by = ? WHERE invited_by = ?', [adminId, id]);
         
-        // สำหรับคอลัมน์ที่อนุญาตให้เป็น NULL (Nullable)
         await connection.execute('UPDATE users SET created_by = NULL WHERE created_by = ?', [id]);
         
-        // 3. ลบตัวตนผู้ใช้
         await connection.execute('DELETE FROM users WHERE user_id = ?', [id]);
 
         await connection.commit();
@@ -885,7 +873,6 @@ const refreshToken = async (req, res) => {
             userRoles.push(1);
         }
 
-        // ✅ สร้าง token ใหม่อายุ 8 ชั่วโมง
         const newToken = jwt.sign(
             { user_id: userId, username: userRows[0].username, roles: userRoles },
             process.env.JWT_SECRET,
@@ -1246,12 +1233,20 @@ const copyUserPermissions = async (req, res) => {
 
         connection = await getConnection();
         
-        // ตรวจสอบสิทธิ์ Admin (ใช้ project_user_roles ตาราง role_id=1 หรือ username)
-        const [adminRoles] = await connection.execute(
+        const [adminGlobalRoles] = await connection.execute(
+            'SELECT role_id FROM user_roles WHERE user_id = ? AND role_id = 1 LIMIT 1',
+            [req.user.user_id]
+        );
+        const [adminProjectRoles] = await connection.execute(
             'SELECT role_id FROM project_user_roles WHERE user_id = ? AND role_id = 1 LIMIT 1',
             [req.user.user_id]
         );
-        const isAdmin = adminRoles.length > 0 || req.user.username === 'admin' || req.user.username === 'adminspk';
+        const tokenRoles = req.user.roles || [];
+        const isAdmin = adminGlobalRoles.length > 0 ||
+                        adminProjectRoles.length > 0 ||
+                        tokenRoles.includes(1) ||
+                        req.user.username === 'admin' ||
+                        req.user.username === 'adminspk';
         console.log(`🔐 Copy permissions admin check: user=${req.user.username} isAdmin=${isAdmin}`);
         if (!isAdmin) {
             return res.status(403).json({ message: 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถคัดลอกสิทธิ์ได้' });
@@ -1267,58 +1262,92 @@ const copyUserPermissions = async (req, res) => {
             return res.status(404).json({ message: 'ไม่พบข้อมูลผู้ใช้ต้นทางหรือปลายทาง' });
         }
 
+        // ดึง companyId จาก header (ส่งมาจาก axiosConfig.js หรือ middleware)
+        const companyId = req.headers['x-company-id'] || req.companyId || null;
+        console.log(`🏢 [copyUserPermissions] Starting copy: srcId=${srcId}, tgtId=${tgtId}, companyId=${companyId}`);
+
         await connection.beginTransaction();
 
-        // 1. คัดลอก Project Roles (project_user_roles)
-        const [sourceProjectRoles] = await connection.execute(
-            'SELECT project_id, role_id FROM project_user_roles WHERE user_id = ?',
+        // Debug: ตรวจสอบโครงการทั้งหมดของ Tiger
+        const [allTigerRoles] = await connection.execute(
+            'SELECT pur.project_id, p.company_id, p.active FROM project_user_roles pur LEFT JOIN projects p ON pur.project_id = p.project_id WHERE pur.user_id = ?',
             [srcId]
         );
-        console.log(`📋 Source project roles: ${sourceProjectRoles.length}`);
+        console.log(`🔍 [DEBUG] Total Tiger roles in DB: ${allTigerRoles.length}`);
+        allTigerRoles.forEach(r => {
+            console.log(`   - Project: ${r.project_id}, Company: ${r.company_id}, Active: ${r.active}`);
+        });
+
+        // 1. คัดลอก Project Roles (project_user_roles) - เฉพาะโครงการในบริษัทปัจจุบัน
+        console.log(`🏢 [copyUserPermissions] Starting copy: srcId=${srcId}, tgtId=${tgtId}, companyId=${companyId}`);
+
+        // 1. Copy Project Roles - Filtered by company
+        const [sourceProjectRoles] = await connection.execute(
+            `SELECT pur.project_id, pur.role_id 
+             FROM project_user_roles pur
+             INNER JOIN projects p ON pur.project_id = p.project_id
+             WHERE pur.user_id = ? AND p.active = 1 AND p.company_id = ?`,
+            [srcId, companyId]
+        );
+        
+        console.log(`📋 [copyUserPermissions] Found ${sourceProjectRoles.length} project roles to copy for company ${companyId}`);
 
         const sourceProjectIds = [...new Set(sourceProjectRoles.map(r => r.project_id))];
         if (sourceProjectIds.length > 0) {
             // ลบสิทธิ์เดิมในโครงการที่ซ้ำกันของผู้ใช้ปลายทางออกก่อน
             const placeholders = sourceProjectIds.map(() => '?').join(',');
-            await connection.execute(
+            const [delResult] = await connection.execute(
                 `DELETE FROM project_user_roles WHERE user_id = ? AND project_id IN (${placeholders})`,
                 [tgtId, ...sourceProjectIds]
             );
+            console.log(`🗑️ [copyUserPermissions] Deleted ${delResult.affectedRows} existing project roles from target`);
             
             // เพิ่มสิทธิ์ใหม่จากต้นทาง
+            let insertCount = 0;
             for (const role of sourceProjectRoles) {
                 await connection.execute(
                     `INSERT INTO project_user_roles (project_id, user_id, role_id, created_at, updated_at) 
                      VALUES (?, ?, ?, NOW(), NOW())`,
                     [role.project_id, tgtId, role.role_id]
                 );
+                insertCount++;
             }
+            console.log(`✅ [copyUserPermissions] Inserted ${insertCount} project roles to target`);
         }
 
-        // 2. คัดลอก Folder Permissions (folder_permissions)
+        // 2. Copy Folder Permissions - Filtered by company
         const [sourceFolderPerms] = await connection.execute(
-            'SELECT folder_id, permission_type FROM folder_permissions WHERE user_id = ?',
-            [srcId]
+            `SELECT fp.folder_id, fp.permission_type 
+             FROM folder_permissions fp
+             INNER JOIN folders f ON fp.folder_id = f.folder_id
+             INNER JOIN projects p ON f.project_id = p.project_id
+             WHERE fp.user_id = ? AND p.active = 1 AND p.company_id = ?`,
+            [srcId, companyId]
         );
-        console.log(`📂 Source folder permissions: ${sourceFolderPerms.length}`);
+        
+        console.log(`📂 [copyUserPermissions] Found ${sourceFolderPerms.length} folder permissions to copy for company ${companyId}`);
 
         const sourceFolderIds = [...new Set(sourceFolderPerms.map(p => p.folder_id))];
         if (sourceFolderIds.length > 0) {
             // ลบสิทธิ์โฟลเดอร์เดิมที่ซ้ำกันออกก่อน
             const placeholders = sourceFolderIds.map(() => '?').join(',');
-            await connection.execute(
+            const [delResult] = await connection.execute(
                 `DELETE FROM folder_permissions WHERE user_id = ? AND folder_id IN (${placeholders})`,
                 [tgtId, ...sourceFolderIds]
             );
+            console.log(`🗑️ [copyUserPermissions] Deleted ${delResult.affectedRows} existing folder permissions from target`);
             
             // เพิ่มสิทธิ์ใหม่
+            let insertCount = 0;
             for (const perm of sourceFolderPerms) {
                 await connection.execute(
                     `INSERT INTO folder_permissions (folder_id, user_id, permission_type, created_at, updated_at) 
                      VALUES (?, ?, ?, NOW(), NOW())`,
                     [perm.folder_id, tgtId, perm.permission_type]
                 );
+                insertCount++;
             }
+            console.log(`✅ [copyUserPermissions] Inserted ${insertCount} folder permissions to target`);
         }
 
         // บันทึก log (ไม่บล็อก transaction ถ้า logs table ไม่มี)

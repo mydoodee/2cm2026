@@ -211,12 +211,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Company context middleware (optional, ดึง X-Company-Id header)
+app.use(companyContext);
+
 // API Routes
 app.use('/api/public', publicRoutes);
 app.use('/api/weather', weatherRoutes);
 
 app.use('/api', authRoutes);
-app.use('/api', companyRoutes); // ✅ ย้ายขึ้นมาด้านบนสุดต่อจาก auth
+app.use('/api', companyRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', statusRoutes);
 app.use('/api', foldersRoutes);
@@ -226,9 +229,6 @@ app.use('/api', progressRoutes);
 app.use('/api', planningRoutes);
 app.use('/api', actualRoutes);
 app.use('/api', scurveRoutes);
-
-// Company context middleware (optional, ดึง X-Company-Id header)
-app.use(companyContext);
 
 app.get('/api/health', (req, res) => {
   res.json({

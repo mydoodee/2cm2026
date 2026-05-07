@@ -63,62 +63,74 @@ function ProjectRoleAssignment({
                     ) : (
                         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                             <Space direction="vertical" size="small" className="w-full">
-                                {projects.map(project => {
-                                    const assignedRole = selectedUserForRoles.project_roles?.find(pr => pr.project_id === project.project_id);
-                                    const isAssigned = !!assignedRole;
-                                    
-                                    return (
-                                        <div 
-                                            key={project.project_id} 
-                                            className={`group p-3 rounded-xl transition-all duration-300 border ${
-                                                isAssigned 
-                                                    ? (theme === 'dark' ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50/50 border-indigo-100')
-                                                    : (theme === 'dark' ? 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300')
-                                            }`}
-                                        >
-                                            <div className="flex justify-between items-center w-full gap-3">
-                                                <div className="flex items-start flex-1 min-w-0">
-                                                    <div className={`mt-0.5 mr-3 p-1.5 rounded-lg ${isAssigned ? 'bg-indigo-500 text-white' : (theme === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-400')}`}>
-                                                        <FolderOpenOutlined className="text-sm" />
+                                {[...projects]
+                                    .sort((a, b) => {
+                                        const aAssigned = selectedUserForRoles.project_roles?.some(pr => String(pr.project_id || '').trim() === String(a.project_id || '').trim());
+                                        const bAssigned = selectedUserForRoles.project_roles?.some(pr => String(pr.project_id || '').trim() === String(b.project_id || '').trim());
+                                        if (aAssigned && !bAssigned) return -1;
+                                        if (!aAssigned && bAssigned) return 1;
+                                        return 0;
+                                    })
+                                    .map(project => {
+                                        const assignedRole = selectedUserForRoles.project_roles?.find(pr => {
+                                            const prId = String(pr.project_id || '').trim();
+                                            const pId = String(project.project_id || '').trim();
+                                            return prId === pId;
+                                        });
+                                        const isAssigned = !!assignedRole;
+                                        
+                                        return (
+                                            <div 
+                                                key={project.project_id} 
+                                                className={`group p-3 rounded-xl transition-all duration-300 border ${
+                                                    isAssigned 
+                                                        ? (theme === 'dark' ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50/50 border-indigo-100')
+                                                        : (theme === 'dark' ? 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300')
+                                                }`}
+                                            >
+                                                <div className="flex justify-between items-center w-full gap-3">
+                                                    <div className="flex items-start flex-1 min-w-0">
+                                                        <div className={`mt-0.5 mr-3 p-1.5 rounded-lg ${isAssigned ? 'bg-indigo-500 text-white' : (theme === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-400')}`}>
+                                                            <FolderOpenOutlined className="text-sm" />
+                                                        </div>
+                                                        <div className="flex flex-col flex-1 min-w-0">
+                                                            <Text strong className={`block truncate text-[13px] ${theme === 'dark' ? 'text-gray-200' : 'text-slate-700'}`} title={project.project_name}>
+                                                                {project.project_name || 'ไม่ระบุ'}
+                                                            </Text>
+                                                            <Text type="secondary" className={`text-[11px] font-medium truncate ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                                {project.job_number || 'ไม่ระบุ'}
+                                                            </Text>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex flex-col flex-1 min-w-0">
-                                                        <Text strong className={`block truncate text-[13px] ${theme === 'dark' ? 'text-gray-200' : 'text-slate-700'}`} title={project.project_name}>
-                                                            {project.project_name || 'ไม่ระบุ'}
-                                                        </Text>
-                                                        <Text type="secondary" className={`text-[11px] font-medium truncate ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                            {project.job_number || 'ไม่ระบุ'}
-                                                        </Text>
+                                                    <div className="flex-shrink-0">
+                                                        <Select
+                                                            size="small"
+                                                            style={{ width: 120 }}
+                                                            placeholder="เลือกบทบาท"
+                                                            variant="borderless"
+                                                            className={`custom-select-small ${isAssigned ? 'font-semibold' : ''}`}
+                                                            classNames={{ popup: { root: theme === 'dark' ? 'dark-dropdown' : '' } }}
+                                                            value={assignedRole?.role_id || undefined}
+                                                            onChange={(roleId) => {
+                                                                if (roleId === undefined || roleId === null) {
+                                                                    handleRemoveRole(project.project_id);
+                                                                } else {
+                                                                    handleAssignRole(project.project_id, roleId);
+                                                                }
+                                                            }}
+                                                            allowClear
+                                                        >
+                                                            {roles.map(role => (
+                                                                <Option key={role.role_id} value={role.role_id}>
+                                                                    {role.role_name}
+                                                                </Option>
+                                                            ))}
+                                                        </Select>
                                                     </div>
-                                                </div>
-                                                <div className="flex-shrink-0">
-                                                    <Select
-                                                        size="small"
-                                                        style={{ width: 120 }}
-                                                        placeholder="เลือกบทบาท"
-                                                        variant="borderless"
-                                                        className={`custom-select-small ${isAssigned ? 'font-semibold' : ''}`}
-                                                        classNames={{ popup: { root: theme === 'dark' ? 'dark-dropdown' : '' } }}
-                                                        value={assignedRole?.role_id || undefined}
-                                                        onChange={(roleId) => {
-                                                            if (roleId === undefined || roleId === null) {
-                                                                handleRemoveRole(project.project_id);
-                                                            } else {
-                                                                handleAssignRole(project.project_id, roleId);
-                                                            }
-                                                        }}
-                                                        allowClear
-                                                    >
-                                                        {roles.map(role => (
-                                                            <Option key={role.role_id} value={role.role_id}>
-                                                                {role.role_name}
-                                                            </Option>
-                                                        ))}
-                                                    </Select>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
                             </Space>
                         </div>
                     )}

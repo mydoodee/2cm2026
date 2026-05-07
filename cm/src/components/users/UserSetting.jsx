@@ -338,7 +338,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     // Helper to sync selection after data reload
     useEffect(() => {
         if (selectedUserForRoles) {
-            const updated = users.find(u => u.user_id === selectedUserForRoles.user_id);
+            const updated = users.find(u => String(u.user_id) === String(selectedUserForRoles.user_id));
             if (updated) setSelectedUserForRoles(updated);
         }
     }, [users]);
@@ -522,7 +522,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             <CopyPermissionsModal 
                 theme={theme}
                 visible={copyModalVisible}
-                onCancel={() => setCopyModalVisible(false)}
+                onCancel={() => { setCopyModalVisible(false); setSourceUserId(null); }}
                 handleCopyPermissions={handleCopyPermissions}
                 isCopying={isCopying}
                 selectedUserForRoles={selectedUserForRoles}
