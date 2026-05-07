@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Typography, Space, Progress, Badge, message, Input, Table, Avatar, Tooltip, Tag, Segmented } from 'antd';
+import { Card, Typography, Space, Progress, Badge, message, Input, Table, Avatar, Tooltip, Tag, Segmented, Pagination } from 'antd';
 import { FileTextOutlined, CalendarOutlined, TeamOutlined, UserOutlined, SearchOutlined, TrophyOutlined, AppstoreOutlined, TableOutlined, EyeOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
@@ -21,6 +21,8 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
   const primaryLightColor = `${primaryColor}15`;
   const [viewMode, setViewMode] = useState(isTenderMode ? 'table' : 'card');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 12;
   const navigate = useNavigate();
 
   // ✅ Set default viewMode based on company type
@@ -47,6 +49,8 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
 
       const year = new Date(formattedStartDate).getFullYear();
       if (!acc[year]) acc[year] = [];
+      // ✅ Skip hidden projects from main list view
+      if (project.is_hidden) return acc;
       acc[year].push({
         ...project,
         start_date: formattedStartDate,
@@ -126,6 +130,7 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
 
   const handleYearChange = useCallback((year) => {
     setSelectedYear(year);
+    setCurrentPage(1);
   }, []);
 
   useEffect(() => {
@@ -159,6 +164,10 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
     project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.description?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Pagination logic
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedProjects = filteredProjects.slice(startIndex, startIndex + pageSize);
 
   if (error) {
     return (
@@ -299,7 +308,10 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                     placeholder="ค้นหาโครงการ..."
                     prefix={<SearchOutlined className={theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />}
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     variant="borderless"
                     className={`font-kanit py-1 px-3 text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}
                   />
@@ -349,7 +361,7 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
               {/* Projects Grid - Settings Style Cards */}
               {viewMode === 'card' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                  {filteredProjects.map((project, index) => {
+                  {paginatedProjects.map((project, index) => {
                     const accentColor = primaryColor;
 
                     return (
@@ -469,7 +481,10 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                   <Table
                     dataSource={filteredProjects}
                     pagination={{
-                      pageSize: 10,
+                      current: currentPage,
+                      pageSize: pageSize,
+                      total: filteredProjects.length,
+                      onChange: setCurrentPage,
                       position: ['bottomCenter'],
                       className: `font-kanit py-6 ${theme === 'dark' ? 'dark-pagination' : ''}`
                     }}
@@ -712,6 +727,22 @@ function Projects({ user, setUser, theme, setTheme, activeCompany, setActiveComp
                       }
                     ]}
                   />
+                </div>
+              )}
+
+              {/* Beautiful Pagination for Card View */}
+              {viewMode === 'card' && filteredProjects.length > pageSize && (
+                <div className="flex justify-center mt-12 pb-8">
+                  <div className={`p-2 rounded-2xl border transition-all duration-300 ${theme === 'dark' ? 'bg-slate-800/40 border-slate-700 shadow-lg' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <Pagination
+                      current={currentPage}
+                      pageSize={pageSize}
+                      total={filteredProjects.length}
+                      onChange={setCurrentPage}
+                      showSizeChanger={false}
+                      className={`font-kanit custom-pagination ${theme === 'dark' ? 'dark-pagination' : ''}`}
+                    />
+                  </div>
                 </div>
               )}
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Table, Space, Card, Typography, Input, Select, Empty, Image, App, ConfigProvider, theme as antdTheme } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, SettingOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Table, Space, Card, Typography, Input, Select, Empty, Image, App, ConfigProvider, Tag, theme as antdTheme } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, SettingOutlined, SearchOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Navbar from '../Navbar';
@@ -199,6 +199,16 @@ const ProjectSetting = ({ user, setUser, theme, setTheme, activeCompany, setActi
       dataIndex: 'project_name',
       key: 'project_name',
       sorter: (a, b) => a.project_name.localeCompare(b.project_name),
+      render: (text, record) => (
+        <span className="flex items-center gap-2">
+          {text}
+          {record.is_hidden ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
+              <EyeInvisibleOutlined className="text-[10px]" /> ซ่อน
+            </span>
+          ) : null}
+        </span>
+      ),
     },
     {
       title: 'เจ้าของ',

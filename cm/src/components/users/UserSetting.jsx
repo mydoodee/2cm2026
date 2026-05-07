@@ -307,18 +307,29 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     };
 
     const handleCopyPermissions = async () => {
-        if (!selectedUserForRoles || !sourceUserId) return;
+        if (!selectedUserForRoles || !sourceUserId) {
+            message.warning('กรุณาเลือกผู้ใช้ต้นทาง');
+            return;
+        }
         try {
             setIsCopying(true);
-            await api.post('/api/users/copy-permissions', {
+            console.log('📋 Copy permissions request:', {
                 sourceUserId,
                 targetUserId: selectedUserForRoles.user_id
             });
-            message.success('คัดลอกสิทธิ์สำเร็จ');
+            const response = await api.post('/api/users/copy-permissions', {
+                sourceUserId: Number(sourceUserId),
+                targetUserId: Number(selectedUserForRoles.user_id)
+            });
+            console.log('✅ Copy permissions response:', response.data);
+            message.success(`คัดลอกสิทธิ์สำเร็จ (${response.data?.details?.projectRolesCount || 0} โครงการ, ${response.data?.details?.folderPermissionsCount || 0} โฟลเดอร์)`);
             setCopyModalVisible(false);
+            setSourceUserId(null);
             fetchUsers();
         } catch (error) {
-            message.error('คัดลอกสิทธิ์ไม่สำเร็จ');
+            console.error('❌ Copy permissions error:', error);
+            const errorMsg = error?.response?.data?.message || error?.message || 'คัดลอกสิทธิ์ไม่สำเร็จ';
+            message.error(errorMsg);
         } finally {
             setIsCopying(false);
         }
@@ -327,7 +338,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
     // Helper to sync selection after data reload
     useEffect(() => {
         if (selectedUserForRoles) {
-            const updated = users.find(u => u.user_id === selectedUserForRoles.user_id);
+            const updated = users.find(u => String(u.user_id) === String(selectedUserForRoles.user_id));
             if (updated) setSelectedUserForRoles(updated);
         }
     }, [users]);
@@ -511,7 +522,7 @@ function UserSetting({ user, setUser, theme, setTheme }) {
             <CopyPermissionsModal 
                 theme={theme}
                 visible={copyModalVisible}
-                onCancel={() => setCopyModalVisible(false)}
+                onCancel={() => { setCopyModalVisible(false); setSourceUserId(null); }}
                 handleCopyPermissions={handleCopyPermissions}
                 isCopying={isCopying}
                 selectedUserForRoles={selectedUserForRoles}

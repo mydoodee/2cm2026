@@ -106,7 +106,7 @@ function UserFormModal({
                                 label={<span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>บทบาทระบบ</span>}
                                 rules={[{ required: true, message: 'กรุณาเลือกบทบาท' }]}
                             >
-                                <Select placeholder="เลือกบทบาท" className="modern-select" popupClassName={theme === 'dark' ? 'dark-dropdown' : ''}>
+                                <Select placeholder="เลือกบทบาท" className="modern-select" classNames={{ popup: { root: theme === 'dark' ? 'dark-dropdown' : '' } }}>
                                     {roles.map(role => (
                                         <Option key={role.role_id} value={role.role_id}>
                                             {role.role_name}
@@ -120,7 +120,7 @@ function UserFormModal({
                                 name="project_id"
                                 label={<span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>โครงการเริ่มต้น (ไม่บังคับ)</span>}
                             >
-                                <Select placeholder="เลือกโครงการ" allowClear className="modern-select" popupClassName={theme === 'dark' ? 'dark-dropdown' : ''}>
+                                <Select placeholder="เลือกโครงการ" allowClear className="modern-select" classNames={{ popup: { root: theme === 'dark' ? 'dark-dropdown' : '' } }}>
                                     {projects.map(project => (
                                         <Option key={project.project_id} value={project.project_id}>
                                             {project.project_name} ({project.job_number})

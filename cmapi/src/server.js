@@ -178,16 +178,26 @@ app.use(cors({
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
-const uploadsPath = path.join(__dirname, 'Uploads');
-app.use('/Uploads', express.static(uploadsPath, {
-  maxAge: '1d',
-  etag: true
-}));
+const uploadsPathRoot = path.join(process.cwd(), 'Uploads');
+const uploadsPathSrc = path.join(__dirname, 'Uploads');
+const uploadsPathParent = path.join(__dirname, '..', 'Uploads');
+const uploadsPathRootLower = path.join(process.cwd(), 'uploads');
+const uploadsPathSrcLower = path.join(__dirname, 'uploads');
+const uploadsPathParentLower = path.join(__dirname, '..', 'uploads');
 
-app.use('/uploads', express.static(uploadsPath, {
-  maxAge: '1d',
-  etag: true
-}));
+// สั่งให้หาจากทุกที่ที่เป็นไปได้
+app.use('/Uploads', express.static(uploadsPathRoot));
+app.use('/Uploads', express.static(uploadsPathSrc));
+app.use('/Uploads', express.static(uploadsPathParent));
+app.use('/uploads', express.static(uploadsPathRoot));
+app.use('/uploads', express.static(uploadsPathSrc));
+app.use('/uploads', express.static(uploadsPathParent));
+app.use('/Uploads', express.static(uploadsPathRootLower));
+app.use('/Uploads', express.static(uploadsPathSrcLower));
+app.use('/Uploads', express.static(uploadsPathParentLower));
+app.use('/uploads', express.static(uploadsPathRootLower));
+app.use('/uploads', express.static(uploadsPathSrcLower));
+app.use('/uploads', express.static(uploadsPathParentLower));
 
 app.use((req, res, next) => {
   if (!req.path.startsWith('/Uploads') && !req.path.startsWith('/uploads')) {
@@ -201,11 +211,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Company context middleware (optional, ดึง X-Company-Id header)
+app.use(companyContext);
+
 // API Routes
 app.use('/api/public', publicRoutes);
 app.use('/api/weather', weatherRoutes);
+
 app.use('/api', authRoutes);
-app.use('/api', companyRoutes); // ✅ ย้ายขึ้นมาด้านบนสุดต่อจาก auth
+app.use('/api', companyRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', statusRoutes);
 app.use('/api', foldersRoutes);
@@ -215,9 +229,6 @@ app.use('/api', progressRoutes);
 app.use('/api', planningRoutes);
 app.use('/api', actualRoutes);
 app.use('/api', scurveRoutes);
-
-// Company context middleware (optional, ดึง X-Company-Id header)
-app.use(companyContext);
 
 app.get('/api/health', (req, res) => {
   res.json({
