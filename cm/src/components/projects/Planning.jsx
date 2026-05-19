@@ -665,6 +665,9 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
             endpoint = '/api/planning/subtypes';
           }
         } else {
+          const itemId = selectedItem[`${modalType}_id`];
+          const pluralMap = { root: 'roots', category: 'categories', type: 'types', subtype: 'subtypes' };
+          const pluralType = pluralMap[modalType] || `${modalType}s`;
           endpoint = `/api/planning/${pluralType}/${itemId}`;
         }
       }
@@ -759,18 +762,34 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
       return <Text type="secondary" style={{ fontSize: '12px' }}>-</Text>;
     }
 
-    const isPdf = record.attachment_url.toLowerCase().endsWith('.pdf');
-    const icon = isPdf
-      ? <FilePdfOutlined style={{ color: '#ef4444', fontSize: '16px' }} />
-      : <FileImageOutlined style={{ color: '#3b82f6', fontSize: '16px' }} />;
+    const url = record.attachment_url.toLowerCase();
+    const isPdf = url.endsWith('.pdf');
+    const isDxf = url.endsWith('.dxf');
+    
+    let icon;
+    if (isPdf) icon = <FilePdfOutlined style={{ color: '#ef4444', fontSize: '16px' }} />;
+    else if (isDxf) icon = <BlockOutlined style={{ color: '#6366f1', fontSize: '16px' }} />;
+    else icon = <FileImageOutlined style={{ color: '#3b82f6', fontSize: '16px' }} />;
+
+    const handleClick = (e) => {
+      if (isDxf) {
+        e.preventDefault();
+        // Use a generated file ID since these are attachments from planning, not project files
+        const fileId = record.key.replace('-', '_'); 
+        const fileName = record.attachment_name || 'แบบแปลน.dxf';
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        window.open(`${baseUrl}project/${id}/viewerdxf/${fileId}?name=${encodeURIComponent(fileName)}`.replace(/\/+/g, '/'), '_blank');
+      }
+    };
 
     return (
       <Tooltip title={record.attachment_name || 'ดูไฟล์'}>
         <a
-          href={`${import.meta.env.VITE_API_URL}${record.attachment_url}`}
-          target="_blank"
+          href={isDxf ? '#' : `${import.meta.env.VITE_API_URL}${record.attachment_url}`}
+          target={isDxf ? '_self' : '_blank'}
           rel="noopener noreferrer"
           style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={handleClick}
         >
           {icon}
         </a>
@@ -1626,7 +1645,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
                   <div className="flex flex-col items-center justify-center h-full text-gray-400 px-4 bg-white">
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      imageStyle={{ height: 40 }}
+                      styles={{ image: { height: 40 } }}
                       description={
                         <span className="text-xs" style={{ fontFamily: 'Kanit, sans-serif' }}>
                           ยังไม่มีหมวดงานหลัก<br />
@@ -1716,7 +1735,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
         onCancel={closeModal}
         footer={null}
         width={560}
-        destroyOnClose
+        destroyOnHidden
         centered
         styles={{ body: { padding: 0 } }}
       >

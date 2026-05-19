@@ -547,7 +547,7 @@ const Schedule = ({ user, projectId, onClose }) => {
         onCancel={closeModal}
         footer={null}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Row gutter={16}>

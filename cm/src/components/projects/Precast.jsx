@@ -454,6 +454,11 @@ const Precast = ({ user, setUser, theme, setTheme }) => {
       window.open(`${baseUrl}project/${id}/viewerifc/${file.file_id}`.replace(/\/+/g, '/'), '_blank');
       return;
     }
+    if (ext === 'dxf') {
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      window.open(`${baseUrl}project/${id}/viewerdxf/${file.file_id}?name=${encodeURIComponent(file.file_name)}`.replace(/\/+/g, '/'), '_blank');
+      return;
+    }
     if (ext === 'pdf') {
       try {
         const response = await api.get(`/api/dashboard/project/${id}/file/${file.file_id}/download`, { responseType: 'blob' });

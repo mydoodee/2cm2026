@@ -321,6 +321,9 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
   };
 
   const getProjectTreeData = () => {
+    const activeCompany = JSON.parse(localStorage.getItem('activeCompany') || '{}');
+    const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
+
     const yearMap = projects.reduce((acc, project) => {
       const year = new Date(project.start_date || Date.now()).getFullYear() + 543;
       if (!acc[year]) acc[year] = [];
@@ -338,8 +341,14 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
           const isSelected = selectedProject === project.project_id;
           const folderCount = folders.filter(f => f.project_id === project.project_id).length;
           const titleSuffix = isSelected ? ` (${folderCount} โฟลเดอร์)` : '';
+          
+          // ถ้าเป็น Tender Mode ให้แสดง เลขที่งาน (job_number) แทนชื่อโครงการ
+          const displayTitle = isTenderMode 
+            ? (project.job_number || project.project_name)
+            : project.project_name;
+
           return {
-            title: `${project.project_name}${titleSuffix}`,
+            title: `${displayTitle}${titleSuffix}`,
             key: project.project_id.toString(),
             icon: <FolderOutlined />,
           };
@@ -429,8 +438,15 @@ const PermissionFolder = ({ user, setUser, theme, setTheme }) => {
       },
     ];
     if (selectedProject) {
+      const activeCompany = JSON.parse(localStorage.getItem('activeCompany') || '{}');
+      const isTenderMode = activeCompany?.company_name?.toLowerCase().includes('tender');
       const project = projects.find(p => p.project_id === selectedProject);
-      items.push({ title: project?.project_name || 'Unknown Project' });
+      
+      const displayTitle = isTenderMode 
+        ? (project?.job_number || project?.project_name)
+        : project?.project_name;
+
+      items.push({ title: displayTitle || 'Unknown Project' });
     }
     if (selectedFolder) {
       items.push({ title: selectedFolder.folder_name });

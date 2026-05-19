@@ -1,27 +1,22 @@
+
 const { getConnection } = require('./src/config/db');
 
 async function checkSchema() {
     let connection;
     try {
         connection = await getConnection();
-        console.log('Checking folder_permissions schema...');
+        console.log('Checking project_user_roles:');
+        const [pur] = await connection.query('DESCRIBE project_user_roles');
+        console.table(pur);
+
+        console.log('Checking folder_permissions:');
+        const [fp] = await connection.query('DESCRIBE folder_permissions');
+        console.table(fp);
         
-        const [tables] = await connection.execute('SHOW TABLES');
-        console.log('Available tables:');
-        console.table(tables);
-
-        for (const tableObj of tables) {
-            const tableName = Object.values(tableObj)[0];
-            console.log(`\nSchema for table: ${tableName}`);
-            const [rows] = await connection.execute(`DESCRIBE ${tableName}`);
-            console.table(rows);
-        }
-
+        process.exit(0);
     } catch (error) {
-        console.error('Connection failed:', error);
-    } finally {
-        if (connection) await connection.release();
-        process.exit();
+        console.error(error);
+        process.exit(1);
     }
 }
 
