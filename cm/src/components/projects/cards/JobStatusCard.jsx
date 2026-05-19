@@ -137,7 +137,7 @@ const JobStatusCard = ({
                           <div className="flex-1 hidden md:flex items-center min-w-0">
                             <Progress
                               percent={val}
-                              strokeWidth={8}
+                              size={["100%", 8]}
                               showInfo={false}
                               strokeColor={color}
                               trailColor="#f5f5f5"
@@ -180,9 +180,8 @@ const JobStatusCard = ({
                 <Progress
                   type="circle"
                   percent={progressValue}
-                  size={140}
+                  size={[140, 10]}
                   strokeColor={{ '0%': '#13c2c2', '100%': '#52c41a' }}
-                  strokeWidth={10}
                 />
                 <div className="absolute inset-0 flex items-center justify-center -z-10 bg-teal-50/30 rounded-full blur-xl scale-125" />
               </div>
