@@ -4,6 +4,31 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { getConnection } = require('../config/db');
+const jwt = require('jsonwebtoken');
+
+// =====================================
+// VERIFY EXPORT TOKEN MIDDLEWARE
+// =====================================
+const verifyExportToken = (req, res, next) => {
+  const token = req.query.token;
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'ไม่พบ Token (Missing export token)' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (String(decoded.projectId) !== String(req.params.projectId)) {
+      return res.status(403).json({ success: false, message: 'Token ไม่ถูกต้องสำหรับโครงการนี้ (Project mismatch)' });
+    }
+    if (decoded.purpose !== 'excel-export') {
+      return res.status(403).json({ success: false, message: 'ประเภท Token ไม่ถูกต้อง' });
+    }
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ success: false, message: 'Token ไม่ถูกต้องหรือหมดอายุแล้ว (Invalid or expired token)' });
+  }
+};
 
 // =====================================
 // RATE LIMITING MIDDLEWARE
@@ -469,7 +494,7 @@ router.post('/cleanup-expired', async (req, res) => {
 // =====================================
 // S-CURVE EXCEL LIVE DATA
 // =====================================
-router.get('/project/:projectId/scurve/excel', rateLimitMiddleware, async (req, res) => {
+router.get('/project/:projectId/scurve/excel', rateLimitMiddleware, verifyExportToken, async (req, res) => {
   // This is a bridge to the scurveController.getSCurveExcelData
   // For security, we could check a token here, but for now we'll allow it 
   // if requested through the public API path
@@ -482,7 +507,7 @@ router.get('/project/:projectId/scurve/excel', rateLimitMiddleware, async (req, 
   }
 });
 
-router.get('/project/:projectId/scurve/excel-summary', rateLimitMiddleware, async (req, res) => {
+router.get('/project/:projectId/scurve/excel-summary', rateLimitMiddleware, verifyExportToken, async (req, res) => {
   const scurveController = require('../controllers/scurveController');
   try {
     return scurveController.getSCurveExcelSummary(req, res);
@@ -491,7 +516,7 @@ router.get('/project/:projectId/scurve/excel-summary', rateLimitMiddleware, asyn
   }
 });
 
-router.get('/project/:projectId/scurve/excel-timephased', rateLimitMiddleware, async (req, res) => {
+router.get('/project/:projectId/scurve/excel-timephased', rateLimitMiddleware, verifyExportToken, async (req, res) => {
   const scurveController = require('../controllers/scurveController');
   try {
     return scurveController.getSCurveExcelTimePhased(req, res);
