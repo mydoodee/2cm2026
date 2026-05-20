@@ -665,6 +665,9 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
             endpoint = '/api/planning/subtypes';
           }
         } else {
+          const itemId = selectedItem[`${modalType}_id`];
+          const pluralMap = { root: 'roots', category: 'categories', type: 'types', subtype: 'subtypes' };
+          const pluralType = pluralMap[modalType] || `${modalType}s`;
           endpoint = `/api/planning/${pluralType}/${itemId}`;
         }
       }
@@ -1642,7 +1645,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
                   <div className="flex flex-col items-center justify-center h-full text-gray-400 px-4 bg-white">
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      imageStyle={{ height: 40 }}
+                      styles={{ image: { height: 40 } }}
                       description={
                         <span className="text-xs" style={{ fontFamily: 'Kanit, sans-serif' }}>
                           ยังไม่มีหมวดงานหลัก<br />
@@ -1732,7 +1735,7 @@ const Planning = ({ user, setUser, theme, setTheme }) => {
         onCancel={closeModal}
         footer={null}
         width={560}
-        destroyOnClose
+        destroyOnHidden
         centered
         styles={{ body: { padding: 0 } }}
       >

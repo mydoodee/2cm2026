@@ -23,6 +23,8 @@ const ProjectInfoCard = ({
   onTenderStatusChange,
   activeCompany,
 }) => {
+  const isPM = project?.team_members?.find(m => m.user_id === user?.user_id)?.role === 'Project Manager';
+
   return (
     <Card className="image-card bg-white shadow-md rounded-lg overflow-hidden h-[360px]">
       <div className="flex flex-col h-full">
@@ -207,7 +209,7 @@ const ProjectInfoCard = ({
             )}
           </div>
 
-          {(user?.isAdmin || user?.is_pm) && (
+          {(user?.isAdmin || user?.roles?.includes(1) || isPM) && (
             <div className="pt-2 mt-auto">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                 {/* 1. Planning + Actual – แบ่ง 2 คอลัมน์ใน sm+ */}

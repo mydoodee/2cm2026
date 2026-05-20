@@ -1083,7 +1083,7 @@ const getSCurveExcelTimePhased = async (req, res) => {
     const { projectId } = req.params;
     connection = await getConnection();
 
-    // 1. Fetch All Items and History
+    // 1. Fetch All Items
     const queryItems = `
       SELECT 
         r.root_name,
@@ -1100,13 +1100,17 @@ const getSCurveExcelTimePhased = async (req, res) => {
       LEFT JOIN s_curve_type t ON c.category_id = t.category_id AND t.is_active = 1
       LEFT JOIN s_curve_subtype st ON t.type_id = st.type_id AND st.is_active = 1
       WHERE r.project_id = ? AND r.is_active = 1
+      ORDER BY r.sort_order, c.sort_order, t.sort_order, st.sort_order
     `;
     const [items] = await connection.query(queryItems, [projectId]);
 
+    // 2. Fetch all update history
     const queryHistory = `
       SELECT 
         COALESCE(h.update_date, a.created_at) as record_date,
         h.new_progress,
+        h.old_progress,
+        h.remarks,
         COALESCE(a.subtype_id, 0) as sub_id,
         COALESCE(a.type_id, st.type_id) as type_id
       FROM s_curve_actual_history h
@@ -1119,80 +1123,58 @@ const getSCurveExcelTimePhased = async (req, res) => {
 
     if (items.length === 0) return res.json([]);
 
-    // 2. Determine Date Range
-    let minDateS = null;
-    let maxDateS = null;
-    items.forEach(item => {
-      const s = item.start_date ? new Date(item.start_date) : null;
-      const e = item.end_date ? new Date(item.end_date) : null;
-      if (s && (!minDateS || s < minDateS)) minDateS = s;
-      if (e && (!maxDateS || e > maxDateS)) maxDateS = e;
-    });
-
-    const today = new Date();
-    if (!minDateS) minDateS = today;
-    if (!maxDateS) maxDateS = today;
-    if (today > maxDateS) maxDateS = today;
-
-    // 3. Generate Weekly Points (Every Monday)
-    const weeks = [];
-    let current = new Date(minDateS);
-    // Find previous Monday
-    current.setDate(current.getDate() - (current.getDay() === 0 ? 6 : current.getDay() - 1));
-
-    while (current <= maxDateS) {
-      weeks.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 7);
-    }
-
     const totalCost = items.reduce((sum, item) => sum + (parseFloat(item.cost) || 1), 0);
 
-    // 4. Transform into Time-Phased Rows
     const rows = [];
     items.forEach(item => {
       const weight = (parseFloat(item.cost) || 1) / totalCost * 100;
-      const s = item.start_date ? new Date(item.start_date) : minDateS;
-      const e = item.end_date ? new Date(item.end_date) : maxDateS;
-      const totalDays = Math.max(1, (e - s) / (1000 * 60 * 60 * 24));
 
-      weeks.forEach((weekStr, idx) => {
-        const wStart = new Date(weekStr);
-        const wEnd = new Date(wStart);
-        wEnd.setDate(wEnd.getDate() + 7);
-
-        // Plan: Overlap between [s, e] and [wStart, wEnd]
-        const overlapStart = new Date(Math.max(s, wStart));
-        const overlapEnd = new Date(Math.min(e, wEnd));
-        let planPercent = 0;
-        if (overlapEnd > overlapStart) {
-          const overlapDays = (overlapEnd - overlapStart) / (1000 * 60 * 60 * 24);
-          planPercent = (weight * overlapDays) / totalDays;
-        }
-
-        // Actual: Progress gained during this week
-        // Get progress at start of week
-        const historyBefore = history.filter(h => {
-          const hDate = new Date(h.record_date);
-          if (hDate > wStart) return false;
-          return item.sub_id > 0 ? h.sub_id === item.sub_id : h.type_id === item.type_id;
-        }).sort((a,b) => new Date(b.record_date) - new Date(a.record_date));
-        
-        const historyDuring = history.filter(h => {
-          const hDate = new Date(h.record_date);
-          if (hDate <= wStart || hDate > wEnd) return false;
-          return item.sub_id > 0 ? h.sub_id === item.sub_id : h.type_id === item.type_id;
-        }).sort((a,b) => new Date(b.record_date) - new Date(a.record_date));
-
-        const startProg = historyBefore.length > 0 ? parseFloat(historyBefore[0].new_progress) : 0;
-        const endProg = historyDuring.length > 0 ? parseFloat(historyDuring[0].new_progress) : startProg;
-        
-        let actualPercent = 0;
-        if (wStart <= today) {
-          actualPercent = (weight * (endProg - startProg)) / 100;
+      // Find all history updates for this item
+      const itemHistory = history.filter(h => {
+        if (item.sub_id > 0) {
+          return h.sub_id === item.sub_id;
         } else {
-          actualPercent = null;
+          return h.type_id === item.type_id;
         }
+      });
 
+      if (itemHistory.length > 0) {
+        // Output a row for each update
+        itemHistory.forEach(h => {
+          const updateDateStr = h.record_date ? new Date(h.record_date).toISOString().split('T')[0] : '-';
+          
+          // Calculate plan percent on this update date
+          let planPercent = 0;
+          if (item.start_date && item.end_date && h.record_date) {
+            const s = new Date(item.start_date);
+            const e = new Date(item.end_date);
+            const d = new Date(h.record_date);
+            if (d >= e) {
+              planPercent = 100;
+            } else if (d <= s) {
+              planPercent = 0;
+            } else {
+              const totalDays = Math.max(1, (e - s) / (1000 * 60 * 60 * 24));
+              const elapsedDays = (d - s) / (1000 * 60 * 60 * 24);
+              planPercent = (elapsedDays / totalDays) * 100;
+            }
+          }
+
+          rows.push({
+            "หมวดงานหลัก": item.root_name || "-",
+            "หมวดงาน": item.category_name || "-",
+            "ประเภทงาน": item.type_name || "-",
+            "งานย่อย": item.subtype_name || "-",
+            "งบประมาณ (Cost)": parseFloat(item.cost) || 0,
+            "Weight (%)": parseFloat(weight.toFixed(4)),
+            "วันที่อัพเดทจริง": updateDateStr,
+            "ความคืบหน้าจริง (%)": parseFloat(((parseFloat(h.new_progress) || 0) - (parseFloat(h.old_progress) || 0)).toFixed(2)),
+            "ความคืบหน้าแผน ณ วันที่อัพเดท (%)": parseFloat(planPercent.toFixed(2)),
+            "หมายเหตุ": h.remarks || "-"
+          });
+        });
+      } else {
+        // If no history, output one row with 0% actual progress
         rows.push({
           "หมวดงานหลัก": item.root_name || "-",
           "หมวดงาน": item.category_name || "-",
@@ -1200,16 +1182,17 @@ const getSCurveExcelTimePhased = async (req, res) => {
           "งานย่อย": item.subtype_name || "-",
           "งบประมาณ (Cost)": parseFloat(item.cost) || 0,
           "Weight (%)": parseFloat(weight.toFixed(4)),
-          "สัปดาห์วันที่": weekStr,
-          "แผนงานประจำสัปดาห์ (%)": parseFloat(planPercent.toFixed(4)),
-          "ผลงานจริงประจำสัปดาห์ (%)": actualPercent !== null ? parseFloat(actualPercent.toFixed(4)) : null
+          "วันที่อัพเดทจริง": "-",
+          "ความคืบหน้าจริง (%)": 0,
+          "ความคืบหน้าแผน ณ วันที่อัพเดท (%)": 0,
+          "หมายเหตุ": "-"
         });
-      });
+      }
     });
 
     res.json(rows);
   } catch (error) {
-    console.error('Error calculating Time-Phased Excel data:', error);
+    console.error('Error calculating Gantt Excel actual history data:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   } finally {
     if (connection) connection.release();

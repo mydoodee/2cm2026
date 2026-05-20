@@ -143,8 +143,9 @@ const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
 
   const canViewProgress = () => {
     if (!user || !project) return false;
-    if (user.isAdmin) return true;
-    if (project.current_user_role?.role_name === 'Project Manager') return true;
+    if (user.isAdmin || user.roles?.includes(1)) return true;
+    const isPM = project?.team_members?.find(m => m.user_id === user?.user_id)?.role === 'Project Manager';
+    if (isPM) return true;
     return false;
   };
 
@@ -730,7 +731,9 @@ const ProjectDetail = ({ user, setUser, activeCompany, setActiveCompany }) => {
         {/* S-Curve Chart */}
         <div className="mb-6">
           <SCurveChart 
-            projectId={id} 
+            projectId={id}
+            user={user}
+            project={project}
             onActualProgressChange={(val) => setScurveActual(val)} 
           />
         </div>
