@@ -61,6 +61,27 @@ router.get('/project/:projectId/scurve/excel-timephased',
   scurveController.getSCurveExcelTimePhased
 );
 
+// 🔑 Generate secure token for Excel Live Connection
+router.get('/project/:projectId/scurve/export-token', (req, res) => {
+  try {
+    const jwt = require('jsonwebtoken');
+    // Generate a long-lived JWT token (e.g., 365 days) that Excel can use without frequent re-auth
+    const token = jwt.sign(
+      { 
+        userId: req.user.user_id, 
+        projectId: req.params.projectId, 
+        purpose: 'excel-export' 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '365d' }
+    );
+    res.json({ success: true, token });
+  } catch (error) {
+    console.error('Export token error:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate export token' });
+  }
+});
+
 // =====================================
 // CRUD OPERATIONS (Optional - for future)
 // =====================================

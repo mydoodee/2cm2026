@@ -7,13 +7,16 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 dayjs.locale('th');
 
-const SCurveChart = ({ projectId, onActualProgressChange }) => {
+const SCurveChart = ({ projectId, user, project, onActualProgressChange }) => {
   const [loading, setLoading] = useState(true);
   const [rootCategories, setRootCategories] = useState([]);
   const [chartData, setChartData] = useState(null);
   const [selectedRootId, setSelectedRootId] = useState(null);
   const [allCategoriesData, setAllCategoriesData] = useState([]);
   const [projectInfo, setProjectInfo] = useState(null);
+
+  const isPM = project?.team_members?.find(m => m.user_id === user?.user_id)?.role === 'Project Manager' || 
+               projectInfo?.team_members?.find(m => m.user_id === user?.user_id)?.role === 'Project Manager';
   const [expandedRoots, setExpandedRoots] = useState(new Set());
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedTypeId, setSelectedTypeId] = useState(null);
@@ -23,39 +26,63 @@ const SCurveChart = ({ projectId, onActualProgressChange }) => {
   const [selectedHistory, setSelectedHistory] = useState([]);
   const [selectedPointDate, setSelectedPointDate] = useState(null);
 
-  const copyExcelLink = () => {
+  // Function to get secure token
+  const getExportToken = async () => {
+    try {
+      message.loading({ content: 'กำลังสร้างลิงก์ที่ปลอดภัย...', key: 'exportToken' });
+      const res = await api.get(`/api/project/${projectId}/scurve/export-token`);
+      if (res.data && res.data.token) {
+        return res.data.token;
+      }
+      throw new Error('No token returned');
+    } catch (error) {
+      console.error('Failed to get export token', error);
+      message.error({ content: 'ไม่สามารถสร้างลิงก์ที่ปลอดภัยได้', key: 'exportToken' });
+      return null;
+    }
+  };
+
+  const copyExcelLink = async () => {
+    const token = await getExportToken();
+    if (!token) return;
+
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-    // Use the public route for easier Excel connection (no JWT required)
-    const link = `${API_URL}/api/public/project/${projectId}/scurve/excel`;
+    const link = `${API_URL}/api/public/project/${projectId}/scurve/excel?token=${token}`;
     
     navigator.clipboard.writeText(link);
-
     message.success({
-      content: 'คัดลอกลิงก์รายการ (Excel) เรียบร้อยแล้ว!',
+      content: 'คัดลอกลิงก์รายการ (Excel) แบบปลอดภัยเรียบร้อยแล้ว!',
+      key: 'exportToken',
       style: { fontFamily: 'Kanit, sans-serif' }
     });
   };
 
-  const copyGraphLink = () => {
+  const copyGraphLink = async () => {
+    const token = await getExportToken();
+    if (!token) return;
+
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-    const link = `${API_URL}/api/public/project/${projectId}/scurve/excel-summary`;
+    const link = `${API_URL}/api/public/project/${projectId}/scurve/excel-summary?token=${token}`;
     
     navigator.clipboard.writeText(link);
-
     message.success({
-      content: 'คัดลอกลิงก์กราฟ S-Curve (Excel) เรียบร้อยแล้ว!',
+      content: 'คัดลอกลิงก์กราฟ S-Curve (Excel) แบบปลอดภัยเรียบร้อยแล้ว!',
+      key: 'exportToken',
       style: { fontFamily: 'Kanit, sans-serif' }
     });
   };
 
-  const copyGanttLink = () => {
+  const copyGanttLink = async () => {
+    const token = await getExportToken();
+    if (!token) return;
+
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3050';
-    const link = `${API_URL}/api/public/project/${projectId}/scurve/excel-timephased`;
+    const link = `${API_URL}/api/public/project/${projectId}/scurve/excel-timephased?token=${token}`;
     
     navigator.clipboard.writeText(link);
-
     message.success({
-      content: 'คัดลอกลิงก์ข้อมูล Gantt (Excel) เรียบร้อยแล้ว!',
+      content: 'คัดลอกลิงก์ข้อมูล Gantt (Excel) แบบปลอดภัยเรียบร้อยแล้ว!',
+      key: 'exportToken',
       style: { fontFamily: 'Kanit, sans-serif' }
     });
   };
@@ -744,37 +771,39 @@ const SCurveChart = ({ projectId, onActualProgressChange }) => {
               </div>
             </div>
             
-            <div className="ml-auto flex gap-2">
-              <Button 
-                type="default" 
-                icon={<LinkOutlined />} 
-                onClick={copyExcelLink}
-                className="h-auto py-2 px-4 rounded-xl border-blue-200 text-blue-600 hover:text-blue-700 hover:border-blue-400 bg-blue-50/30 font-bold text-xs"
-                style={{ fontFamily: 'Kanit, sans-serif' }}
-              >
-                คัดลอกลิงก์รายการ (Excel)
-              </Button>
+            {(user?.isAdmin || user?.roles?.includes(1) || isPM) && (
+              <div className="ml-auto flex gap-2">
+                <Button 
+                  type="default" 
+                  icon={<LinkOutlined />} 
+                  onClick={copyExcelLink}
+                  className="h-auto py-2 px-4 rounded-xl border-blue-200 text-blue-600 hover:text-blue-700 hover:border-blue-400 bg-blue-50/30 font-bold text-xs"
+                  style={{ fontFamily: 'Kanit, sans-serif' }}
+                >
+                  คัดลอกลิงก์รายการ (Excel)
+                </Button>
 
-              <Button 
-                type="default" 
-                icon={<BarChartOutlined />} 
-                onClick={copyGraphLink}
-                className="h-auto py-2 px-4 rounded-xl border-blue-200 text-blue-600 hover:text-blue-700 hover:border-blue-400 bg-blue-50/30 font-bold text-xs"
-                style={{ fontFamily: 'Kanit, sans-serif' }}
-              >
-                คัดลอกลิงก์กราฟ (Excel)
-              </Button>
+                <Button 
+                  type="default" 
+                  icon={<BarChartOutlined />} 
+                  onClick={copyGraphLink}
+                  className="h-auto py-2 px-4 rounded-xl border-blue-200 text-blue-600 hover:text-blue-700 hover:border-blue-400 bg-blue-50/30 font-bold text-xs"
+                  style={{ fontFamily: 'Kanit, sans-serif' }}
+                >
+                  คัดลอกลิงก์กราฟ (Excel)
+                </Button>
 
-              <Button 
-                type="primary" 
-                icon={<CalendarOutlined />} 
-                onClick={copyGanttLink}
-                className="h-auto py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 border-none shadow-sm font-bold text-xs text-white"
-                style={{ fontFamily: 'Kanit, sans-serif' }}
-              >
-                คัดลอกลิงก์ข้อมูล Gantt (Excel)
-              </Button>
-            </div>
+                <Button 
+                  type="primary" 
+                  icon={<CalendarOutlined />} 
+                  onClick={copyGanttLink}
+                  className="h-auto py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 border-none shadow-sm font-bold text-xs text-white"
+                  style={{ fontFamily: 'Kanit, sans-serif' }}
+                >
+                  คัดลอกลิงก์ข้อมูล Gantt (Excel)
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
