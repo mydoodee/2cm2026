@@ -23,7 +23,9 @@ const planningRoutes = require('./routes/PlanningRoutes');
 const actualRoutes = require('./routes/actualRoutes');
 const scurveRoutes = require('./routes/scurveRoutes');
 const companyRoutes = require('./routes/companyRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 const { companyContext } = require('./middleware/companyContext');
+
 
 const app = express();
 const httpServer = createServer(app); // ⭐ เปลี่ยนจาก app.listen เป็น createServer
@@ -217,6 +219,8 @@ app.use(companyContext);
 // API Routes
 app.use('/api/public', publicRoutes);
 app.use('/api/weather', weatherRoutes);
+app.use('/api/ai', aiRoutes);
+
 
 app.use('/api', authRoutes);
 app.use('/api', companyRoutes);

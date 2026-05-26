@@ -34,6 +34,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import CompanySelector from './components/CompanySelector';
 import CompanySettings from './components/CompanySettings';
+import AiAssistant from './components/AiAssistant';
+
 import { useState, useEffect } from 'react';
 import api from './axiosConfig';
 import 'antd/dist/reset.css';
@@ -362,7 +364,9 @@ function App() {
             <Route path="/project/:id/job-status" element={<JobStatusDetail user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
 
             {/* === USER PAGES === */}
+            <Route path="/ai-assistant" element={<AiAssistant user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/progress" element={<Progress user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
+
             <Route path="/profile" element={<Profile user={user} setUser={setUser} theme={theme} setTheme={setTheme} />} />
             <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />
             <Route path="/company-settings" element={<CompanySettings user={user} setUser={setUser} theme={theme} setTheme={setTheme} activeCompany={activeCompany} setActiveCompany={setActiveCompany} />} />

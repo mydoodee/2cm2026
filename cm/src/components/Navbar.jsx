@@ -16,7 +16,9 @@ import {
   SwapOutlined,
   BankOutlined,
   FolderOpenOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
+
 import { Badge, Avatar } from 'antd';
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
@@ -74,7 +76,11 @@ function Navbar({ user, setUser, theme, setTheme, activeCompany, setActiveCompan
     { name: 'Dashboard', href: '/dashboard', icon: <HomeOutlined className="text-lg" />, color: 'text-blue-500' },
     { name: 'History', href: '/history', icon: <ClockCircleOutlined className="text-lg" />, color: 'text-purple-500' },
     { name: isTenderMode ? 'Tender' : 'Projects', href: '/projects', icon: <ProjectOutlined className="text-lg" />, color: 'text-green-500' },
+    ...(import.meta.env.VITE_AI_ENABLED === 'true'
+      ? [{ name: 'AI Assistant', href: '/ai-assistant', icon: <RobotOutlined className="text-lg" />, color: 'text-indigo-500' }]
+      : [])
   ];
+
 
   const userMenuItems = [
     { name: 'โปรไฟล์', href: '/profile', icon: <UserOutlined className="text-base" />, color: 'text-purple-500' },
